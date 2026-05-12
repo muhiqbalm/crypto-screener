@@ -117,8 +117,10 @@ class MarketDataFetcher:
         """
         Fetch current long/short ratio for a perpetual futures contract.
         
-        Uses CCXT's fetch_long_short_ratio method which calls OKX's Rubik API.
-        Requires CCXT version 4.0+ for this method to be available.
+        Uses direct HTTP request to OKX Rubik API since CCXT doesn't support
+        fetchLongShortRatio for OKX yet.
+        
+        API: GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract-top-trader
         
         Args:
             symbol: Perpetual futures symbol (e.g., 'BTC/USDT:USDT')
@@ -127,22 +129,28 @@ class MarketDataFetcher:
             float: Long/short ratio (e.g., 1.5 means 1.5x more longs than shorts)
         """
         try:
-            # Use CCXT's built-in fetch_long_short_ratio method
-            # This requires CCXT 4.0+ - run: pip install --upgrade ccxt
-            if not hasattr(self.exchange, 'fetch_long_short_ratio'):
-                logger.warning(f"CCXT version too old for fetch_long_short_ratio. Please upgrade: pip install --upgrade ccxt")
-                return None
+            import requests
             
-            ls_data = self.exchange.fetch_long_short_ratio(symbol)
+            # Convert CCXT symbol format to OKX instId format
+            # 'BTC/USDT:USDT' -> 'BTC-USDT-SWAP'
+            market = self.exchange.market(symbol)
+            inst_id = market['id']
             
-            if ls_data and len(ls_data) > 0:
-                # Get the latest data point
-                latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
-                ratio = latest.get('longShortRatio', None)
-                
-                if ratio is not None:
-                    logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
-                    return float(ratio)
+            # Direct HTTP request to OKX Rubik API
+            url = 'https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio-contract-top-trader'
+            params = {
+                'instId': inst_id,
+                'period': '5m'
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            if data.get('code') == '0' and data.get('data') and len(data['data']) > 0:
+                latest_data = data['data'][0]
+                ratio = float(latest_data.get('longShortRatio', 0))
+                logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
+                return ratio
             
             logger.warning(f"Long/short ratio data not available for {symbol}")
             return None
