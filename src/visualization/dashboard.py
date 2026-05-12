@@ -7,7 +7,7 @@ Builds complete visualization dashboard with multiple panels.
 import logging
 import pandas as pd
 import matplotlib.pyplot as plt
-from .panels import MultiFactorPanel, FundingRatePanel, LongShortRatioPanel
+from .panels import MultiFactorPanel, FundingRatePanel, LongShortRatioPanel, ATRPanel, MA50Panel, SparklinePanel, OIDeltaPanel
 
 logger = logging.getLogger(__name__)
 
@@ -90,19 +90,19 @@ class DashboardBuilder:
             if len(self.df) == 0:
                 logger.warning("Creating dashboard with empty DataFrame (no assets to visualize)")
             else:
-                logger.info(f"Creating dashboard with 3 panels for {len(self.df)} assets...")
+                logger.info(f"Creating dashboard with 7 panels for {len(self.df)} assets...")
             
-            # Create figure with 3 subplots in vertical stack
+            # Create figure with 7 subplots in vertical stack
             # figsize=(width, height) in inches
             # - Width: 12 inches provides good horizontal space for labels and bars
-            # - Height: 10 inches (3-4 inches per panel) provides good vertical space
+            # - Height: 18 inches provides vertical space for 7 panels
             # sharex=False: Each panel has independent X-axis (different metrics)
             # sharey=True: All panels share Y-axis (same asset ordering)
             try:
                 fig, axes = plt.subplots(
-                    nrows=3,           # 3 panels stacked vertically
+                    nrows=7,           # 7 panels stacked vertically
                     ncols=1,           # Single column
-                    figsize=(12, 10),  # Figure size in inches
+                    figsize=(12, 18),  # Figure size in inches
                     sharex=False,      # Independent X-axes (different metrics)
                     sharey=True        # Shared Y-axis (same asset ordering)
                 )
@@ -158,6 +158,86 @@ class DashboardBuilder:
                 error_msg = f"Failed to render long/short ratio panel: {e}"
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
+            
+            # Render Panel 4: ATR (Volatility Risk)
+            try:
+                logger.info("Rendering ATR panel...")
+                if 'atr_percent' in self.df.columns:
+                    atr_panel = ATRPanel()
+                    atr_panel.render(axes[3], self.df)
+                    logger.info("ATR panel rendered successfully")
+                else:
+                    axes[3].text(0.5, 0.5, 'No data available',
+                               horizontalalignment='center', verticalalignment='center',
+                               transform=axes[3].transAxes)
+                    axes[3].set_title('ATR (Volatility Risk)', fontsize=12, fontweight='bold', pad=10)
+                    logger.warning("ATR panel: 'atr_percent' column not available, showing placeholder")
+            except Exception as e:
+                logger.error(f"Failed to render ATR panel: {e}")
+                axes[3].text(0.5, 0.5, 'No data available',
+                           horizontalalignment='center', verticalalignment='center',
+                           transform=axes[3].transAxes)
+                axes[3].set_title('ATR (Volatility Risk)', fontsize=12, fontweight='bold', pad=10)
+            
+            # Render Panel 5: Distance to MA50 (Price Context)
+            try:
+                logger.info("Rendering MA50 panel...")
+                if 'distance_to_ma50' in self.df.columns:
+                    ma50_panel = MA50Panel()
+                    ma50_panel.render(axes[4], self.df)
+                    logger.info("MA50 panel rendered successfully")
+                else:
+                    axes[4].text(0.5, 0.5, 'No data available',
+                               horizontalalignment='center', verticalalignment='center',
+                               transform=axes[4].transAxes)
+                    axes[4].set_title('Distance to MA50 (Price Context)', fontsize=12, fontweight='bold', pad=10)
+                    logger.warning("MA50 panel: 'distance_to_ma50' column not available, showing placeholder")
+            except Exception as e:
+                logger.error(f"Failed to render MA50 panel: {e}")
+                axes[4].text(0.5, 0.5, 'No data available',
+                           horizontalalignment='center', verticalalignment='center',
+                           transform=axes[4].transAxes)
+                axes[4].set_title('Distance to MA50 (Price Context)', fontsize=12, fontweight='bold', pad=10)
+            
+            # Render Panel 6: Sparkline (24h Price Trend)
+            try:
+                logger.info("Rendering Sparkline panel...")
+                if 'sparkline_data' in self.df.columns and 'sparkline_trend' in self.df.columns:
+                    sparkline_panel = SparklinePanel()
+                    sparkline_panel.render(axes[5], self.df)
+                    logger.info("Sparkline panel rendered successfully")
+                else:
+                    axes[5].text(0.5, 0.5, 'No data available',
+                               horizontalalignment='center', verticalalignment='center',
+                               transform=axes[5].transAxes)
+                    axes[5].set_title('24h Price Trend (Sparkline)', fontsize=12, fontweight='bold', pad=10)
+                    logger.warning("Sparkline panel: required columns not available, showing placeholder")
+            except Exception as e:
+                logger.error(f"Failed to render Sparkline panel: {e}")
+                axes[5].text(0.5, 0.5, 'No data available',
+                           horizontalalignment='center', verticalalignment='center',
+                           transform=axes[5].transAxes)
+                axes[5].set_title('24h Price Trend (Sparkline)', fontsize=12, fontweight='bold', pad=10)
+            
+            # Render Panel 7: OI Delta (Market Context)
+            try:
+                logger.info("Rendering OI Delta panel...")
+                if 'oi_delta_percent' in self.df.columns:
+                    oi_delta_panel = OIDeltaPanel()
+                    oi_delta_panel.render(axes[6], self.df)
+                    logger.info("OI Delta panel rendered successfully")
+                else:
+                    axes[6].text(0.5, 0.5, 'No data available',
+                               horizontalalignment='center', verticalalignment='center',
+                               transform=axes[6].transAxes)
+                    axes[6].set_title('OI Delta 24h (Market Context)', fontsize=12, fontweight='bold', pad=10)
+                    logger.warning("OI Delta panel: 'oi_delta_percent' column not available, showing placeholder")
+            except Exception as e:
+                logger.error(f"Failed to render OI Delta panel: {e}")
+                axes[6].text(0.5, 0.5, 'No data available',
+                           horizontalalignment='center', verticalalignment='center',
+                           transform=axes[6].transAxes)
+                axes[6].set_title('OI Delta 24h (Market Context)', fontsize=12, fontweight='bold', pad=10)
             
             # Apply tight_layout() for proper spacing between panels
             # This automatically adjusts subplot parameters to give specified padding

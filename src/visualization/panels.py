@@ -12,6 +12,289 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+class ATRPanel:
+    """
+    Renders ATR (Average True Range) visualization panel.
+    
+    This class creates a horizontal bar chart displaying the ATR percentage
+    for each asset. Assets are ordered consistently with the multi-factor panel
+    (by multi-factor score, highest to lowest). Bars are colored based on
+    volatility thresholds:
+    - Green (#4CAF50): ATR < 3% (low volatility)
+    - Yellow (#FFC107): 3% <= ATR <= 6% (medium volatility)
+    - Red (#F44336): ATR > 6% (high volatility)
+    
+    The visualization includes numeric ATR percentage values displayed on each bar
+    formatted to 2 decimal places.
+    """
+    
+    def render(self, ax, df: pd.DataFrame):
+        """
+        Create horizontal bar chart for ATR percentage values.
+        
+        Visualization Logic:
+        1. Y-axis: Asset symbols ordered by multi-factor score (highest at top)
+        2. X-axis: ATR percentage values (0% to max)
+        3. Bar colors: Based on volatility thresholds
+           - Green (#4CAF50): ATR < 3% (low volatility)
+           - Yellow (#FFC107): 3% <= ATR <= 6% (medium volatility)
+           - Red (#F44336): ATR > 6% (high volatility)
+        4. Labels: ATR % formatted to 2 decimal places
+        5. Panel title: "ATR (Volatility Risk)"
+        
+        Args:
+            ax: matplotlib axes object to render the chart on
+            df: DataFrame with columns:
+                - 'symbol': Asset symbol (str)
+                - 'atr_percent': ATR as percentage of price (float)
+                
+        Raises:
+            KeyError: If required columns are missing from DataFrame
+        """
+        # Validate required columns exist
+        required_columns = ['symbol', 'atr_percent']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            error_msg = f"DataFrame missing required columns for ATRPanel: {missing_columns}"
+            logger.error(error_msg)
+            raise KeyError(error_msg)
+        
+        # Handle empty DataFrame
+        if len(df) == 0:
+            logger.warning("Empty DataFrame provided to ATRPanel.render()")
+            ax.text(0.5, 0.5, 'No data available',
+                   horizontalalignment='center', verticalalignment='center',
+                   transform=ax.transAxes)
+            ax.set_title('ATR (Volatility Risk)', fontsize=12, fontweight='bold', pad=10)
+            return
+        
+        # Extract data for visualization
+        # DataFrame is already sorted by multi_factor_score descending (from RankingEngine)
+        # Reverse the order for plotting so highest scores appear at the top
+        symbols = df['symbol'].values[::-1]
+        atr_values = df['atr_percent'].values[::-1]
+        
+        # Define colors based on ATR volatility thresholds
+        # Green (#4CAF50): ATR < 3% (low volatility)
+        # Yellow (#FFC107): 3% <= ATR <= 6% (medium volatility)
+        # Red (#F44336): ATR > 6% (high volatility)
+        bar_colors = []
+        display_values = []
+        has_missing = False
+        
+        for atr in atr_values:
+            if pd.isna(atr):
+                bar_colors.append('#CCCCCC')
+                display_values.append(0)
+                has_missing = True
+            elif atr < 3.0:
+                bar_colors.append('#4CAF50')  # Green - low volatility
+                display_values.append(atr)
+            elif atr <= 6.0:
+                bar_colors.append('#FFC107')  # Yellow - medium volatility
+                display_values.append(atr)
+            else:
+                bar_colors.append('#F44336')  # Red - high volatility
+                display_values.append(atr)
+        
+        # Create horizontal bar chart
+        bars = ax.barh(symbols, display_values, color=bar_colors, edgecolor='black', linewidth=0.5)
+        
+        # Add numeric ATR percentage values on each bar
+        for i, (bar, atr) in enumerate(zip(bars, atr_values)):
+            if pd.isna(atr):
+                # Display placeholder text for missing data
+                ax.text(0.05, bar.get_y() + bar.get_height() / 2,
+                       'N/A',
+                       ha='left', va='center',
+                       color='gray', fontweight='bold', fontsize=9,
+                       fontstyle='italic')
+            else:
+                # Get bar width
+                width = bar.get_width()
+                
+                # Determine label position
+                x_range = abs(ax.get_xlim()[1] - ax.get_xlim()[0]) if ax.get_xlim()[1] != ax.get_xlim()[0] else 1
+                threshold = 0.15 * x_range
+                
+                if width > threshold:
+                    # Large bar: place label inside bar at the right edge
+                    label_x = width - 0.02 * x_range
+                    ha = 'right'
+                    text_color = 'white'
+                else:
+                    # Small bar: place label outside bar to the right
+                    label_x = width + 0.02 * x_range
+                    ha = 'left'
+                    text_color = 'black'
+                
+                ax.text(label_x, bar.get_y() + bar.get_height() / 2,
+                       f'{atr:.2f}%',
+                       ha=ha, va='center',
+                       color=text_color, fontweight='bold', fontsize=9)
+        
+        # Set panel title
+        ax.set_title('ATR (Volatility Risk)', fontsize=12, fontweight='bold', pad=10)
+        
+        # Set axis labels
+        ax.set_xlabel('ATR (%)', fontsize=10)
+        ax.set_ylabel('Asset Symbol', fontsize=10)
+        
+        # Add grid for easier reading of values
+        ax.grid(axis='x', alpha=0.3, linestyle='--', linewidth=0.5)
+        
+        # Adjust layout for better appearance
+        ax.tick_params(axis='both', labelsize=9)
+        
+        logger.info(f"ATRPanel rendered with {len(df)} assets")
+
+
+class MA50Panel:
+    """
+    Renders Distance to MA50 visualization panel.
+    
+    This class creates a horizontal bar chart displaying the percentage distance
+    from the current price to the 50-day moving average for each asset. Assets are
+    ordered consistently with the multi-factor panel (by multi-factor score, highest
+    to lowest). Bars are colored based on the sign of the distance:
+    - Green (#4CAF50): Positive distance (price above MA50)
+    - Red (#F44336): Negative distance (price below MA50)
+    
+    A vertical reference line at 0% indicates where price equals MA50.
+    The visualization includes numeric distance percentage values displayed on each
+    bar formatted to 2 decimal places.
+    """
+    
+    def render(self, ax, df: pd.DataFrame):
+        """
+        Create horizontal bar chart for Distance to MA50 percentage values.
+        
+        Visualization Logic:
+        1. Y-axis: Asset symbols ordered by multi-factor score (highest at top)
+        2. X-axis: Distance to MA50 percentage values (can be negative)
+        3. Bar colors: Based on distance sign
+           - Green (#4CAF50): Positive distance (price above MA50)
+           - Red (#F44336): Negative distance (price below MA50)
+        4. Reference line: Vertical line at 0% (price at MA50)
+        5. Labels: Distance % formatted to 2 decimal places
+        6. Panel title: "Distance to MA50 (Price Context)"
+        
+        Args:
+            ax: matplotlib axes object to render the chart on
+            df: DataFrame with columns:
+                - 'symbol': Asset symbol (str)
+                - 'distance_to_ma50': Distance as percentage (float)
+                
+        Raises:
+            KeyError: If required columns are missing from DataFrame
+        """
+        # Validate required columns exist
+        required_columns = ['symbol', 'distance_to_ma50']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            error_msg = f"DataFrame missing required columns for MA50Panel: {missing_columns}"
+            logger.error(error_msg)
+            raise KeyError(error_msg)
+        
+        # Handle empty DataFrame
+        if len(df) == 0:
+            logger.warning("Empty DataFrame provided to MA50Panel.render()")
+            ax.text(0.5, 0.5, 'No data available',
+                   horizontalalignment='center', verticalalignment='center',
+                   transform=ax.transAxes)
+            ax.set_title('Distance to MA50 (Price Context)', fontsize=12, fontweight='bold', pad=10)
+            return
+        
+        # Extract data for visualization
+        # DataFrame is already sorted by multi_factor_score descending (from RankingEngine)
+        # Reverse the order for plotting so highest scores appear at the top
+        symbols = df['symbol'].values[::-1]
+        distance_values = df['distance_to_ma50'].values[::-1]
+        
+        # Define colors based on distance sign
+        # Green (#4CAF50): Positive distance (price above MA50)
+        # Red (#F44336): Negative distance (price below MA50)
+        bar_colors = []
+        display_values = []
+        has_missing = False
+        
+        for dist in distance_values:
+            if pd.isna(dist):
+                bar_colors.append('#CCCCCC')
+                display_values.append(0)
+                has_missing = True
+            elif dist >= 0:
+                bar_colors.append('#4CAF50')  # Green - above MA50
+                display_values.append(dist)
+            else:
+                bar_colors.append('#F44336')  # Red - below MA50
+                display_values.append(dist)
+        
+        # Create horizontal bar chart
+        bars = ax.barh(symbols, display_values, color=bar_colors, edgecolor='black', linewidth=0.5)
+        
+        # Add vertical reference line at 0% (price at MA50)
+        ax.axvline(x=0, color='black', linestyle='-', linewidth=1.2, alpha=0.7, zorder=3)
+        
+        # Add numeric distance percentage values on each bar
+        for i, (bar, dist) in enumerate(zip(bars, distance_values)):
+            if pd.isna(dist):
+                # Display placeholder text for missing data
+                ax.text(0.05, bar.get_y() + bar.get_height() / 2,
+                       'N/A',
+                       ha='left', va='center',
+                       color='gray', fontweight='bold', fontsize=9,
+                       fontstyle='italic')
+            else:
+                # Get bar width
+                width = bar.get_width()
+                
+                # Determine label position
+                x_range = abs(ax.get_xlim()[1] - ax.get_xlim()[0]) if ax.get_xlim()[1] != ax.get_xlim()[0] else 1
+                threshold = 0.15 * x_range
+                
+                if abs(width) > threshold:
+                    # Large bar: place label inside bar at the end
+                    if width >= 0:
+                        label_x = width - 0.02 * x_range
+                        ha = 'right'
+                    else:
+                        label_x = width + 0.02 * x_range
+                        ha = 'left'
+                    text_color = 'white'
+                else:
+                    # Small bar: place label outside bar
+                    if width >= 0:
+                        label_x = width + 0.02 * x_range
+                        ha = 'left'
+                    else:
+                        label_x = width - 0.02 * x_range
+                        ha = 'right'
+                    text_color = 'black'
+                
+                ax.text(label_x, bar.get_y() + bar.get_height() / 2,
+                       f'{dist:.2f}%',
+                       ha=ha, va='center',
+                       color=text_color, fontweight='bold', fontsize=9)
+        
+        # Set panel title
+        ax.set_title('Distance to MA50 (Price Context)', fontsize=12, fontweight='bold', pad=10)
+        
+        # Set axis labels
+        ax.set_xlabel('Distance to MA50 (%)', fontsize=10)
+        ax.set_ylabel('Asset Symbol', fontsize=10)
+        
+        # Add grid for easier reading of values
+        ax.grid(axis='x', alpha=0.3, linestyle='--', linewidth=0.5)
+        
+        # Adjust layout for better appearance
+        ax.tick_params(axis='both', labelsize=9)
+        
+        logger.info(f"MA50Panel rendered with {len(df)} assets")
+
+
 class MultiFactorPanel:
     """
     Renders multi-factor score visualization panel.
@@ -441,3 +724,283 @@ class LongShortRatioPanel:
         ax.tick_params(axis='both', labelsize=9)
         
         logger.info(f"LongShortRatioPanel rendered with {len(df)} assets")
+
+
+class SparklinePanel:
+    """
+    Renders 24-hour price trend sparkline visualization panel.
+    
+    This class creates mini line charts showing 24-hour price movement for each asset.
+    Assets are ordered consistently with the multi-factor panel (by multi-factor score,
+    highest to lowest). Sparklines are colored based on trend direction:
+    - Green (#4CAF50): Uptrend (price increased over 24h)
+    - Red (#F44336): Downtrend (price decreased over 24h)
+    - Gray (#9E9E9E): Neutral (no significant change)
+    
+    The visualization uses min-max normalization per asset to fit sparklines in
+    consistent vertical space while preserving relative price movements.
+    """
+    
+    def render(self, ax, df: pd.DataFrame):
+        """
+        Create sparkline mini charts for 24-hour price trends.
+        
+        Visualization Logic:
+        1. Y-axis: Asset symbols ordered by multi-factor score (highest at top)
+        2. X-axis: Time progression (24 data points for hourly data)
+        3. Line colors: Based on trend direction
+           - Green (#4CAF50): Uptrend
+           - Red (#F44336): Downtrend
+           - Gray (#9E9E9E): Neutral
+        4. Normalization: Min-max scaling per asset for consistent display
+        5. Panel title: "24h Price Trend (Sparkline)"
+        
+        Args:
+            ax: matplotlib axes object to render the chart on
+            df: DataFrame with columns:
+                - 'symbol': Asset symbol (str)
+                - 'sparkline_data': List of closing prices (list of float)
+                - 'sparkline_trend': Trend direction ('uptrend'/'downtrend'/'neutral')
+                
+        Raises:
+            KeyError: If required columns are missing from DataFrame
+        """
+        # Validate required columns exist
+        required_columns = ['symbol', 'sparkline_data', 'sparkline_trend']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            error_msg = f"DataFrame missing required columns for SparklinePanel: {missing_columns}"
+            logger.error(error_msg)
+            raise KeyError(error_msg)
+        
+        # Handle empty DataFrame
+        if len(df) == 0:
+            logger.warning("Empty DataFrame provided to SparklinePanel.render()")
+            ax.text(0.5, 0.5, 'No data available',
+                   horizontalalignment='center', verticalalignment='center',
+                   transform=ax.transAxes)
+            ax.set_title('24h Price Trend (Sparkline)', fontsize=12, fontweight='bold', pad=10)
+            return
+        
+        # Extract data for visualization
+        # DataFrame is already sorted by multi_factor_score descending (from RankingEngine)
+        # Reverse the order for plotting so highest scores appear at the top
+        symbols = df['symbol'].values[::-1]
+        sparkline_data = df['sparkline_data'].values[::-1]
+        trends = df['sparkline_trend'].values[::-1]
+        
+        # Define colors based on trend
+        trend_colors = {
+            'uptrend': '#4CAF50',    # Green
+            'downtrend': '#F44336',  # Red
+            'neutral': '#9E9E9E'     # Gray
+        }
+        
+        # Create sparklines for each asset
+        num_assets = len(symbols)
+        
+        for i, (symbol, prices, trend) in enumerate(zip(symbols, sparkline_data, trends)):
+            # Handle missing data
+            if prices is None or (isinstance(prices, float) and np.isnan(prices)):
+                # Display "No data" text
+                ax.text(0.5, i, 'No data',
+                       ha='center', va='center',
+                       color='gray', fontsize=8, fontstyle='italic')
+                continue
+            
+            # Check if prices is a valid list/array
+            if not isinstance(prices, (list, np.ndarray)) or len(prices) < 2:
+                ax.text(0.5, i, 'No data',
+                       ha='center', va='center',
+                       color='gray', fontsize=8, fontstyle='italic')
+                continue
+            
+            # Normalize prices using min-max scaling (0 to 1 range)
+            prices_array = np.array(prices)
+            
+            price_min = prices_array.min()
+            price_max = prices_array.max()
+            
+            if price_max == price_min:
+                # Flat line - all prices the same
+                normalized = np.full_like(prices_array, 0.5)
+            else:
+                normalized = (prices_array - price_min) / (price_max - price_min)
+            
+            # Scale to fit in row space (0.2 height per row, centered at row index)
+            scaled = normalized * 0.4 + (i - 0.2)
+            
+            # Create x-axis points
+            x_points = np.linspace(0, 1, len(prices_array))
+            
+            # Get color based on trend
+            color = trend_colors.get(trend, '#9E9E9E')
+            
+            # Plot sparkline
+            ax.plot(x_points, scaled, color=color, linewidth=1.5, alpha=0.8)
+        
+        # Set Y-axis to show symbols
+        ax.set_yticks(range(num_assets))
+        ax.set_yticklabels(symbols, fontsize=9)
+        
+        # Remove X-axis ticks (sparklines are relative, not absolute time)
+        ax.set_xticks([])
+        ax.set_xlim(0, 1)
+        ax.set_ylim(-0.5, num_assets - 0.5)
+        
+        # Set panel title
+        ax.set_title('24h Price Trend (Sparkline)', fontsize=12, fontweight='bold', pad=10)
+        
+        # Add subtle grid
+        ax.grid(axis='y', alpha=0.2, linestyle='--', linewidth=0.5)
+        
+        logger.info(f"SparklinePanel rendered with {len(df)} assets")
+
+
+class OIDeltaPanel:
+    """
+    Renders Open Interest Delta visualization panel.
+    
+    This class creates a horizontal bar chart displaying the 24-hour percentage change
+    in Open Interest for each asset. Assets are ordered consistently with the multi-factor
+    panel (by multi-factor score, highest to lowest). Bars are colored based on the sign
+    of the OI delta:
+    - Blue (#2196F3): Positive OI delta (Open Interest increasing)
+    - Orange (#FF9800): Negative OI delta (Open Interest decreasing)
+    - Gray (#9E9E9E): Zero or near-zero change
+    
+    A vertical reference line at 0% helps identify the transition between increasing
+    and decreasing Open Interest.
+    """
+    
+    def render(self, ax, df: pd.DataFrame):
+        """
+        Create horizontal bar chart for OI Delta percentage values.
+        
+        Visualization Logic:
+        1. Y-axis: Asset symbols ordered by multi-factor score (highest at top)
+        2. X-axis: OI Delta percentage values (can be negative)
+        3. Bar colors: Based on OI delta sign
+           - Blue (#2196F3): Positive delta (OI increasing)
+           - Orange (#FF9800): Negative delta (OI decreasing)
+           - Gray (#9E9E9E): Near-zero change
+        4. Reference line: Vertical line at 0% (no change)
+        5. Labels: OI delta % formatted to 1 decimal place
+        6. Panel title: "OI Delta 24h (Market Context)"
+        
+        Args:
+            ax: matplotlib axes object to render the chart on
+            df: DataFrame with columns:
+                - 'symbol': Asset symbol (str)
+                - 'oi_delta_percent': OI delta as percentage (float)
+                
+        Raises:
+            KeyError: If required columns are missing from DataFrame
+        """
+        # Validate required columns exist
+        required_columns = ['symbol', 'oi_delta_percent']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            error_msg = f"DataFrame missing required columns for OIDeltaPanel: {missing_columns}"
+            logger.error(error_msg)
+            raise KeyError(error_msg)
+        
+        # Handle empty DataFrame
+        if len(df) == 0:
+            logger.warning("Empty DataFrame provided to OIDeltaPanel.render()")
+            ax.text(0.5, 0.5, 'No data available',
+                   horizontalalignment='center', verticalalignment='center',
+                   transform=ax.transAxes)
+            ax.set_title('OI Delta 24h (Market Context)', fontsize=12, fontweight='bold', pad=10)
+            return
+        
+        # Extract data for visualization
+        # DataFrame is already sorted by multi_factor_score descending (from RankingEngine)
+        # Reverse the order for plotting so highest scores appear at the top
+        symbols = df['symbol'].values[::-1]
+        oi_deltas = df['oi_delta_percent'].values[::-1]
+        
+        # Define colors based on OI delta sign
+        # Blue: Positive (OI increasing)
+        # Orange: Negative (OI decreasing)
+        # Gray: Near-zero
+        bar_colors = []
+        display_values = []
+        
+        for delta in oi_deltas:
+            if pd.isna(delta):
+                bar_colors.append('#CCCCCC')
+                display_values.append(0)
+            elif abs(delta) < 0.5:  # Near-zero threshold
+                bar_colors.append('#9E9E9E')  # Gray
+                display_values.append(delta)
+            elif delta > 0:
+                bar_colors.append('#2196F3')  # Blue - OI increasing
+                display_values.append(delta)
+            else:
+                bar_colors.append('#FF9800')  # Orange - OI decreasing
+                display_values.append(delta)
+        
+        # Create horizontal bar chart
+        bars = ax.barh(symbols, display_values, color=bar_colors, edgecolor='black', linewidth=0.5)
+        
+        # Add vertical reference line at 0% (no change)
+        ax.axvline(x=0, color='black', linestyle='-', linewidth=1.2, alpha=0.7, zorder=3)
+        
+        # Add numeric OI delta percentage values on each bar
+        for i, (bar, delta) in enumerate(zip(bars, oi_deltas)):
+            if pd.isna(delta):
+                # Display placeholder text for missing data
+                ax.text(0.05, bar.get_y() + bar.get_height() / 2,
+                       'N/A',
+                       ha='left', va='center',
+                       color='gray', fontweight='bold', fontsize=9,
+                       fontstyle='italic')
+            else:
+                # Get bar width
+                width = bar.get_width()
+                
+                # Determine label position
+                x_range = abs(ax.get_xlim()[1] - ax.get_xlim()[0]) if ax.get_xlim()[1] != ax.get_xlim()[0] else 1
+                threshold = 0.15 * x_range
+                
+                if abs(width) > threshold:
+                    # Large bar: place label inside bar at the end
+                    if width >= 0:
+                        label_x = width - 0.02 * x_range
+                        ha = 'right'
+                    else:
+                        label_x = width + 0.02 * x_range
+                        ha = 'left'
+                    text_color = 'white'
+                else:
+                    # Small bar: place label outside bar
+                    if width >= 0:
+                        label_x = width + 0.02 * x_range
+                        ha = 'left'
+                    else:
+                        label_x = width - 0.02 * x_range
+                        ha = 'right'
+                    text_color = 'black'
+                
+                ax.text(label_x, bar.get_y() + bar.get_height() / 2,
+                       f'{delta:.1f}%',  # 1 decimal place
+                       ha=ha, va='center',
+                       color=text_color, fontweight='bold', fontsize=9)
+        
+        # Set panel title
+        ax.set_title('OI Delta 24h (Market Context)', fontsize=12, fontweight='bold', pad=10)
+        
+        # Set axis labels
+        ax.set_xlabel('OI Delta (%)', fontsize=10)
+        ax.set_ylabel('Asset Symbol', fontsize=10)
+        
+        # Add grid for easier reading of values
+        ax.grid(axis='x', alpha=0.3, linestyle='--', linewidth=0.5)
+        
+        # Adjust layout for better appearance
+        ax.tick_params(axis='both', labelsize=9)
+        
+        logger.info(f"OIDeltaPanel rendered with {len(df)} assets")
