@@ -117,11 +117,8 @@ class MarketDataFetcher:
         """
         Fetch current long/short ratio for a perpetual futures contract.
         
-        Uses OKX's Rubik API:
-        GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract
-        
-        The ratio represents the proportion of accounts with net long positions
-        to those with net short positions.
+        Uses CCXT's fetch_long_short_ratio method which calls OKX's Rubik API.
+        Requires CCXT version 4.0+ for this method to be available.
         
         Args:
             symbol: Perpetual futures symbol (e.g., 'BTC/USDT:USDT')
@@ -130,42 +127,22 @@ class MarketDataFetcher:
             float: Long/short ratio (e.g., 1.5 means 1.5x more longs than shorts)
         """
         try:
-            # Convert CCXT symbol format to OKX instId format
-            # 'BTC/USDT:USDT' -> 'BTC-USDT-SWAP'
-            market = self.exchange.market(symbol)
-            inst_id = market['id']  # e.g., 'BTC-USDT-SWAP'
+            # Use CCXT's built-in fetch_long_short_ratio method
+            # This requires CCXT 4.0+ - run: pip install --upgrade ccxt
+            if not hasattr(self.exchange, 'fetch_long_short_ratio'):
+                logger.warning(f"CCXT version too old for fetch_long_short_ratio. Please upgrade: pip install --upgrade ccxt")
+                return None
             
-            # Extract base currency from symbol (e.g., 'BTC' from 'BTC/USDT:USDT')
-            base_currency = market['base']  # e.g., 'BTC'
+            ls_data = self.exchange.fetch_long_short_ratio(symbol)
             
-            # Try CCXT's built-in method first (newer versions)
-            if hasattr(self.exchange, 'fetch_long_short_ratio'):
-                try:
-                    ls_data = self.exchange.fetch_long_short_ratio(symbol)
-                    if ls_data and len(ls_data) > 0:
-                        latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
-                        ratio = latest.get('longShortRatio', None)
-                        if ratio is not None:
-                            logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
-                            return float(ratio)
-                except Exception:
-                    pass  # Fall through to manual API call
-            
-            # Fallback: Call OKX Rubik API directly
-            # Use the contract-specific endpoint which requires instId
-            # GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract
-            response = self.exchange.publicGetRubikStatContractsLongShortAccountRatioContract({
-                'instId': inst_id,
-                'period': '5m'  # 5-minute period for most recent data
-            })
-            
-            if response and 'data' in response and len(response['data']) > 0:
-                # Get the most recent data point
-                latest_data = response['data'][0]
-                # OKX returns 'longShortRatio' field
-                ratio = float(latest_data.get('longShortRatio', 0))
-                logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
-                return ratio
+            if ls_data and len(ls_data) > 0:
+                # Get the latest data point
+                latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
+                ratio = latest.get('longShortRatio', None)
+                
+                if ratio is not None:
+                    logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
+                    return float(ratio)
             
             logger.warning(f"Long/short ratio data not available for {symbol}")
             return None
