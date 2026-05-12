@@ -5,7 +5,6 @@ Fetches market data for perpetual futures contracts from exchanges.
 """
 
 import logging
-import random
 import ccxt
 import pandas as pd
 import numpy as np
@@ -118,19 +117,14 @@ class MarketDataFetcher:
         """
         Fetch current long/short ratio for a perpetual futures contract.
         
-        CCXT Endpoint Mapping:
-        - OKX-specific: May require custom API endpoint or simulation
-        - Standard CCXT does not have a universal long/short ratio method
-        - For OKX: Could use exchange.publicGetMarketOpenInterestAndVolume() or similar
-        - Current implementation: SIMULATED with random values for MVP
+        Uses CCXT's fetch_long_short_ratio method which calls OKX's Rubik API:
+        GET /api/v5/rubik/stat/contracts/long-short-account-ratio
         
-        Note: This is a placeholder implementation. Real implementation would require:
-        1. OKX-specific API endpoint for long/short ratio
-        2. Parsing of OKX's proprietary response format
-        3. Proper error handling for OKX-specific errors
+        The ratio represents the proportion of accounts with net long positions
+        to those with net short positions.
         
         Args:
-            symbol: Perpetual futures symbol (e.g., 'ZEC/USDT:USDT')
+            symbol: Perpetual futures symbol (e.g., 'BTC/USDT:USDT')
             
         Returns:
             float: Long/short ratio (e.g., 1.5 means 1.5x more longs than shorts)
@@ -139,32 +133,98 @@ class MarketDataFetcher:
             Exception: If long/short ratio cannot be fetched
         """
         try:
-            # SIMULATED IMPLEMENTATION for MVP
-            # Real implementation would use OKX-specific API endpoint
-            # Example: exchange.publicGetMarketOpenInterestAndVolume({'instId': symbol})
+            # Use CCXT's built-in fetch_long_short_ratio method
+            # This calls OKX's Rubik API for long/short account ratio
+            ls_data = self.exchange.fetch_long_short_ratio(symbol)
             
-            # For now, generate simulated ratio between 0.5 and 2.0
-            # This provides realistic-looking data for testing visualization
-            import random
-            simulated_ratio = random.uniform(0.5, 2.0)
+            # CCXT returns a list of ratio data points, get the most recent one
+            if ls_data and len(ls_data) > 0:
+                # Get the latest data point
+                latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
+                
+                # Extract the ratio - CCXT normalizes this to 'longShortRatio' field
+                ratio = latest.get('longShortRatio', None)
+                
+                if ratio is not None:
+                    logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
+                    return float(ratio)
             
-            logger.debug(f"Fetched (simulated) long/short ratio for {symbol}: {simulated_ratio}")
-            logger.warning(f"Long/short ratio for {symbol} is SIMULATED - implement OKX-specific API for production")
-            
-            return simulated_ratio
+            logger.warning(f"Long/short ratio data not available for {symbol}")
+            return None
             
         except Exception as e:
-            logger.error(f"Failed to fetch long/short ratio for {symbol}: {e}")
+            logger.warning(f"Failed to fetch long/short ratio for {symbol}: {e}")
+            # Return None instead of raising - allows graceful degradation
+            return None
+    
+    def fetch_ohlcv(self, symbol: str, timeframe: str = '1d', limit: int = 30) -> list:
+        """
+        Fetch OHLCV (candlestick) data for momentum calculation.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTC/USDT:USDT')
+            timeframe: Candle timeframe (default: '1d' for daily)
+            limit: Number of candles to fetch (default: 30 for 30-day momentum)
+            
+        Returns:
+            list: List of OHLCV candles [[timestamp, open, high, low, close, volume], ...]
+            
+        Raises:
+            Exception: If OHLCV data cannot be fetched
+        """
+        try:
+            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+            logger.debug(f"Fetched {len(ohlcv)} OHLCV candles for {symbol}")
+            return ohlcv
+        except Exception as e:
+            logger.error(f"Failed to fetch OHLCV data for {symbol}: {e}")
             raise
+    
+    def calculate_momentum_30d(self, symbol: str) -> float:
+        """
+        Calculate 30-day price momentum from OHLCV data.
+        
+        Momentum = (current_price - price_30d_ago) / price_30d_ago * 100
+        
+        Args:
+            symbol: Trading pair symbol
+            
+        Returns:
+            float: 30-day momentum as percentage, or None if calculation fails
+        """
+        try:
+            ohlcv = self.fetch_ohlcv(symbol, '1d', limit=31)  # 31 to ensure we have 30 days
+            
+            if len(ohlcv) < 2:
+                logger.warning(f"Insufficient OHLCV data for {symbol} momentum calculation")
+                return None
+            
+            # Get closing prices
+            # OHLCV format: [timestamp, open, high, low, close, volume]
+            current_close = ohlcv[-1][4]  # Most recent close
+            old_close = ohlcv[0][4]       # Oldest close (approximately 30 days ago)
+            
+            if old_close == 0:
+                logger.warning(f"Zero price in historical data for {symbol}")
+                return None
+            
+            # Calculate momentum as percentage change
+            momentum = ((current_close - old_close) / old_close) * 100
+            
+            logger.debug(f"Calculated 30-day momentum for {symbol}: {momentum:.2f}%")
+            return momentum
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate momentum for {symbol}: {e}")
+            return None
     
     def fetch_all_data(self) -> pd.DataFrame:
         """
         Fetch all market data fields for all symbols with graceful error handling.
         
         This method loops through the symbol list and fetches ticker data, funding rate,
-        and long/short ratio for each symbol. If any symbol fails to fetch, it logs a
-        warning and continues processing remaining symbols, setting null/NaN values for
-        the failed symbol's data fields.
+        long/short ratio, and 30-day momentum for each symbol. If any field fails to fetch,
+        it logs a warning and continues, setting NaN values for failed fields.
         
         Error Handling Strategy:
         - Catches exceptions per-symbol during data fetching loop
@@ -180,8 +240,7 @@ class MarketDataFetcher:
                 - change_24h: 24-hour percentage change (float, NaN if failed)
                 - funding_rate: Funding rate percentage (float, NaN if failed)
                 - long_short_ratio: Long/short ratio (float, NaN if failed)
-        
-        Requirements: 2.2, 2.7, 10.1, 10.2
+                - momentum_30d: 30-day price momentum percentage (float, NaN if failed)
         """
         logger.info(f"Starting to fetch data for {len(self.symbols)} symbols")
         
@@ -198,7 +257,8 @@ class MarketDataFetcher:
                 'price': np.nan,
                 'change_24h': np.nan,
                 'funding_rate': np.nan,
-                'long_short_ratio': np.nan
+                'long_short_ratio': np.nan,
+                'momentum_30d': np.nan
             }
             
             # Fetch ticker data (price and 24h change) with error handling
@@ -222,6 +282,13 @@ class MarketDataFetcher:
                 record['long_short_ratio'] = ls_ratio if ls_ratio is not None else np.nan
             except Exception as e:
                 logger.warning(f"Failed to fetch long/short ratio for {symbol}: {e}")
+            
+            # Fetch 30-day momentum with error handling
+            try:
+                momentum = self.calculate_momentum_30d(symbol)
+                record['momentum_30d'] = momentum if momentum is not None else np.nan
+            except Exception as e:
+                logger.warning(f"Failed to calculate momentum for {symbol}: {e}")
             
             # Log success or partial success
             if not pd.isna(record['price']):

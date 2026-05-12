@@ -5,7 +5,6 @@ Generates trading signals from market data.
 """
 
 import logging
-import random
 import pandas as pd
 import numpy as np
 
@@ -70,49 +69,44 @@ class SignalGenerator:
         """
         Calculate 30-day momentum signal for each asset.
         
-        Simulated Logic:
-        - Momentum signal = change_24h * random_factor
-        - Random factor simulates longer-term trend strength (placeholder for real calculation)
-        - This is a simplified momentum signal for MVP demonstration
+        Uses pre-calculated 30-day momentum from market data if available,
+        otherwise falls back to 24h change as a proxy.
         
-        Real Implementation Note:
-        - Production version would calculate actual 30-day returns or moving average crossovers
-        - Would use historical price data to compute trend strength
-        - Would incorporate volume, volatility, and market regime indicators
-        - Current implementation uses 24h change as proxy since we don't have historical data
+        Momentum signal interpretation:
+        - Positive momentum: Asset has been trending upward
+        - Negative momentum: Asset has been trending downward
+        - Higher absolute values indicate stronger trends
         
         Args:
-            df: DataFrame with 'change_24h' column (24-hour percentage change)
+            df: DataFrame with 'momentum_30d' column (preferred) or 'change_24h' column (fallback)
             
         Returns:
-            pd.Series: Momentum signal values (higher = stronger momentum)
+            pd.Series: Momentum signal values (higher = stronger upward momentum)
             
         Raises:
-            KeyError: If 'change_24h' column is missing from DataFrame
+            KeyError: If neither 'momentum_30d' nor 'change_24h' column is present
         """
-        if 'change_24h' not in df.columns:
-            error_msg = "DataFrame must contain 'change_24h' column"
-            logger.error(error_msg)
-            raise KeyError(error_msg)
-        
         # Handle empty DataFrame
         if len(df) == 0:
             logger.warning("Empty DataFrame provided to calculate_momentum_signal")
             return pd.Series(dtype=float)
         
-        # Simulated momentum calculation using random factor
-        # In production, this would be replaced with actual 30-day price momentum
-        # Random factor between 0.5 and 1.5 simulates varying trend strengths
-        import random
-        random.seed(42)  # Fixed seed for reproducibility in testing
+        # Prefer real 30-day momentum if available
+        if 'momentum_30d' in df.columns and df['momentum_30d'].notna().any():
+            momentum_signal = df['momentum_30d'].copy()
+            logger.info("Using real 30-day momentum data for momentum signal")
+            return momentum_signal
         
-        momentum_signal = df['change_24h'].apply(
-            lambda x: x * random.uniform(0.5, 1.5) if not pd.isna(x) else np.nan
-        )
+        # Fallback to 24h change if momentum_30d not available
+        if 'change_24h' not in df.columns:
+            error_msg = "DataFrame must contain 'momentum_30d' or 'change_24h' column"
+            logger.error(error_msg)
+            raise KeyError(error_msg)
+        
+        logger.warning("30-day momentum not available, using 24h change as fallback")
+        momentum_signal = df['change_24h'].copy()
         
         logger.debug(f"Calculated momentum signal for {len(momentum_signal)} assets")
-        logger.warning("Momentum signal is SIMULATED - implement real 30-day calculation for production")
-        
         return momentum_signal
     
     def normalize_signal(self, signal: pd.Series) -> pd.Series:
