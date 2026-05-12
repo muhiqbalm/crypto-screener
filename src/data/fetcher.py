@@ -117,8 +117,8 @@ class MarketDataFetcher:
         """
         Fetch current long/short ratio for a perpetual futures contract.
         
-        Uses OKX's Rubik API directly:
-        GET /api/v5/rubik/stat/contracts/long-short-account-ratio
+        Uses OKX's Rubik API:
+        GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract
         
         The ratio represents the proportion of accounts with net long positions
         to those with net short positions.
@@ -128,9 +128,6 @@ class MarketDataFetcher:
             
         Returns:
             float: Long/short ratio (e.g., 1.5 means 1.5x more longs than shorts)
-            
-        Raises:
-            Exception: If long/short ratio cannot be fetched
         """
         try:
             # Convert CCXT symbol format to OKX instId format
@@ -138,19 +135,26 @@ class MarketDataFetcher:
             market = self.exchange.market(symbol)
             inst_id = market['id']  # e.g., 'BTC-USDT-SWAP'
             
+            # Extract base currency from symbol (e.g., 'BTC' from 'BTC/USDT:USDT')
+            base_currency = market['base']  # e.g., 'BTC'
+            
             # Try CCXT's built-in method first (newer versions)
             if hasattr(self.exchange, 'fetch_long_short_ratio'):
-                ls_data = self.exchange.fetch_long_short_ratio(symbol)
-                if ls_data and len(ls_data) > 0:
-                    latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
-                    ratio = latest.get('longShortRatio', None)
-                    if ratio is not None:
-                        logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
-                        return float(ratio)
+                try:
+                    ls_data = self.exchange.fetch_long_short_ratio(symbol)
+                    if ls_data and len(ls_data) > 0:
+                        latest = ls_data[-1] if isinstance(ls_data, list) else ls_data
+                        ratio = latest.get('longShortRatio', None)
+                        if ratio is not None:
+                            logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
+                            return float(ratio)
+                except Exception:
+                    pass  # Fall through to manual API call
             
-            # Fallback: Call OKX Rubik API directly via CCXT raw endpoint
-            # GET /api/v5/rubik/stat/contracts/long-short-account-ratio
-            response = self.exchange.publicGetRubikStatContractsLongShortAccountRatio({
+            # Fallback: Call OKX Rubik API directly
+            # Use the contract-specific endpoint which requires instId
+            # GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract
+            response = self.exchange.publicGetRubikStatContractsLongShortAccountRatioContract({
                 'instId': inst_id,
                 'period': '5m'  # 5-minute period for most recent data
             })
@@ -168,7 +172,6 @@ class MarketDataFetcher:
             
         except Exception as e:
             logger.warning(f"Failed to fetch long/short ratio for {symbol}: {e}")
-            # Return None instead of raising - allows graceful degradation
             return None
     
     def fetch_ohlcv(self, symbol: str, timeframe: str = '1d', limit: int = 30) -> list:
