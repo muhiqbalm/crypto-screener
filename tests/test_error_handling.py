@@ -32,40 +32,40 @@ class TestErrorHandling(unittest.TestCase):
         """Test that NetworkError is caught and logged with descriptive message"""
         import ccxt
         
-        with patch('ccxt.okx') as mock_okx:
+        with patch('ccxt.binanceusdm') as mock_binance:
             # Mock the exchange to raise NetworkError
             mock_exchange = Mock()
             mock_exchange.load_markets.side_effect = ccxt.NetworkError("Connection timeout")
-            mock_okx.return_value = mock_exchange
+            mock_binance.return_value = mock_exchange
             
-            connector = ExchangeConnector(exchange_id='okx')
+            connector = ExchangeConnector(exchange_id='binanceusdm')
             
             # Should raise ConnectionError with descriptive message
             with self.assertRaises(ConnectionError) as context:
                 connector.connect()
             
             # Verify error message contains exchange name and details
-            self.assertIn('okx', str(context.exception).lower())
+            self.assertIn('binanceusdm', str(context.exception).lower())
             self.assertIn('network', str(context.exception).lower())
     
     def test_exchange_connection_exchange_error(self):
         """Test that ExchangeError is caught and logged with descriptive message"""
         import ccxt
         
-        with patch('ccxt.okx') as mock_okx:
+        with patch('ccxt.binanceusdm') as mock_binance:
             # Mock the exchange to raise ExchangeError
             mock_exchange = Mock()
             mock_exchange.load_markets.side_effect = ccxt.ExchangeError("API key invalid")
-            mock_okx.return_value = mock_exchange
+            mock_binance.return_value = mock_exchange
             
-            connector = ExchangeConnector(exchange_id='okx')
+            connector = ExchangeConnector(exchange_id='binanceusdm')
             
             # Should raise ConnectionError with descriptive message
             with self.assertRaises(ConnectionError) as context:
                 connector.connect()
             
             # Verify error message contains exchange name and details
-            self.assertIn('okx', str(context.exception).lower())
+            self.assertIn('binanceusdm', str(context.exception).lower())
     
     def test_dashboard_empty_dataframe_error(self):
         """Test that empty DataFrame raises KeyError with descriptive message"""

@@ -12,29 +12,40 @@ logger = logging.getLogger(__name__)
 
 class ExchangeConnector:
     """
-    Manages connection to OKX exchange via CCXT library.
+    Manages connection to cryptocurrency exchanges via CCXT library.
     
-    This class initializes and validates the connection to OKX exchange,
-    ensuring that Binance is NOT used (per regional restrictions).
+    Supports Binance USDT-M Futures exchange.
     """
     
-    def __init__(self, exchange_id: str = 'okx'):
+    # Supported exchanges (OKX removed due to API compatibility issues)
+    SUPPORTED_EXCHANGES = ['binance', 'binanceusdm']
+    
+    # Blocked exchanges
+    BLOCKED_EXCHANGES = ['okx']
+    
+    def __init__(self, exchange_id: str = 'binanceusdm'):
         """
         Initialize CCXT exchange instance.
         
         Args:
-            exchange_id: Exchange identifier (default: 'okx')
+            exchange_id: Exchange identifier. Supported: 'binance', 'binanceusdm'
+                        Default: 'binanceusdm' (Binance USDT-M Futures)
             
         Raises:
-            ValueError: If exchange_id is 'binance' (blocked exchange)
+            ValueError: If exchange_id is not supported or is blocked
         """
-        # Validate that Binance is NOT used
-        if exchange_id.lower() == 'binance':
-            error_msg = "Binance exchange is not allowed due to regional restrictions"
+        # Check if exchange is blocked
+        if exchange_id.lower() in self.BLOCKED_EXCHANGES:
+            error_msg = f"OKX exchange is not allowed due to API compatibility issues. Use 'binanceusdm' instead."
             logger.error(error_msg)
             raise ValueError(error_msg)
         
-        self.exchange_id = exchange_id
+        if exchange_id.lower() not in self.SUPPORTED_EXCHANGES:
+            error_msg = f"Exchange '{exchange_id}' not supported. Use one of: {self.SUPPORTED_EXCHANGES}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        self.exchange_id = exchange_id.lower()
         self.exchange = None
         logger.info(f"ExchangeConnector initialized with exchange: {exchange_id}")
     
@@ -49,7 +60,6 @@ class ExchangeConnector:
             ConnectionError: If connection to exchange fails
         """
         try:
-            # Initialize the exchange instance
             logger.info(f"Attempting to connect to {self.exchange_id} exchange...")
             
             # Get the exchange class dynamically

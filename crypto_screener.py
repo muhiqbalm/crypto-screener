@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """
-Crypto Screener System
+Crypto Screener System (LEGACY FILE - DEPRECATED)
+
+WARNING: This is a legacy monolithic file. Please use the modular structure in src/ instead.
+The main entry point is now main.py which uses the modular components.
+
+This file is kept for reference only and uses OKX exchange which is no longer supported.
+For production use, please use:
+- main.py (entry point)
+- src/exchange/connector.py (Binance USDT-M Futures)
+- src/data/fetcher.py (market data)
+- src/signals/ (signal generation)
+- src/visualization/ (dashboard)
 
 A real-time cryptocurrency asset screener that fetches market data from OKX exchange,
 applies quantitative scoring algorithms, and generates static visualization dashboards.

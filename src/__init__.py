@@ -1,7 +1,7 @@
 """
 Crypto Screener System
 
-A modular cryptocurrency asset screener that fetches market data from OKX exchange,
+A modular cryptocurrency asset screener that fetches market data from Binance USDT-M Futures exchange,
 applies quantitative scoring algorithms, and generates static visualization dashboards.
 """
 

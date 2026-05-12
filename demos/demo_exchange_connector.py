@@ -16,16 +16,16 @@ def demo_exchange_connector():
     print("ExchangeConnector Demo")
     print("=" * 60)
     
-    # 1. Initialize connector with OKX (default)
-    print("\n1. Initializing ExchangeConnector with OKX...")
+    # 1. Initialize connector with Binance USDT-M Futures (default)
+    print("\n1. Initializing ExchangeConnector with Binance USDT-M Futures...")
     connector = ExchangeConnector()
     print(f"   Exchange ID: {connector.exchange_id}")
     
-    # 2. Try to initialize with Binance (should fail)
-    print("\n2. Attempting to initialize with Binance (should fail)...")
+    # 2. Try to initialize with OKX (should fail)
+    print("\n2. Attempting to initialize with OKX (should fail)...")
     try:
-        binance_connector = ExchangeConnector(exchange_id='binance')
-        print("   ERROR: Binance should have been blocked!")
+        okx_connector = ExchangeConnector(exchange_id='okx')
+        print("   ERROR: OKX should have been blocked!")
     except ValueError as e:
         print(f"   ✓ Correctly blocked: {e}")
     
@@ -38,7 +38,7 @@ def demo_exchange_connector():
         print(f"   ✓ Correctly raised error: {e}")
     
     # 4. Connect to exchange
-    print("\n4. Connecting to OKX exchange...")
+    print("\n4. Connecting to Binance USDT-M Futures exchange...")
     try:
         result = connector.connect()
         if result:
@@ -48,7 +48,7 @@ def demo_exchange_connector():
             print(f"   ✓ Markets loaded: {len(exchange.markets)}")
     except ConnectionError as e:
         print(f"   ⚠ Connection failed (network issue): {e}")
-        print("   This is expected if OKX is not accessible from your network.")
+        print("   This is expected if Binance is not accessible from your network.")
     
     print("\n" + "=" * 60)
     print("Demo complete!")

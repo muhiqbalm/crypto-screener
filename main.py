@@ -56,15 +56,15 @@ def main():
     logger.info("Starting Crypto Screener System")
     logger.info("=" * 70)
     
-    # Define symbol list
+    # Define symbol list (Binance USDT-M Futures compatible)
     SYMBOLS = [
         'BTC/USDT:USDT',
         'ETH/USDT:USDT',
-        'ZEC/USDT:USDT',
-        'TAO/USDT:USDT',
-        'TON/USDT:USDT',
+        'SOL/USDT:USDT',
         'AAVE/USDT:USDT',
-        'SOL/USDT:USDT'
+        'LINK/USDT:USDT',
+        'AVAX/USDT:USDT',
+        'DOGE/USDT:USDT'
     ]
     
     logger.info(f"Target symbols: {SYMBOLS}")
@@ -75,7 +75,7 @@ def main():
         logger.info("Stage 1: Connecting to exchange")
         logger.info("=" * 70)
         
-        connector = ExchangeConnector(exchange_id='okx')
+        connector = ExchangeConnector(exchange_id='binanceusdm')
         connector.connect()
         exchange = connector.get_exchange()
         
@@ -86,6 +86,7 @@ def main():
         logger.info("Stage 2: Fetching market data")
         logger.info("=" * 70)
         
+        # Binance USDT-M Futures symbol format: 'BTC/USDT:USDT'
         fetcher = MarketDataFetcher(exchange, SYMBOLS)
         market_data = fetcher.fetch_all_data()
         

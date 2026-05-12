@@ -3,7 +3,7 @@
 Test script for main() function with mocked exchange connection.
 
 This script tests the complete pipeline without requiring actual network access
-to the OKX exchange. It mocks the exchange connection and data fetching to
+to the Binance exchange. It mocks the exchange connection and data fetching to
 verify that all pipeline stages execute correctly.
 """
 

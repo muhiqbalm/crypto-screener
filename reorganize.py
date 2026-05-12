@@ -285,7 +285,7 @@ def main():
         logger.info("Stage 1: Connecting to exchange")
         logger.info("=" * 70)
         
-        connector = ExchangeConnector(exchange_id='okx')
+        connector = ExchangeConnector(exchange_id='binanceusdm')
         connector.connect()
         exchange = connector.get_exchange()
         

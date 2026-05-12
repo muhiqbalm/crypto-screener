@@ -9,20 +9,20 @@ from crypto_screener import ExchangeConnector
 
 
 def test_exchange_connector_initialization():
-    """Test that ExchangeConnector initializes with OKX by default"""
+    """Test that ExchangeConnector initializes with Binance USDT-M Futures by default"""
     connector = ExchangeConnector()
-    assert connector.exchange_id == 'okx'
+    assert connector.exchange_id == 'binanceusdm'
     assert connector.exchange is None  # Not connected yet
 
 
-def test_exchange_connector_binance_blocked():
-    """Test that Binance is blocked and raises ValueError"""
-    with pytest.raises(ValueError, match="Binance exchange is not allowed"):
-        ExchangeConnector(exchange_id='binance')
+def test_exchange_connector_okx_blocked():
+    """Test that OKX is blocked and raises ValueError"""
+    with pytest.raises(ValueError, match="OKX exchange is not allowed"):
+        ExchangeConnector(exchange_id='okx')
     
     # Test case-insensitive blocking
-    with pytest.raises(ValueError, match="Binance exchange is not allowed"):
-        ExchangeConnector(exchange_id='BINANCE')
+    with pytest.raises(ValueError, match="OKX exchange is not allowed"):
+        ExchangeConnector(exchange_id='OKX')
 
 
 def test_get_exchange_before_connect():
@@ -33,7 +33,7 @@ def test_get_exchange_before_connect():
 
 
 def test_connect_success():
-    """Test successful connection to OKX exchange"""
+    """Test successful connection to Binance USDT-M Futures exchange"""
     connector = ExchangeConnector()
     
     try:
@@ -46,7 +46,7 @@ def test_connect_success():
         assert exchange is not None
         assert hasattr(exchange, 'markets')
         
-        print(f"✓ Successfully connected to OKX exchange")
+        print(f"✓ Successfully connected to Binance USDT-M Futures exchange")
         print(f"✓ Loaded {len(exchange.markets)} markets")
         
     except ConnectionError as e:
@@ -69,9 +69,9 @@ if __name__ == "__main__":
     test_exchange_connector_initialization()
     print("✓ Initialization test passed")
     
-    print("\n2. Testing Binance blocking...")
-    test_exchange_connector_binance_blocked()
-    print("✓ Binance blocking test passed")
+    print("\n2. Testing OKX blocking...")
+    test_exchange_connector_okx_blocked()
+    print("✓ OKX blocking test passed")
     
     print("\n3. Testing get_exchange before connect...")
     test_get_exchange_before_connect()

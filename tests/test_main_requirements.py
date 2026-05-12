@@ -90,7 +90,7 @@ class TestMainRequirements(unittest.TestCase):
             pass
         
         # Verify all components were initialized
-        mock_connector.assert_called_once_with(exchange_id='okx')
+        mock_connector.assert_called_once_with(exchange_id='binanceusdm')
         mock_fetcher.assert_called_once()
         mock_signal_gen.assert_called_once()
         mock_ic_calc.assert_called_once()

@@ -25,7 +25,7 @@ class MarketDataFetcher:
         Initialize MarketDataFetcher with exchange and symbol list.
         
         Args:
-            exchange: CCXT exchange instance (e.g., OKX)
+            exchange: CCXT exchange instance (e.g., Binance USDT-M Futures)
             symbols: List of perpetual futures symbols (e.g., ['ZEC/USDT:USDT', 'TAO/USDT:USDT'])
         """
         self.exchange = exchange
@@ -117,10 +117,7 @@ class MarketDataFetcher:
         """
         Fetch current long/short ratio for a perpetual futures contract.
         
-        Uses direct HTTP request to OKX Rubik API since CCXT doesn't support
-        fetchLongShortRatio for OKX yet.
-        
-        API: GET /api/v5/rubik/stat/contracts/long-short-account-ratio-contract-top-trader
+        Uses Binance Futures API for top trader long/short ratio.
         
         Args:
             symbol: Perpetual futures symbol (e.g., 'BTC/USDT:USDT')
@@ -131,26 +128,28 @@ class MarketDataFetcher:
         try:
             import requests
             
-            # Convert CCXT symbol format to OKX instId format
-            # 'BTC/USDT:USDT' -> 'BTC-USDT-SWAP'
+            exchange_id = self.exchange.id.lower()
             market = self.exchange.market(symbol)
-            inst_id = market['id']
             
-            # Direct HTTP request to OKX Rubik API
-            url = 'https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio-contract-top-trader'
-            params = {
-                'instId': inst_id,
-                'period': '5m'
-            }
-            
-            response = requests.get(url, params=params, timeout=10)
-            data = response.json()
-            
-            if data.get('code') == '0' and data.get('data') and len(data['data']) > 0:
-                latest_data = data['data'][0]
-                ratio = float(latest_data.get('longShortRatio', 0))
-                logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
-                return ratio
+            if exchange_id in ['binance', 'binanceusdm']:
+                # Binance Futures API for top trader long/short ratio
+                # Extract symbol without slash (e.g., 'BTCUSDT')
+                binance_symbol = market['id']  # e.g., 'BTCUSDT'
+                
+                url = 'https://fapi.binance.com/futures/data/topLongShortAccountRatio'
+                params = {
+                    'symbol': binance_symbol,
+                    'period': '5m',
+                    'limit': 1
+                }
+                
+                response = requests.get(url, params=params, timeout=10)
+                data = response.json()
+                
+                if data and len(data) > 0:
+                    ratio = float(data[0].get('longShortRatio', 0))
+                    logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
+                    return ratio
             
             logger.warning(f"Long/short ratio data not available for {symbol}")
             return None

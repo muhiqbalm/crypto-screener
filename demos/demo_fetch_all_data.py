@@ -15,13 +15,13 @@ def main():
     print("=" * 60)
     
     # Initialize exchange connector
-    print("\n1. Connecting to OKX exchange...")
+    print("\n1. Connecting to Binance USDT-M Futures exchange...")
     connector = ExchangeConnector()
     
     try:
         connector.connect()
         exchange = connector.get_exchange()
-        print("✓ Successfully connected to OKX exchange")
+        print("✓ Successfully connected to Binance USDT-M Futures exchange")
     except Exception as e:
         print(f"✗ Failed to connect: {e}")
         return
