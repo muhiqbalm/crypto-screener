@@ -4,8 +4,15 @@ Multi-Factor Scorer Module
 Combines multiple trading signals into a multi-factor score.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
+
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .ic_weights import ICWeightCalculator
 
 logger = logging.getLogger(__name__)
 
