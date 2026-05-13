@@ -121,7 +121,7 @@ def get_debug_service(request: Request) -> DebugExchangeService:
 
 
 @router.get(
-    "/exchange/ticker/{symbol}",
+    "/exchange/ticker/{symbol:path}",
     response_model=DebugResponse,
     summary="Get raw ticker data",
     description="Retrieve unprocessed ticker data from Binance Futures API including price, volume, and 24-hour change information",
@@ -194,7 +194,7 @@ async def get_raw_ticker(
 
 
 @router.get(
-    "/exchange/open-interest/{symbol}",
+    "/exchange/open-interest/{symbol:path}",
     response_model=DebugResponse,
     summary="Get raw open interest data",
     description="Retrieve unprocessed open interest data showing total outstanding derivative contracts",
@@ -263,7 +263,7 @@ async def get_raw_open_interest(
 
 
 @router.get(
-    "/exchange/funding-rate/{symbol}",
+    "/exchange/funding-rate/{symbol:path}",
     response_model=DebugResponse,
     summary="Get raw funding rate data",
     description="Retrieve unprocessed funding rate data showing periodic payments between long and short positions",
@@ -332,7 +332,7 @@ async def get_raw_funding_rate(
 
 
 @router.get(
-    "/exchange/long-short-ratio/{symbol}",
+    "/exchange/long-short-ratio/{symbol:path}",
     response_model=DebugResponse,
     summary="Get raw long/short ratio data",
     description="Retrieve unprocessed long/short ratio data from Binance top trader statistics",
@@ -400,7 +400,7 @@ async def get_raw_long_short_ratio(
 
 
 @router.get(
-    "/exchange/all/{symbol}",
+    "/exchange/all/{symbol:path}",
     response_model=AggregatedDebugResponse,
     summary="Get aggregated raw data for all types",
     description="Retrieve raw data for ticker, open interest, funding rate, and long/short ratio concurrently",
