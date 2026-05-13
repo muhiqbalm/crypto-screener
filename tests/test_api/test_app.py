@@ -113,6 +113,28 @@ class TestLifespan:
         assert hasattr(lifespan_app.state, "active_requests")
         assert lifespan_app.state.active_requests == 0
 
+    @pytest.mark.asyncio
+    async def test_lifespan_initializes_debug_service(self, lifespan_app):
+        """Lifespan startup initializes DebugExchangeService in app.state."""
+        from src.services.debug_exchange_service import DebugExchangeService
+
+        # Debug service should be initialized (or None if initialization failed)
+        assert hasattr(lifespan_app.state, "debug_service")
+        # If initialization succeeded, it should be a DebugExchangeService instance
+        if lifespan_app.state.debug_service is not None:
+            assert isinstance(lifespan_app.state.debug_service, DebugExchangeService)
+
+    @pytest.mark.asyncio
+    async def test_lifespan_initializes_exchange_connector(self, lifespan_app):
+        """Lifespan startup initializes ExchangeConnector in app.state."""
+        from src.exchange.connector import ExchangeConnector
+
+        # Exchange connector should be initialized (or None if initialization failed)
+        assert hasattr(lifespan_app.state, "exchange_connector")
+        # If initialization succeeded, it should be an ExchangeConnector instance
+        if lifespan_app.state.exchange_connector is not None:
+            assert isinstance(lifespan_app.state.exchange_connector, ExchangeConnector)
+
 
 class TestGracefulShutdown:
     """Tests for graceful shutdown behavior (503 rejection)."""

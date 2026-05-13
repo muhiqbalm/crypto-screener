@@ -33,6 +33,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware that logs each request with endpoint, method, and response time.
 
     Also rejects new requests with 503 when the application is shutting down.
+    
+    For debug endpoints, additionally logs:
+    - Symbol parameter (from path parameters)
+    - Requester identity (from X-Forwarded-For, X-Real-IP, or User-Agent headers)
     """
 
     async def dispatch(
@@ -69,14 +73,34 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         response_time_ms = (time.perf_counter() - start_time) * 1000
 
+        # Build log extra data
+        log_extra = {
+            "endpoint": request.url.path,
+            "method": request.method,
+            "status_code": response.status_code,
+            "response_time_ms": round(response_time_ms, 2),
+        }
+
+        # For debug endpoints, add symbol parameter and requester identity
+        if request.url.path.startswith("/api/v1/debug/"):
+            # Extract symbol from path parameters if present
+            path_params = request.path_params
+            if "symbol" in path_params:
+                log_extra["symbol"] = path_params["symbol"]
+            
+            # Extract requester identity from headers
+            # Priority: X-Forwarded-For > X-Real-IP > User-Agent
+            requester_identity = (
+                request.headers.get("X-Forwarded-For") or
+                request.headers.get("X-Real-IP") or
+                request.headers.get("User-Agent") or
+                "unknown"
+            )
+            log_extra["requester_identity"] = requester_identity
+
         logger.info(
             "Request completed",
-            extra={
-                "endpoint": request.url.path,
-                "method": request.method,
-                "status_code": response.status_code,
-                "response_time_ms": round(response_time_ms, 2),
-            },
+            extra=log_extra,
         )
 
         return response
@@ -106,6 +130,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.start_time = time.time()
     app.state.shutting_down = False
     app.state.active_requests = 0
+
+    # Initialize ExchangeConnector and DebugExchangeService for debug endpoints
+    from src.exchange.connector import ExchangeConnector
+    from src.services.debug_exchange_service import DebugExchangeService
+
+    try:
+        exchange_connector = ExchangeConnector(exchange_id="binanceusdm")
+        exchange_connector.connect()
+        app.state.exchange_connector = exchange_connector
+        app.state.debug_service = DebugExchangeService(exchange_connector)
+        logger.info("DebugExchangeService initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize DebugExchangeService: {e}")
+        # Continue startup even if debug service fails to initialize
+        app.state.exchange_connector = None
+        app.state.debug_service = None
 
     # Register signal handlers for graceful shutdown
     loop = asyncio.get_running_loop()
@@ -177,8 +217,56 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Crypto Screener API",
         version="1.0.0",
-        description="REST API backend for crypto screener data",
+        description="""
+REST API backend for crypto screener data with diagnostic capabilities.
+
+## Features
+
+### Main API
+- Real-time cryptocurrency market data from Binance Futures
+- Price, volume, and market metrics for multiple trading pairs
+- Caching for improved performance
+
+### Debug API
+The Debug API provides diagnostic and debugging capabilities for monitoring raw responses 
+from the Binance Futures exchange API. These endpoints expose unprocessed exchange data 
+for troubleshooting and verification purposes.
+
+**Debug endpoints include:**
+- Raw ticker data (price, volume, 24h change)
+- Raw open interest data
+- Raw funding rate data
+- Raw long/short ratio data
+- Aggregated data (all types in one request)
+- Exchange health check
+
+**Features:**
+- Request/response timing metrics
+- Field mapping documentation
+- Graceful error handling
+- Concurrent data fetching
+- Optional authentication
+
+## Authentication
+
+Debug API endpoints support optional Bearer token authentication. When enabled, 
+include the token in the Authorization header:
+
+```
+Authorization: Bearer <your-token>
+```
+        """,
         lifespan=lifespan,
+        openapi_tags=[
+            {
+                "name": "Main API",
+                "description": "Primary endpoints for cryptocurrency market data"
+            },
+            {
+                "name": "Debug API",
+                "description": "Diagnostic endpoints for raw exchange data inspection and troubleshooting"
+            }
+        ]
     )
 
     # Store settings in app.state for access by lifespan and middleware
@@ -195,10 +283,27 @@ def create_app() -> FastAPI:
 
     # Register request logging middleware
     app.add_middleware(RequestLoggingMiddleware)
+    
+    # Register rate limiting middleware for debug endpoints (if enabled)
+    if settings.debug_rate_limit_enabled:
+        from src.api.rate_limit_middleware import RateLimitMiddleware
+        
+        app.add_middleware(
+            RateLimitMiddleware,
+            max_requests=settings.debug_rate_limit_requests,
+            window_seconds=settings.debug_rate_limit_window,
+        )
+        logger.info(
+            f"Rate limiting enabled for debug endpoints: "
+            f"{settings.debug_rate_limit_requests} requests per "
+            f"{settings.debug_rate_limit_window} seconds"
+        )
 
     # Register API routes
     from src.api.routes import router
+    from src.api.debug_routes import router as debug_router
 
     app.include_router(router)
+    app.include_router(debug_router)
 
     return app
