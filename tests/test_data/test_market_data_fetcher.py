@@ -6,7 +6,7 @@ Basic tests for MarketDataFetcher class
 import sys
 import pytest
 from unittest.mock import Mock, MagicMock
-from crypto_screener import MarketDataFetcher
+from src.data.fetcher import MarketDataFetcher
 
 
 def test_market_data_fetcher_initialization():
@@ -22,13 +22,14 @@ def test_market_data_fetcher_initialization():
 
 
 def test_fetch_ticker_data():
-    """Test fetching ticker data extracts price and 24h change correctly"""
+    """Test fetching ticker data extracts price, 24h change, and volume correctly"""
     mock_exchange = Mock()
     
     # Mock the fetch_ticker response
     mock_exchange.fetch_ticker.return_value = {
         'last': 45.67,
         'percentage': 2.34,
+        'quoteVolume': 1234567.89,
         'symbol': 'ZEC/USDT:USDT'
     }
     
@@ -37,6 +38,7 @@ def test_fetch_ticker_data():
     
     assert result['price'] == 45.67
     assert result['change_24h'] == 2.34
+    assert result['volume_24h'] == 1234567.89
     mock_exchange.fetch_ticker.assert_called_once_with('ZEC/USDT:USDT')
 
 
@@ -54,6 +56,27 @@ def test_fetch_ticker_data_missing_fields():
     
     assert result['price'] is None
     assert result['change_24h'] is None
+    assert result['volume_24h'] is None
+
+
+def test_fetch_ticker_data_baseVolume_fallback():
+    """Test fetching ticker data falls back to baseVolume when quoteVolume is missing"""
+    mock_exchange = Mock()
+    
+    # Mock response with baseVolume but no quoteVolume
+    mock_exchange.fetch_ticker.return_value = {
+        'last': 45.67,
+        'percentage': 2.34,
+        'baseVolume': 9876543.21,
+        'symbol': 'ZEC/USDT:USDT'
+    }
+    
+    fetcher = MarketDataFetcher(mock_exchange, ['ZEC/USDT:USDT'])
+    result = fetcher.fetch_ticker_data('ZEC/USDT:USDT')
+    
+    assert result['price'] == 45.67
+    assert result['change_24h'] == 2.34
+    assert result['volume_24h'] == 9876543.21
 
 
 def test_fetch_funding_rate():
@@ -140,23 +163,27 @@ if __name__ == "__main__":
     test_fetch_ticker_data_missing_fields()
     print("✓ Fetch ticker data with missing fields test passed")
     
-    print("\n4. Testing fetch_funding_rate...")
+    print("\n4. Testing fetch_ticker_data with baseVolume fallback...")
+    test_fetch_ticker_data_baseVolume_fallback()
+    print("✓ Fetch ticker data with baseVolume fallback test passed")
+    
+    print("\n5. Testing fetch_funding_rate...")
     test_fetch_funding_rate()
     print("✓ Fetch funding rate test passed")
     
-    print("\n5. Testing fetch_funding_rate with missing data...")
+    print("\n6. Testing fetch_funding_rate with missing data...")
     test_fetch_funding_rate_missing()
     print("✓ Fetch funding rate with missing data test passed")
     
-    print("\n6. Testing fetch_long_short_ratio...")
+    print("\n7. Testing fetch_long_short_ratio...")
     test_fetch_long_short_ratio()
     print("✓ Fetch long/short ratio test passed")
     
-    print("\n7. Testing fetch_ticker_data exception handling...")
+    print("\n8. Testing fetch_ticker_data exception handling...")
     test_fetch_ticker_data_exception()
     print("✓ Fetch ticker data exception test passed")
     
-    print("\n8. Testing fetch_funding_rate exception handling...")
+    print("\n9. Testing fetch_funding_rate exception handling...")
     test_fetch_funding_rate_exception()
     print("✓ Fetch funding rate exception test passed")
     

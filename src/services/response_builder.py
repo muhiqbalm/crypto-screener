@@ -217,10 +217,18 @@ class ResponseBuilder:
             if len(valid_funding) > 0:
                 avg_funding = self._sanitize_value(valid_funding.mean(), decimals=4)
 
-        if "volume_24h" in df.columns:
+        # Calculate total_volume according to requirement 2.3:
+        # - If assets array is empty: return 0.0
+        # - If all volume_24h values are null: return null
+        # - If at least one non-null volume_24h: return sum rounded to 2 decimals
+        if len(df) == 0:
+            # Empty assets array
+            total_vol = 0.0
+        elif "volume_24h" in df.columns:
             valid_volume = df["volume_24h"].dropna()
             if len(valid_volume) > 0:
                 total_vol = self._sanitize_value(valid_volume.sum(), decimals=2)
+            # else: total_vol remains None (all values are null)
 
         bullish_count = 0
         bearish_count = 0
@@ -292,9 +300,9 @@ class ResponseBuilder:
             signal=signal,
             price=self._sanitize_value(row.get("price"), decimals=2),
             change_24h=self._sanitize_value(row.get("change_24h"), decimals=4),
-            volume_24h=None,  # Not fetched in current implementation
+            volume_24h=self._sanitize_value(row.get("volume_24h"), decimals=2),
             funding_rate=self._sanitize_value(row.get("funding_rate"), decimals=4),
-            open_interest=None,  # Not fetched in current implementation
+            open_interest=self._sanitize_value(row.get("open_interest"), decimals=2),
             long_short_ratio=self._sanitize_value(row.get("long_short_ratio"), decimals=4),
             rsi=rsi,
             macd_signal=macd_signal,

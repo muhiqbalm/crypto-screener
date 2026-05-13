@@ -1,0 +1,133 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Volume and Open Interest Return Null
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases - API requests to `/api/v1/screener/summary` and `/api/v1/screener/assets/{symbol}` endpoints
+  - Test that `volume_24h` and `open_interest` fields return null for all assets in the summary endpoint response
+  - Test that `volume_24h` and `open_interest` fields return null for individual asset detail endpoint responses
+  - Test that `market_overview.total_volume` returns null when all `volume_24h` values are null
+  - The test assertions should match the Expected Behavior Properties from design (non-null numeric values when exchange provides data)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause (e.g., "GET /api/v1/screener/summary returns volume_24h: null for BTC/USDT:USDT despite exchange providing volume data")
+  - Verify root cause by inspecting `src/services/response_builder.py` lines 296 and 298 for hardcoded None values
+  - Verify that `src/data/fetcher.py` does not extract volume from CCXT ticker response
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Volume/OI Field Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-volume/open-interest fields (price, change_24h, funding_rate, long_short_ratio, rsi, macd_signal, volatility, composite_score, rank, signal)
+  - Observe that market_overview aggregations (avg_change_24h, avg_funding_rate, bullish_count, bearish_count, neutral_count) work correctly on unfixed code
+  - Observe that cache behavior (cache_hit, data_age_seconds, stale_data_warning) works correctly on unfixed code
+  - Observe that error handling (404, 500, 503) works correctly on unfixed code
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Property-based testing generates many test cases for stronger guarantees
+  - Test that all non-volume/OI fields produce identical values before and after fix
+  - Test that composite score calculation and ranking remain unchanged
+  - Test that signal derivation (BULLISH/BEARISH/NEUTRAL) remains unchanged
+  - Test that market overview aggregations remain unchanged
+  - Test that cache behavior remains unchanged
+  - Test that error handling remains unchanged
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10_
+
+- [x] 3. Fix for null volume_24h and open_interest fields
+
+  - [x] 3.1 Modify MarketDataFetcher to extract volume_24h from CCXT ticker
+    - Open `src/data/fetcher.py` and locate the `fetch_ticker_data()` method
+    - Extract 24-hour trading volume from CCXT ticker response using `ticker.get('quoteVolume', None)`
+    - If `quoteVolume` is not available, try `baseVolume` as fallback
+    - If both are unavailable, set volume_24h to None
+    - Return volume_24h in the dictionary alongside price and change_24h
+    - Add appropriate logging for debugging
+    - _Bug_Condition: isBugCondition(api_request) where api_request.endpoint IN ['/api/v1/screener/summary', '/api/v1/screener/assets/{symbol}'] AND response.asset.volume_24h == null_
+    - _Expected_Behavior: volume_24h should be non-negative numeric value with up to 2 decimal places when exchange provides data, null otherwise_
+    - _Preservation: All other ticker data extraction (price, change_24h) must remain unchanged_
+    - _Requirements: 2.1, 2.4, 2.6, 2.7, 2.8_
+
+  - [x] 3.2 Create fetch_open_interest() method in MarketDataFetcher
+    - Open `src/data/fetcher.py` and add a new method `fetch_open_interest(symbol: str) -> float`
+    - Use CCXT's `exchange.fetch_open_interest(symbol)` method
+    - Extract the `openInterestAmount` or `openInterest` field from the response
+    - Handle exceptions gracefully (return None if data unavailable or request times out after 5 seconds)
+    - Add appropriate logging for debugging
+    - _Bug_Condition: isBugCondition(api_request) where api_request.endpoint IN ['/api/v1/screener/summary', '/api/v1/screener/assets/{symbol}'] AND response.asset.open_interest == null_
+    - _Expected_Behavior: open_interest should be non-negative numeric value between 0 and 999999999999.99 with up to 2 decimal places when exchange provides data, null otherwise_
+    - _Preservation: All other data fetching methods must remain unchanged_
+    - _Requirements: 2.2, 2.2.1, 2.2.2, 2.5, 2.6, 2.7, 2.8_
+
+  - [x] 3.3 Update fetch_all_data() to populate volume_24h and open_interest columns
+    - Open `src/data/fetcher.py` and locate the `fetch_all_data()` method
+    - Extract volume_24h from the ticker_data dictionary returned by `fetch_ticker_data()`
+    - Call the new `fetch_open_interest()` method for each symbol
+    - Store both values in the DataFrame record
+    - Handle None values gracefully (set to np.nan in DataFrame)
+    - Add error handling for exchange failures
+    - _Bug_Condition: DataFrame columns for volume_24h and open_interest are initialized to np.nan but never populated with actual data_
+    - _Expected_Behavior: DataFrame should contain actual volume_24h and open_interest values from exchange when available_
+    - _Preservation: All other DataFrame column population (price, change_24h, funding_rate, etc.) must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.4, 2.5, 2.6, 2.7, 2.8_
+
+  - [x] 3.4 Update ResponseBuilder to map volume_24h and open_interest from DataFrame
+    - Open `src/services/response_builder.py` and locate the `_build_asset()` method (around lines 296 and 298)
+    - Replace hardcoded `volume_24h=None` with `volume_24h=self._sanitize_value(row.get("volume_24h"), decimals=2)`
+    - Replace hardcoded `open_interest=None` with `open_interest=self._sanitize_value(row.get("open_interest"), decimals=2)`
+    - Remove comments "# Not fetched in current implementation"
+    - Verify that `_sanitize_value()` method handles None, np.nan, and numeric values correctly
+    - _Bug_Condition: ResponseBuilder._build_asset() hardcodes volume_24h=None and open_interest=None_
+    - _Expected_Behavior: ResponseBuilder should map volume_24h and open_interest from DataFrame to API response_
+    - _Preservation: All other field mappings (price, change_24h, funding_rate, etc.) must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.4, 2.5_
+
+  - [x] 3.5 Update _build_market_overview() to calculate total_volume
+    - Open `src/services/response_builder.py` and locate the `_build_market_overview()` method
+    - Verify that total_volume calculation sums all non-null volume_24h values from assets array
+    - If all volume_24h values are null, total_volume should be null
+    - If assets array is empty, total_volume should be 0.0
+    - Round total_volume to 2 decimal places
+    - _Bug_Condition: total_volume returns null because all volume_24h values are null_
+    - _Expected_Behavior: total_volume should be sum of all non-null volume_24h values, rounded to 2 decimal places_
+    - _Preservation: All other market_overview calculations (avg_change_24h, avg_funding_rate, sentiment counts) must remain unchanged_
+    - _Requirements: 2.3_
+
+  - [x] 3.6 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Volume and Open Interest Return Non-Null Values
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify that `volume_24h` and `open_interest` fields return non-null numeric values when exchange provides data
+    - Verify that `market_overview.total_volume` returns sum of all non-null volume_24h values
+    - Verify that graceful degradation works (null when exchange doesn't provide data)
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Volume/OI Field Behavior
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify that all non-volume/OI fields (price, change_24h, funding_rate, long_short_ratio, rsi, macd_signal, volatility, composite_score, rank, signal) produce identical values before and after fix
+    - Verify that market_overview aggregations (avg_change_24h, avg_funding_rate, bullish_count, bearish_count, neutral_count) remain unchanged
+    - Verify that cache behavior (cache_hit, data_age_seconds, stale_data_warning) remains unchanged
+    - Verify that error handling (404, 500, 503) remains unchanged
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all bug condition exploration tests and verify they pass
+  - Run all preservation property tests and verify they pass
+  - Run any existing unit tests and integration tests to ensure no regressions
+  - Verify that the API endpoints return correct volume_24h and open_interest values
+  - Verify that total_volume calculation works correctly
+  - Verify that graceful degradation works when exchange doesn't provide data
+  - If any tests fail, investigate and fix the issues before proceeding
+  - Ask the user if questions arise

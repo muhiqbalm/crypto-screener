@@ -168,6 +168,8 @@ def test_app(mock_settings, mock_data_processor, mock_cache_manager, mock_respon
     Patches Settings so create_app() uses mock_settings, then overrides
     app.state with mock services.
     """
+    import time
+    
     with patch("src.api.app.Settings", return_value=mock_settings):
         from src.api.app import create_app
 
@@ -178,6 +180,7 @@ def test_app(mock_settings, mock_data_processor, mock_cache_manager, mock_respon
     app.state.data_processor = mock_data_processor
     app.state.cache_manager = mock_cache_manager
     app.state.response_builder = mock_response_builder
+    app.state.start_time = time.time()  # Add start_time for health endpoint
 
     return app
 

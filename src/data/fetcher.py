@@ -34,18 +34,19 @@ class MarketDataFetcher:
     
     def fetch_ticker_data(self, symbol: str) -> dict:
         """
-        Fetch current price and 24-hour change percentage for a symbol.
+        Fetch current price, 24-hour change percentage, and 24-hour volume for a symbol.
         
         CCXT Endpoint Mapping:
         - Uses exchange.fetch_ticker(symbol) method
         - Extracts 'last' field for current price
         - Extracts 'percentage' field for 24-hour percentage change
+        - Extracts 'quoteVolume' field for 24-hour trading volume (with 'baseVolume' as fallback)
         
         Args:
             symbol: Trading pair symbol (e.g., 'ZEC/USDT:USDT')
             
         Returns:
-            dict: Dictionary with 'price' and 'change_24h' keys
+            dict: Dictionary with 'price', 'change_24h', and 'volume_24h' keys
             
         Raises:
             Exception: If ticker data cannot be fetched
@@ -61,16 +62,79 @@ class MarketDataFetcher:
             # Extract 24h percentage change from 'percentage' field
             change_24h = ticker.get('percentage', None)
             
-            logger.debug(f"Fetched ticker for {symbol}: price={price}, change_24h={change_24h}%")
+            # Extract 24-hour trading volume
+            # Prefer quoteVolume (volume in quote currency, e.g., USDT) for consistency across assets
+            # Fall back to baseVolume if quoteVolume is not available
+            volume_24h = ticker.get('quoteVolume', None)
+            if volume_24h is None:
+                volume_24h = ticker.get('baseVolume', None)
+                if volume_24h is not None:
+                    logger.debug(f"Using baseVolume for {symbol} (quoteVolume not available)")
+            
+            logger.debug(f"Fetched ticker for {symbol}: price={price}, change_24h={change_24h}%, volume_24h={volume_24h}")
             
             return {
                 'price': price,
-                'change_24h': change_24h
+                'change_24h': change_24h,
+                'volume_24h': volume_24h
             }
             
         except Exception as e:
             logger.error(f"Failed to fetch ticker data for {symbol}: {e}")
             raise
+    
+    def fetch_open_interest(self, symbol: str) -> float:
+        """
+        Fetch current open interest for a perpetual futures contract.
+        
+        CCXT Endpoint Mapping:
+        - Uses exchange.fetch_open_interest(symbol) method
+        - Extracts 'openInterestAmount' or 'openInterest' field from response
+        - Open interest represents the total number of outstanding derivative contracts
+        
+        Args:
+            symbol: Perpetual futures symbol (e.g., 'BTC/USDT:USDT')
+            
+        Returns:
+            float: Open interest value, or None if data unavailable or request times out
+        """
+        try:
+            # Fetch open interest from CCXT with 5-second timeout
+            # CCXT endpoint: exchange.fetch_open_interest() returns open interest info
+            open_interest_data = self.exchange.fetch_open_interest(symbol, params={'timeout': 5000})
+            
+            # Extract open interest from 'openInterestAmount' field (preferred)
+            # Fall back to 'openInterest' if 'openInterestAmount' is not available
+            open_interest = open_interest_data.get('openInterestAmount', None)
+            if open_interest is None:
+                open_interest = open_interest_data.get('openInterest', None)
+            
+            if open_interest is not None:
+                # Validate that the value is numeric and within acceptable range
+                try:
+                    open_interest_value = float(open_interest)
+                    
+                    # Validate range: must be non-negative and not exceed max value
+                    if open_interest_value < 0 or open_interest_value > 999999999999.99:
+                        logger.warning(
+                            f"Open interest value out of range for {symbol}: {open_interest_value}"
+                        )
+                        return None
+                    
+                    logger.debug(f"Fetched open interest for {symbol}: {open_interest_value}")
+                    return open_interest_value
+                    
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid open interest value for {symbol}: {open_interest} - {e}")
+                    return None
+            else:
+                logger.debug(f"Open interest not available for {symbol}")
+                return None
+                
+        except Exception as e:
+            # Handle timeout and other exceptions gracefully
+            logger.warning(f"Failed to fetch open interest for {symbol}: {e}")
+            return None
     
     def fetch_funding_rate(self, symbol: str) -> float:
         """
@@ -645,7 +709,7 @@ class MarketDataFetcher:
         Fetch all market data fields for all symbols with graceful error handling.
         
         This method loops through the symbol list and fetches ticker data, funding rate,
-        long/short ratio, and 30-day momentum for each symbol. If any field fails to fetch,
+        long/short ratio, open interest, and 30-day momentum for each symbol. If any field fails to fetch,
         it logs a warning and continues, setting NaN values for failed fields.
         
         Error Handling Strategy:
@@ -660,6 +724,8 @@ class MarketDataFetcher:
                 - symbol: Asset symbol (str)
                 - price: Current price (float, NaN if failed)
                 - change_24h: 24-hour percentage change (float, NaN if failed)
+                - volume_24h: 24-hour trading volume (float, NaN if failed)
+                - open_interest: Current open interest (float, NaN if failed)
                 - funding_rate: Funding rate percentage (float, NaN if failed)
                 - long_short_ratio: Long/short ratio (float, NaN if failed)
                 - momentum_30d: 30-day price momentum percentage (float, NaN if failed)
@@ -678,6 +744,8 @@ class MarketDataFetcher:
                 'symbol': symbol,
                 'price': np.nan,
                 'change_24h': np.nan,
+                'volume_24h': np.nan,
+                'open_interest': np.nan,
                 'funding_rate': np.nan,
                 'long_short_ratio': np.nan,
                 'momentum_30d': np.nan,
@@ -689,13 +757,21 @@ class MarketDataFetcher:
                 'oi_interpretation': 'neutral'
             }
             
-            # Fetch ticker data (price and 24h change) with error handling
+            # Fetch ticker data (price, 24h change, and volume_24h) with error handling
             try:
                 ticker_data = self.fetch_ticker_data(symbol)
                 record['price'] = ticker_data.get('price', np.nan)
                 record['change_24h'] = ticker_data.get('change_24h', np.nan)
+                record['volume_24h'] = ticker_data.get('volume_24h', np.nan)
             except Exception as e:
                 logger.warning(f"Failed to fetch ticker data for {symbol}: {e}")
+            
+            # Fetch open interest with error handling
+            try:
+                open_interest = self.fetch_open_interest(symbol)
+                record['open_interest'] = open_interest if open_interest is not None else np.nan
+            except Exception as e:
+                logger.warning(f"Failed to fetch open interest for {symbol}: {e}")
             
             # Fetch funding rate with error handling
             try:

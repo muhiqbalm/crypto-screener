@@ -216,6 +216,18 @@ class TestBuildMarketOverview:
         assert overview.avg_funding_rate is None
         assert overview.total_volume is None
 
+    def test_empty_dataframe(self, builder):
+        """Test that empty DataFrame returns total_volume=0.0 per requirement 2.3."""
+        df = pd.DataFrame()
+        overview = builder._build_market_overview(df)
+
+        assert overview.avg_change_24h is None
+        assert overview.avg_funding_rate is None
+        assert overview.total_volume == 0.0  # Requirement 2.3: empty assets array -> 0.0
+        assert overview.bullish_count == 0
+        assert overview.bearish_count == 0
+        assert overview.neutral_count == 0
+
 
 class TestBuildTop3Assets:
     """Tests for _build_top_3_assets method."""
