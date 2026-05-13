@@ -41,18 +41,16 @@ def sample_df():
         {
             "symbol": ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT", "DOGE/USDT:USDT"],
             "rank": [1, 2, 3, 4],
-            "composite_score": [0.85, 0.72, 0.65, 0.45],
-            "signal": ["BULLISH", "BULLISH", "NEUTRAL", "BEARISH"],
+            "multi_factor_score": [0.85, 0.72, 0.05, -0.65],  # Used for composite_score and signal derivation
+            "reversal_signal": [1.5, -0.5, 0.2, -1.8],  # Used for RSI calculation
+            "momentum_signal": [0.8, 0.6, 0.1, -0.9],  # Used for MACD signal derivation
             "price": [67500.50, 3450.25, 145.80, 0.1234],
             "change_24h": [2.5, -1.2, 5.3, -3.1],
             "volume_24h": [1500000000.0, 800000000.0, 300000000.0, 150000000.0],
             "funding_rate": [0.0001, 0.0002, -0.0001, 0.0003],
             "open_interest": [25000000000.0, 12000000000.0, 5000000000.0, 2000000000.0],
             "long_short_ratio": [1.25, 0.98, 1.10, 0.85],
-            "rsi": [65.5, 45.2, 72.1, 30.8],
-            "macd_signal": ["BUY", "SELL", "BUY", "SELL"],
-            "volatility": [0.025, 0.035, 0.045, 0.055],
-            "ic_weight": [0.15, 0.12, 0.10, 0.08],
+            "atr_percent": [0.025, 0.035, 0.045, 0.055],  # Maps to volatility
         }
     )
 
@@ -64,18 +62,16 @@ def df_with_nans():
         {
             "symbol": ["BTC/USDT:USDT", "ETH/USDT:USDT"],
             "rank": [1, 2],
-            "composite_score": [0.85, float("nan")],
-            "signal": ["BULLISH", None],
+            "multi_factor_score": [0.85, float("nan")],
+            "reversal_signal": [1.5, float("nan")],
+            "momentum_signal": [0.8, float("nan")],
             "price": [67500.50, float("nan")],
             "change_24h": [2.5, float("nan")],
             "volume_24h": [1500000000.0, float("nan")],
             "funding_rate": [0.0001, float("nan")],
             "open_interest": [25000000000.0, None],
             "long_short_ratio": [1.25, float("nan")],
-            "rsi": [65.5, float("nan")],
-            "macd_signal": ["BUY", None],
-            "volatility": [0.025, float("nan")],
-            "ic_weight": [0.15, float("nan")],
+            "atr_percent": [0.025, float("nan")],
         }
     )
 
@@ -187,7 +183,8 @@ class TestBuildMarketOverview:
         assert overview.avg_funding_rate == pytest.approx(0.0001, abs=0.0001)
         # total_volume: sum of all volumes
         assert overview.total_volume == pytest.approx(2750000000.0, abs=1.0)
-        # Signal counts
+        # Signal counts derived from multi_factor_score:
+        # [0.85, 0.72, 0.05, -0.65] -> [BULLISH, BULLISH, NEUTRAL, BEARISH]
         assert overview.bullish_count == 2
         assert overview.bearish_count == 1
         assert overview.neutral_count == 1
@@ -199,7 +196,7 @@ class TestBuildMarketOverview:
                 "change_24h": [float("nan"), float("nan")],
                 "funding_rate": [float("nan"), float("nan")],
                 "volume_24h": [float("nan"), float("nan")],
-                "signal": [None, None],
+                "multi_factor_score": [float("nan"), float("nan")],
             }
         )
         overview = builder._build_market_overview(df)
@@ -237,8 +234,7 @@ class TestBuildTop3Assets:
             {
                 "symbol": ["BTC/USDT:USDT"],
                 "rank": [1],
-                "composite_score": [0.9],
-                "signal": ["BULLISH"],
+                "multi_factor_score": [0.9],
             }
         )
         top_3 = builder._build_top_3_assets(df)
@@ -248,7 +244,7 @@ class TestBuildTop3Assets:
         assert top_3[0].rank == 1
 
     def test_empty_dataframe(self, builder):
-        df = pd.DataFrame(columns=["symbol", "rank", "composite_score", "signal"])
+        df = pd.DataFrame(columns=["symbol", "rank", "multi_factor_score"])
         top_3 = builder._build_top_3_assets(df)
 
         assert len(top_3) == 0
@@ -265,10 +261,12 @@ class TestBuildAsset:
         assert asset.symbol == "BTC/USDT:USDT"
         assert asset.rank == 1
         assert asset.composite_score == 0.85
-        assert asset.signal == "BULLISH"
+        assert asset.signal == "BULLISH"  # Derived from multi_factor_score > 0.5
         assert asset.price == 67500.50
         assert asset.change_24h == pytest.approx(2.5, abs=0.0001)
-        assert asset.rsi == 65.5
+        # RSI calculated from reversal_signal: 50 + (1.5 * 10) = 65.0
+        assert asset.rsi == pytest.approx(65.0, abs=0.1)
+        # MACD signal derived from momentum_signal > 0.5: BUY
         assert asset.macd_signal == "BUY"
 
     def test_nan_values_become_none(self, builder, df_with_nans):
@@ -394,9 +392,9 @@ class TestEdgeCases:
     def test_empty_dataframe(self, builder):
         df = pd.DataFrame(
             columns=[
-                "symbol", "rank", "composite_score", "signal", "price",
+                "symbol", "rank", "multi_factor_score", "reversal_signal", "momentum_signal", "price",
                 "change_24h", "volume_24h", "funding_rate", "open_interest",
-                "long_short_ratio", "rsi", "macd_signal", "volatility", "ic_weight",
+                "long_short_ratio", "atr_percent",
             ]
         )
         response = builder.build_full_response(df, cache_hit=False, data_age_seconds=0.0)
@@ -410,18 +408,16 @@ class TestEdgeCases:
             {
                 "symbol": ["BTC/USDT:USDT"],
                 "rank": [1],
-                "composite_score": [0.9],
-                "signal": ["BULLISH"],
+                "multi_factor_score": [0.9],  # > 0.5 -> BULLISH
+                "reversal_signal": [0.5],  # RSI = 50 + (0.5 * 10) = 55.0
+                "momentum_signal": [0.8],  # > 0.5 -> BUY
                 "price": [67000.0],
                 "change_24h": [1.5],
                 "volume_24h": [1000000000.0],
                 "funding_rate": [0.0001],
                 "open_interest": [20000000000.0],
                 "long_short_ratio": [1.1],
-                "rsi": [55.0],
-                "macd_signal": ["BUY"],
-                "volatility": [0.03],
-                "ic_weight": [0.2],
+                "atr_percent": [0.03],
             }
         )
         response = builder.build_full_response(df, cache_hit=False, data_age_seconds=0.0)

@@ -179,11 +179,14 @@ class ResponseBuilder:
         summaries = []
 
         for _, row in top_rows.iterrows():
+            # Derive signal from multi_factor_score
+            signal = self._derive_signal(row.get("multi_factor_score"))
+            
             summary = AssetSummary(
                 symbol=row.get("symbol", ""),
                 rank=self._sanitize_int(row.get("rank")),
-                composite_score=self._sanitize_value(row.get("composite_score"), decimals=4),
-                signal=row.get("signal") if pd.notna(row.get("signal")) else None,
+                composite_score=self._sanitize_value(row.get("multi_factor_score"), decimals=4),
+                signal=signal,
             )
             summaries.append(summary)
 
@@ -223,11 +226,16 @@ class ResponseBuilder:
         bearish_count = 0
         neutral_count = 0
 
-        if "signal" in df.columns:
-            signal_counts = df["signal"].value_counts()
-            bullish_count = int(signal_counts.get("BULLISH", 0))
-            bearish_count = int(signal_counts.get("BEARISH", 0))
-            neutral_count = int(signal_counts.get("NEUTRAL", 0))
+        # Derive signal counts from multi_factor_score
+        if "multi_factor_score" in df.columns:
+            for _, row in df.iterrows():
+                signal = self._derive_signal(row.get("multi_factor_score"))
+                if signal == "BULLISH":
+                    bullish_count += 1
+                elif signal == "BEARISH":
+                    bearish_count += 1
+                elif signal == "NEUTRAL":
+                    neutral_count += 1
 
         return MarketOverview(
             avg_change_24h=avg_change,
@@ -261,21 +269,37 @@ class ResponseBuilder:
         Returns:
             AssetDetail with all metric fields populated or None.
         """
+        # Derive signal from multi_factor_score
+        signal = self._derive_signal(row.get("multi_factor_score"))
+        
+        # Calculate RSI from reversal_signal (normalized z-score)
+        # RSI approximation: map z-score to 0-100 range
+        rsi = self._calculate_rsi_from_signal(row.get("reversal_signal"))
+        
+        # Derive MACD signal from momentum_signal
+        macd_signal = self._derive_macd_signal(row.get("momentum_signal"))
+        
+        # Map atr_percent to volatility
+        volatility = self._sanitize_value(row.get("atr_percent"), decimals=4)
+        
+        # Calculate weighted IC weight for this asset (average of signal weights)
+        ic_weight = self._calculate_asset_ic_weight(row)
+        
         return AssetDetail(
             symbol=row.get("symbol", ""),
             rank=self._sanitize_int(row.get("rank")),
-            composite_score=self._sanitize_value(row.get("composite_score"), decimals=4),
-            signal=row.get("signal") if pd.notna(row.get("signal")) else None,
+            composite_score=self._sanitize_value(row.get("multi_factor_score"), decimals=4),
+            signal=signal,
             price=self._sanitize_value(row.get("price"), decimals=2),
             change_24h=self._sanitize_value(row.get("change_24h"), decimals=4),
-            volume_24h=self._sanitize_value(row.get("volume_24h"), decimals=2),
+            volume_24h=None,  # Not fetched in current implementation
             funding_rate=self._sanitize_value(row.get("funding_rate"), decimals=4),
-            open_interest=self._sanitize_value(row.get("open_interest"), decimals=2),
+            open_interest=None,  # Not fetched in current implementation
             long_short_ratio=self._sanitize_value(row.get("long_short_ratio"), decimals=4),
-            rsi=self._sanitize_value(row.get("rsi"), decimals=2),
-            macd_signal=row.get("macd_signal") if pd.notna(row.get("macd_signal")) else None,
-            volatility=self._sanitize_value(row.get("volatility"), decimals=4),
-            ic_weight=self._sanitize_value(row.get("ic_weight"), decimals=4),
+            rsi=rsi,
+            macd_signal=macd_signal,
+            volatility=volatility,
+            ic_weight=ic_weight,
         )
 
     def _sanitize_value(self, value, decimals: int = 2) -> Optional[float]:
@@ -316,3 +340,112 @@ class ResponseBuilder:
             return int(float_val)
         except (TypeError, ValueError):
             return None
+
+    def _derive_signal(self, multi_factor_score) -> Optional[str]:
+        """Derive trading signal from multi-factor score.
+
+        Args:
+            multi_factor_score: The composite score value.
+
+        Returns:
+            "BULLISH", "BEARISH", or "NEUTRAL" based on score thresholds, or None if score is invalid.
+        """
+        if multi_factor_score is None:
+            return None
+        
+        try:
+            score = float(multi_factor_score)
+            if math.isnan(score) or math.isinf(score):
+                return None
+            
+            # Thresholds based on normalized z-scores
+            # Score > 0.5: Strong bullish
+            # Score < -0.5: Strong bearish
+            # Otherwise: Neutral
+            if score > 0.5:
+                return "BULLISH"
+            elif score < -0.5:
+                return "BEARISH"
+            else:
+                return "NEUTRAL"
+        except (TypeError, ValueError):
+            return None
+
+    def _calculate_rsi_from_signal(self, reversal_signal) -> Optional[float]:
+        """Calculate RSI approximation from reversal signal (normalized z-score).
+
+        Maps z-score to 0-100 RSI range:
+        - z-score of -2 → RSI ~30 (oversold)
+        - z-score of 0 → RSI ~50 (neutral)
+        - z-score of +2 → RSI ~70 (overbought)
+
+        Args:
+            reversal_signal: Normalized reversal signal (z-score).
+
+        Returns:
+            RSI value between 0-100, or None if signal is invalid.
+        """
+        if reversal_signal is None:
+            return None
+        
+        try:
+            signal = float(reversal_signal)
+            if math.isnan(signal) or math.isinf(signal):
+                return None
+            
+            # Map z-score to RSI: RSI = 50 + (signal * 10)
+            # Clamp to 0-100 range
+            rsi = 50 + (signal * 10)
+            rsi = max(0, min(100, rsi))
+            
+            return round(rsi, 2)
+        except (TypeError, ValueError):
+            return None
+
+    def _derive_macd_signal(self, momentum_signal) -> Optional[str]:
+        """Derive MACD signal from momentum signal (normalized z-score).
+
+        Args:
+            momentum_signal: Normalized momentum signal (z-score).
+
+        Returns:
+            "BUY", "SELL", or "HOLD" based on momentum thresholds, or None if signal is invalid.
+        """
+        if momentum_signal is None:
+            return None
+        
+        try:
+            signal = float(momentum_signal)
+            if math.isnan(signal) or math.isinf(signal):
+                return None
+            
+            # Thresholds based on normalized z-scores
+            if signal > 0.5:
+                return "BUY"
+            elif signal < -0.5:
+                return "SELL"
+            else:
+                return "HOLD"
+        except (TypeError, ValueError):
+            return None
+
+    def _calculate_asset_ic_weight(self, row: pd.Series) -> Optional[float]:
+        """Calculate effective IC weight for an asset.
+
+        The IC weight represents the confidence in the composite score.
+        For now, we use a fixed average of the signal weights (0.3 + 0.7) / 2 = 0.5.
+
+        In a production system, this would be calculated based on:
+        - Historical accuracy of signals for this specific asset
+        - Data quality/completeness for this asset
+        - Market regime indicators
+
+        Args:
+            row: DataFrame row with asset data.
+
+        Returns:
+            IC weight value between 0-1, or None if cannot be calculated.
+        """
+        # Fixed average IC weight for MVP
+        # In production, this would be asset-specific
+        return 0.5
