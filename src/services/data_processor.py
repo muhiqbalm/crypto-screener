@@ -199,6 +199,8 @@ class DataProcessor:
             "symbol": symbol,
             "price": np.nan,
             "change_24h": np.nan,
+            "volume_24h": np.nan,
+            "open_interest": np.nan,
             "funding_rate": np.nan,
             "long_short_ratio": np.nan,
             "momentum_30d": np.nan,
@@ -215,8 +217,16 @@ class DataProcessor:
             ticker_data = fetcher.fetch_ticker_data(symbol)
             record["price"] = ticker_data.get("price", np.nan)
             record["change_24h"] = ticker_data.get("change_24h", np.nan)
+            record["volume_24h"] = ticker_data.get("volume_24h", np.nan)
         except Exception as e:
             logger.warning(f"Failed to fetch ticker data for {symbol}: {e}")
+
+        # Fetch open interest
+        try:
+            open_interest = fetcher.fetch_open_interest(symbol)
+            record["open_interest"] = open_interest if open_interest is not None else np.nan
+        except Exception as e:
+            logger.warning(f"Failed to fetch open interest for {symbol}: {e}")
 
         # Fetch funding rate
         try:
