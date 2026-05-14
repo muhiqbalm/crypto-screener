@@ -252,7 +252,7 @@ class DebugExchangeService:
             
             # Call exchange API to fetch ticker
             logger.info(f"Fetching raw ticker data for symbol: {normalized_symbol} (CCXT format: {ccxt_symbol})")
-            raw_data = await self.exchange.fetch_ticker(ccxt_symbol)
+            raw_data = self.exchange.fetch_ticker(ccxt_symbol)
             
             # Sanitize response data to remove sensitive fields
             sanitized_data = sanitize_response_data(raw_data)
@@ -465,7 +465,7 @@ class DebugExchangeService:
             
             # Call exchange API to fetch open interest
             logger.info(f"Fetching raw open interest data for symbol: {normalized_symbol} (CCXT format: {ccxt_symbol})")
-            raw_data = await self.exchange.fetch_open_interest(ccxt_symbol)
+            raw_data = self.exchange.fetch_open_interest(ccxt_symbol)
             
             # Sanitize response data to remove sensitive fields
             sanitized_data = sanitize_response_data(raw_data)
