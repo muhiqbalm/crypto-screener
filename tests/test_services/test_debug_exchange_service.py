@@ -59,8 +59,8 @@ class TestFetchRawTicker:
         assert "last" in result.fieldMapping
         assert result.fieldMapping["last"].app_field == "price"
         
-        # Verify exchange was called with normalized symbol
-        debug_service.exchange.fetch_ticker.assert_called_once_with("BTCUSDT")
+        # Verify exchange was called with CCXT format (converted from Binance format)
+        debug_service.exchange.fetch_ticker.assert_called_once_with("BTC/USDT:USDT")
     
     @pytest.mark.asyncio
     async def test_fetch_raw_ticker_normalizes_symbol(self, debug_service):
@@ -75,7 +75,7 @@ class TestFetchRawTicker:
         
         # Assert
         assert result.success is True
-        debug_service.exchange.fetch_ticker.assert_called_once_with("BTCUSDT")
+        debug_service.exchange.fetch_ticker.assert_called_once_with("BTC/USDT:USDT")
     
     @pytest.mark.asyncio
     async def test_fetch_raw_ticker_empty_symbol(self, debug_service):
@@ -107,7 +107,7 @@ class TestFetchRawTicker:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol must contain only alphanumeric characters"
+        assert result.error.message == "Symbol contains invalid characters. Only alphanumeric, '/', and ':' are allowed"
     
     @pytest.mark.asyncio
     async def test_fetch_raw_ticker_exceeds_max_length(self, debug_service):
@@ -122,7 +122,7 @@ class TestFetchRawTicker:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol parameter exceeds maximum length"
+        assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
     
     @pytest.mark.asyncio
     async def test_fetch_raw_ticker_network_error(self, debug_service):
@@ -286,8 +286,8 @@ class TestFetchRawOpenInterest:
         assert "openInterestAmount" in result.fieldMapping
         assert result.fieldMapping["openInterestAmount"].app_field == "open_interest"
         
-        # Verify exchange was called with normalized symbol
-        debug_service.exchange.fetch_open_interest.assert_called_once_with("BTCUSDT")
+        # Verify exchange was called with CCXT format (converted from Binance format)
+        debug_service.exchange.fetch_open_interest.assert_called_once_with("BTC/USDT:USDT")
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_normalizes_symbol(self, debug_service):
@@ -302,7 +302,7 @@ class TestFetchRawOpenInterest:
         
         # Assert
         assert result.success is True
-        debug_service.exchange.fetch_open_interest.assert_called_once_with("ETHUSDT")
+        debug_service.exchange.fetch_open_interest.assert_called_once_with("ETH/USDT:USDT")
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_empty_symbol(self, debug_service):
@@ -334,7 +334,7 @@ class TestFetchRawOpenInterest:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol must contain only alphanumeric characters"
+        assert result.error.message == "Symbol format is invalid. Expected Binance format (BTCUSDT) or CCXT format (BTC/USDT:USDT)"
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_exceeds_max_length(self, debug_service):
@@ -349,7 +349,7 @@ class TestFetchRawOpenInterest:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol parameter exceeds maximum length"
+        assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_network_error(self, debug_service):
@@ -591,7 +591,7 @@ class TestFetchRawFundingRate:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol must contain only alphanumeric characters"
+        assert result.error.message == "Symbol contains invalid characters. Only alphanumeric, '/', and ':' are allowed"
         assert result.metadata.http_status == 400
     
     def test_fetch_raw_funding_rate_exceeds_max_length(self, debug_service):
@@ -606,7 +606,7 @@ class TestFetchRawFundingRate:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol parameter exceeds maximum length"
+        assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
         assert result.metadata.http_status == 400
     
     def test_fetch_raw_funding_rate_network_error(self, debug_service):
@@ -909,7 +909,7 @@ class TestFetchRawLongShortRatio:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol must contain only alphanumeric characters"
+        assert result.error.message == "Symbol contains invalid characters. Only alphanumeric, '/', and ':' are allowed"
     
     def test_fetch_raw_long_short_ratio_exceeds_max_length(self, debug_service):
         """Test validation error for symbol exceeding max length."""
@@ -923,7 +923,7 @@ class TestFetchRawLongShortRatio:
         assert result.success is False
         assert result.error is not None
         assert result.error.code == "INVALID_INPUT"
-        assert result.error.message == "Symbol parameter exceeds maximum length"
+        assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
     
     def test_fetch_raw_long_short_ratio_timeout_error(self, debug_service):
         """Test handling of timeout errors."""

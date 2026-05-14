@@ -303,7 +303,9 @@ class TestFetchAllRawData:
         assert result.success is True
         
         # Verify all methods were called with normalized symbol
-        debug_service.exchange.fetch_ticker.assert_called_once_with("BTCUSDT")
-        debug_service.exchange.fetch_open_interest.assert_called_once_with("BTCUSDT")
+        # Note: fetch_ticker and fetch_open_interest convert to CCXT format (BTC/USDT:USDT)
+        # after normalization, while fetch_funding_rate and market use the normalized symbol directly
+        debug_service.exchange.fetch_ticker.assert_called_once_with("BTC/USDT:USDT")
+        debug_service.exchange.fetch_open_interest.assert_called_once_with("BTC/USDT:USDT")
         debug_service.exchange.fetch_funding_rate.assert_called_once_with("BTCUSDT")
         debug_service.exchange.market.assert_called_once_with("BTCUSDT")

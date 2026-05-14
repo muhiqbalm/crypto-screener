@@ -20,7 +20,7 @@ from src.api.debug_models import (
     DataTypeResult,
     HealthCheckResponse
 )
-from src.api.debug_utils import validate_symbol, normalize_symbol
+from src.api.debug_utils import validate_symbol, normalize_symbol, ensure_ccxt_format
 
 logger = logging.getLogger(__name__)
 
@@ -247,9 +247,12 @@ class DebugExchangeService:
             # Normalize symbol (uppercase and trim)
             normalized_symbol = normalize_symbol(symbol)
             
+            # Convert to CCXT unified format (fetch_ticker requires CCXT format)
+            ccxt_symbol = ensure_ccxt_format(normalized_symbol)
+            
             # Call exchange API to fetch ticker
-            logger.info(f"Fetching raw ticker data for symbol: {normalized_symbol}")
-            raw_data = await self.exchange.fetch_ticker(normalized_symbol)
+            logger.info(f"Fetching raw ticker data for symbol: {normalized_symbol} (CCXT format: {ccxt_symbol})")
+            raw_data = await self.exchange.fetch_ticker(ccxt_symbol)
             
             # Sanitize response data to remove sensitive fields
             sanitized_data = sanitize_response_data(raw_data)
@@ -457,9 +460,12 @@ class DebugExchangeService:
             # Normalize symbol (uppercase and trim)
             normalized_symbol = normalize_symbol(symbol)
             
+            # Convert to CCXT unified format (fetch_open_interest requires CCXT format)
+            ccxt_symbol = ensure_ccxt_format(normalized_symbol)
+            
             # Call exchange API to fetch open interest
-            logger.info(f"Fetching raw open interest data for symbol: {normalized_symbol}")
-            raw_data = await self.exchange.fetch_open_interest(normalized_symbol)
+            logger.info(f"Fetching raw open interest data for symbol: {normalized_symbol} (CCXT format: {ccxt_symbol})")
+            raw_data = await self.exchange.fetch_open_interest(ccxt_symbol)
             
             # Sanitize response data to remove sensitive fields
             sanitized_data = sanitize_response_data(raw_data)
@@ -629,6 +635,11 @@ class DebugExchangeService:
         
         This method retrieves unprocessed funding rate data from the Binance Futures API,
         including request/response timing metrics and field mapping documentation.
+        
+        NOTE: Symbol format handling - This endpoint accepts both CCXT unified format
+        (BTC/USDT:USDT) and Binance native format (BTCUSDT). The CCXT fetch_funding_rate()
+        method handles format conversion internally, so no explicit conversion is needed here.
+        This endpoint is NOT affected by the symbol format bug fix.
         
         Args:
             symbol: Trading pair symbol (e.g., "BTCUSDT", "ETHUSDT")
@@ -854,6 +865,13 @@ class DebugExchangeService:
         This method retrieves unprocessed long/short ratio data from the Binance Futures API
         using a direct HTTP request (not available in CCXT). The long/short ratio represents
         the ratio of long positions to short positions from Binance top trader data.
+        
+        NOTE: Symbol format handling - This endpoint already has correct format conversion logic.
+        It uses self.exchange.market(normalized_symbol) to look up the market and extracts
+        market['id'] to get the Binance native format (BTCUSDT) required by the direct Binance
+        API endpoint. This conversion logic works with both CCXT unified format (BTC/USDT:USDT)
+        and Binance native format (BTCUSDT) inputs. This endpoint is NOT affected by the symbol
+        format bug fix - the existing market lookup handles conversion correctly.
         
         Args:
             symbol: Trading pair symbol (e.g., "BTCUSDT", "ETHUSDT")
@@ -1131,8 +1149,16 @@ class DebugExchangeService:
         and long/short ratio) concurrently using asyncio.gather(). Each fetch call has
         individual error handling to prevent one failure from blocking others.
         
+        NOTE: Symbol format handling - This endpoint accepts both CCXT unified format
+        (BTC/USDT:USDT) and Binance native format (BTCUSDT). Format conversion is handled
+        automatically by the individual fetch methods:
+        - fetch_raw_ticker() and fetch_raw_open_interest() convert to CCXT format
+        - fetch_raw_funding_rate() accepts both formats (CCXT handles internally)
+        - fetch_raw_long_short_ratio() uses market lookup for conversion
+        No explicit format conversion is needed in this aggregated method.
+        
         Args:
-            symbol: Trading pair symbol (e.g., "BTCUSDT", "ETHUSDT")
+            symbol: Trading pair symbol in either format (e.g., "BTCUSDT" or "BTC/USDT:USDT")
         
         Returns:
             AggregatedDebugResponse: Response containing results for all four data types,
@@ -1145,6 +1171,10 @@ class DebugExchangeService:
             True
             >>> print(response.metadata['individual_timings']['ticker_ms'])
             150.25
+            
+            >>> response = await service.fetch_all_raw_data("BTC/USDT:USDT")
+            >>> print(response.data['ticker'].success)
+            True
         """
         # Validate symbol once before all requests
         is_valid, error_message = validate_symbol(symbol)
