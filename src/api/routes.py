@@ -27,7 +27,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
-@router.get("/screener/summary", response_model=ScreenerResponse)
+@router.get(
+    "/screener/summary",
+    response_model=ScreenerResponse,
+    tags=["Screener API"],
+    summary="Get Screener Summary",
+    description="Returns the full screener dataset including metadata, market overview "
+    "(tier distribution, signal counts), and an array of all ranked assets with "
+    "5-factor scoring, risk-adjusted scores, tier classification, and position sizing. "
+    "Use `summary_only=true` to omit the assets array.",
+)
 async def get_screener_summary(request: Request, summary_only: bool = False):
     """Return full screener data or summary-only based on query parameter.
 
@@ -129,7 +138,15 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
             )
 
 
-@router.get("/screener/assets/{symbol:path}", response_model=AssetDetailResponse)
+@router.get(
+    "/screener/assets/{symbol:path}",
+    response_model=AssetDetailResponse,
+    tags=["Screener API"],
+    summary="Get Asset Detail",
+    description="Returns detailed data for a single asset including price, volume, "
+    "derivatives metrics (funding rate, OI, L/S ratio), all signal factor scores, "
+    "risk-adjusted composite score, tier classification, and suggested position sizing.",
+)
 async def get_asset_detail(request: Request, symbol: str):
     """Return detailed data for a single asset.
 
@@ -253,7 +270,14 @@ async def get_asset_detail(request: Request, symbol: str):
             )
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Screener API"],
+    summary="Health Check",
+    description="Returns API health status including server uptime and cache status "
+    "(data age, staleness, next refresh time). Always returns HTTP 200.",
+)
 async def health_check(request: Request):
     """Return API health status including cache status and uptime.
 

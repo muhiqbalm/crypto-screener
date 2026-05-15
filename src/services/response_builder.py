@@ -179,13 +179,15 @@ class ResponseBuilder:
         summaries = []
 
         for _, row in top_rows.iterrows():
-            # Derive signal from multi_factor_score
-            signal = self._derive_signal(row.get("multi_factor_score"))
+            # Derive signal from risk_adjusted_score
+            signal = self._derive_signal(row.get("risk_adjusted_score", row.get("multi_factor_score")))
             
             summary = AssetSummary(
                 symbol=row.get("symbol", ""),
                 rank=self._sanitize_int(row.get("rank")),
-                composite_score=self._sanitize_value(row.get("multi_factor_score"), decimals=4),
+                composite_score=self._sanitize_value(
+                    row.get("risk_adjusted_score", row.get("multi_factor_score")), decimals=4
+                ),
                 signal=signal,
             )
             summaries.append(summary)
@@ -234,16 +236,34 @@ class ResponseBuilder:
         bearish_count = 0
         neutral_count = 0
 
-        # Derive signal counts from multi_factor_score
-        if "multi_factor_score" in df.columns:
+        # Derive signal counts from risk_adjusted_score (fallback to multi_factor_score)
+        score_col = "risk_adjusted_score" if "risk_adjusted_score" in df.columns else "multi_factor_score"
+        if score_col in df.columns:
             for _, row in df.iterrows():
-                signal = self._derive_signal(row.get("multi_factor_score"))
+                signal = self._derive_signal(row.get(score_col))
                 if signal == "BULLISH":
                     bullish_count += 1
                 elif signal == "BEARISH":
                     bearish_count += 1
                 elif signal == "NEUTRAL":
                     neutral_count += 1
+
+        # Calculate tier counts
+        tier_a_count = 0
+        tier_b_count = 0
+        tier_c_count = 0
+        if "tier" in df.columns:
+            tier_counts = df["tier"].value_counts()
+            tier_a_count = int(tier_counts.get("A", 0))
+            tier_b_count = int(tier_counts.get("B", 0))
+            tier_c_count = int(tier_counts.get("C", 0))
+
+        # Calculate average risk-adjusted score
+        avg_risk_adjusted = None
+        if "risk_adjusted_score" in df.columns:
+            valid_ras = df["risk_adjusted_score"].dropna()
+            if len(valid_ras) > 0:
+                avg_risk_adjusted = self._sanitize_value(valid_ras.mean(), decimals=4)
 
         return MarketOverview(
             avg_change_24h=avg_change,
@@ -252,6 +272,10 @@ class ResponseBuilder:
             bullish_count=bullish_count,
             bearish_count=bearish_count,
             neutral_count=neutral_count,
+            avg_risk_adjusted_score=avg_risk_adjusted,
+            tier_a_count=tier_a_count,
+            tier_b_count=tier_b_count,
+            tier_c_count=tier_c_count,
         )
 
     def _build_assets_list(self, df: pd.DataFrame) -> list[AssetDetail]:
@@ -277,8 +301,9 @@ class ResponseBuilder:
         Returns:
             AssetDetail with all metric fields populated or None.
         """
-        # Derive signal from multi_factor_score
-        signal = self._derive_signal(row.get("multi_factor_score"))
+        # Derive signal from risk_adjusted_score (fallback to multi_factor_score)
+        score_for_signal = row.get("risk_adjusted_score", row.get("multi_factor_score"))
+        signal = self._derive_signal(score_for_signal)
         
         # Calculate RSI from reversal_signal (normalized z-score)
         # RSI approximation: map z-score to 0-100 range
@@ -290,13 +315,23 @@ class ResponseBuilder:
         # Map atr_percent to volatility
         volatility = self._sanitize_value(row.get("atr_percent"), decimals=4)
         
-        # Calculate weighted IC weight for this asset (average of signal weights)
+        # Map ic_weight to suggested_position_pct / 100 (portfolio weight, 0-1 range)
         ic_weight = self._calculate_asset_ic_weight(row)
+        
+        # Derive funding rate signal direction
+        funding_rate_signal_val = row.get("funding_rate_signal")
+        funding_rate_signal_str = self._derive_sub_signal(funding_rate_signal_val)
+        
+        # Derive OI signal direction
+        oi_signal_val = row.get("oi_momentum_signal")
+        oi_signal_str = self._derive_sub_signal(oi_signal_val)
         
         return AssetDetail(
             symbol=row.get("symbol", ""),
             rank=self._sanitize_int(row.get("rank")),
-            composite_score=self._sanitize_value(row.get("multi_factor_score"), decimals=4),
+            composite_score=self._sanitize_value(
+                row.get("risk_adjusted_score", row.get("multi_factor_score")), decimals=4
+            ),
             signal=signal,
             price=self._sanitize_value(row.get("price"), decimals=2),
             change_24h=self._sanitize_value(row.get("change_24h"), decimals=4),
@@ -308,6 +343,11 @@ class ResponseBuilder:
             macd_signal=macd_signal,
             volatility=volatility,
             ic_weight=ic_weight,
+            risk_adjusted_score=self._sanitize_value(row.get("risk_adjusted_score"), decimals=4),
+            suggested_position_pct=self._sanitize_value(row.get("suggested_position_pct"), decimals=2),
+            tier=row.get("tier") if row.get("tier") in ('A', 'B', 'C') else None,
+            funding_rate_signal=funding_rate_signal_str,
+            oi_signal=oi_signal_str,
         )
 
     def _sanitize_value(self, value, decimals: int = 2) -> Optional[float]:
@@ -438,15 +478,11 @@ class ResponseBuilder:
             return None
 
     def _calculate_asset_ic_weight(self, row: pd.Series) -> Optional[float]:
-        """Calculate effective IC weight for an asset.
+        """Calculate effective IC weight for an asset from suggested position sizing.
 
-        The IC weight represents the confidence in the composite score.
-        For now, we use a fixed average of the signal weights (0.3 + 0.7) / 2 = 0.5.
-
-        In a production system, this would be calculated based on:
-        - Historical accuracy of signals for this specific asset
-        - Data quality/completeness for this asset
-        - Market regime indicators
+        Maps suggested_position_pct to a 0-1 range portfolio weight.
+        If suggested_position_pct is available, ic_weight = suggested_position_pct / 100.
+        Otherwise falls back to a fixed average.
 
         Args:
             row: DataFrame row with asset data.
@@ -454,6 +490,39 @@ class ResponseBuilder:
         Returns:
             IC weight value between 0-1, or None if cannot be calculated.
         """
-        # Fixed average IC weight for MVP
-        # In production, this would be asset-specific
+        position_pct = row.get("suggested_position_pct")
+        if position_pct is not None:
+            sanitized = self._sanitize_value(position_pct, decimals=4)
+            if sanitized is not None:
+                return round(sanitized / 100.0, 4)
+        
+        # Fallback to fixed average IC weight
         return 0.5
+
+    def _derive_sub_signal(self, signal_value) -> Optional[str]:
+        """Derive BULLISH/BEARISH/NEUTRAL from a normalized signal z-score.
+
+        Used for individual sub-signals like funding_rate_signal and oi_momentum_signal.
+
+        Args:
+            signal_value: Normalized signal value (z-score).
+
+        Returns:
+            "BULLISH", "BEARISH", or "NEUTRAL" based on thresholds, or None if invalid.
+        """
+        if signal_value is None:
+            return None
+        
+        try:
+            val = float(signal_value)
+            if math.isnan(val) or math.isinf(val):
+                return None
+            
+            if val > 0.3:
+                return "BULLISH"
+            elif val < -0.3:
+                return "BEARISH"
+            else:
+                return "NEUTRAL"
+        except (TypeError, ValueError):
+            return None

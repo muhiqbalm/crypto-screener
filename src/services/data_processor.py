@@ -108,15 +108,33 @@ class DataProcessor:
             market_data["momentum_signal"] = await asyncio.to_thread(
                 signal_gen.calculate_momentum_signal, market_data
             )
+            market_data["funding_rate_signal"] = await asyncio.to_thread(
+                signal_gen.calculate_funding_rate_signal, market_data
+            )
+            market_data["sentiment_signal"] = await asyncio.to_thread(
+                signal_gen.calculate_sentiment_signal, market_data
+            )
+            market_data["oi_momentum_signal"] = await asyncio.to_thread(
+                signal_gen.calculate_oi_momentum_signal, market_data
+            )
 
-            # Normalize signals
+            # Normalize all signals
             market_data["reversal_signal"] = await asyncio.to_thread(
                 signal_gen.normalize_signal, market_data["reversal_signal"]
             )
             market_data["momentum_signal"] = await asyncio.to_thread(
                 signal_gen.normalize_signal, market_data["momentum_signal"]
             )
-            logger.info("Signals generated and normalized")
+            market_data["funding_rate_signal"] = await asyncio.to_thread(
+                signal_gen.normalize_signal, market_data["funding_rate_signal"]
+            )
+            market_data["sentiment_signal"] = await asyncio.to_thread(
+                signal_gen.normalize_signal, market_data["sentiment_signal"]
+            )
+            market_data["oi_momentum_signal"] = await asyncio.to_thread(
+                signal_gen.normalize_signal, market_data["oi_momentum_signal"]
+            )
+            logger.info("All signals generated and normalized")
 
             # Stage 4: Calculate multi-factor scores
             logger.info("Calculating multi-factor scores...")
@@ -132,14 +150,24 @@ class DataProcessor:
             market_data["tier"] = await asyncio.to_thread(
                 scorer.classify_tiers, market_data["multi_factor_score"]
             )
-            logger.info("Multi-factor scores calculated")
 
-            # Stage 5: Rank assets
+            # Calculate risk-adjusted score and position sizing
+            market_data = await asyncio.to_thread(
+                scorer.calculate_risk_adjusted_score, market_data
+            )
+            market_data = await asyncio.to_thread(
+                scorer.calculate_position_sizing, market_data
+            )
+            logger.info("Multi-factor scores, risk adjustment, and position sizing calculated")
+
+            # Stage 5: Rank assets by risk_adjusted_score
             logger.info("Ranking assets...")
             from src.ranking.engine import RankingEngine
 
             ranker = RankingEngine()
-            ranked_data = await asyncio.to_thread(ranker.rank_assets, market_data)
+            ranked_data = await asyncio.to_thread(
+                ranker.rank_assets, market_data, 'risk_adjusted_score'
+            )
             logger.info(f"Ranking complete - {len(ranked_data)} assets ranked")
 
             return ProcessedResult(data=ranked_data, errors=errors)
@@ -309,7 +337,8 @@ class DataProcessor:
         """Generate synthetic data for testing without exchange connectivity.
 
         Creates a DataFrame with all expected columns populated with random
-        but realistic values for the configured symbols.
+        but realistic values for the configured symbols. Includes all 5 signal
+        factors, risk-adjusted scoring, and position sizing.
 
         Returns:
             ProcessedResult with synthetic data and no errors.
@@ -329,7 +358,7 @@ class DataProcessor:
                     "long_short_ratio": rng.uniform(0.5, 3.0),
                     "momentum_30d": rng.uniform(-30.0, 30.0),
                     "atr_percent": rng.uniform(1.0, 10.0),
-                    "distance_to_ma50": rng.uniform(-20.0, 20.0),
+                    "distance_to_ma50": rng.uniform(-40.0, 40.0),
                     "sparkline_data": [
                         float(rng.uniform(100, 200)) for _ in range(7)
                     ],
@@ -345,7 +374,7 @@ class DataProcessor:
 
         df = pd.DataFrame(records)
 
-        # Generate signals
+        # Generate all 5 signals
         from src.signals.generator import SignalGenerator
         from src.signals.ic_weights import ICWeightCalculator
         from src.signals.scorer import MultiFactorScorer
@@ -354,16 +383,30 @@ class DataProcessor:
         signal_gen = SignalGenerator()
         df["reversal_signal"] = signal_gen.calculate_reversal_signal(df)
         df["momentum_signal"] = signal_gen.calculate_momentum_signal(df)
+        df["funding_rate_signal"] = signal_gen.calculate_funding_rate_signal(df)
+        df["sentiment_signal"] = signal_gen.calculate_sentiment_signal(df)
+        df["oi_momentum_signal"] = signal_gen.calculate_oi_momentum_signal(df)
+
+        # Normalize all signals
         df["reversal_signal"] = signal_gen.normalize_signal(df["reversal_signal"])
         df["momentum_signal"] = signal_gen.normalize_signal(df["momentum_signal"])
+        df["funding_rate_signal"] = signal_gen.normalize_signal(df["funding_rate_signal"])
+        df["sentiment_signal"] = signal_gen.normalize_signal(df["sentiment_signal"])
+        df["oi_momentum_signal"] = signal_gen.normalize_signal(df["oi_momentum_signal"])
 
+        # Calculate scores
         ic_calc = ICWeightCalculator()
         scorer = MultiFactorScorer(ic_calc)
         df["multi_factor_score"] = scorer.calculate_score(df)
         df["tier"] = scorer.classify_tiers(df["multi_factor_score"])
 
+        # Risk-adjusted score and position sizing
+        df = scorer.calculate_risk_adjusted_score(df)
+        df = scorer.calculate_position_sizing(df)
+
+        # Rank by risk_adjusted_score
         ranker = RankingEngine()
-        ranked_df = ranker.rank_assets(df)
+        ranked_df = ranker.rank_assets(df, sort_by='risk_adjusted_score')
 
         logger.info(f"Generated mock data for {n} symbols")
         return ProcessedResult(data=ranked_df, errors=[])

@@ -25,39 +25,40 @@ class RankingEngine:
     - All original DataFrame columns are preserved in the output
     """
     
-    def rank_assets(self, df: pd.DataFrame) -> pd.DataFrame:
+    def rank_assets(self, df: pd.DataFrame, sort_by: str = 'multi_factor_score') -> pd.DataFrame:
         """
-        Sort DataFrame by multi_factor_score descending and add rank column.
+        Sort DataFrame by specified score column descending and add rank column.
         
         This method performs the following operations:
-        1. Validates that the DataFrame contains a 'multi_factor_score' column
-        2. Sorts the DataFrame by 'multi_factor_score' in descending order
+        1. Validates that the DataFrame contains the specified score column
+        2. Sorts the DataFrame by the score column in descending order
         3. Uses stable sort (kind='mergesort') to preserve relative order for equal scores
         4. Adds a 'rank' column with position numbers (1 = highest score)
         5. Returns the sorted DataFrame with all original columns plus rank
         
         Stable Sort Behavior:
-        - When two assets have the same multi_factor_score, their relative order
+        - When two assets have the same score, their relative order
           from the input DataFrame is preserved in the output
         - This ensures deterministic and reproducible ranking results
         - Example: If assets A and B both have score 0.5, and A appears before B
           in the input, then A will appear before B in the output
         
         Args:
-            df: DataFrame with 'multi_factor_score' column and other asset data
+            df: DataFrame with the specified score column and other asset data
+            sort_by: Column name to sort by (default: 'multi_factor_score')
             
         Returns:
             pd.DataFrame: Sorted DataFrame with added 'rank' column
                 - All original columns are preserved
-                - Sorted by multi_factor_score descending
+                - Sorted by specified score column descending
                 - 'rank' column contains position numbers (1, 2, 3, ...)
                 
         Raises:
-            KeyError: If 'multi_factor_score' column is missing from DataFrame
+            KeyError: If the specified score column is missing from DataFrame
         """
         # Validate required column exists
-        if 'multi_factor_score' not in df.columns:
-            error_msg = "DataFrame must contain 'multi_factor_score' column"
+        if sort_by not in df.columns:
+            error_msg = f"DataFrame must contain '{sort_by}' column"
             logger.error(error_msg)
             raise KeyError(error_msg)
         
@@ -73,7 +74,7 @@ class RankingEngine:
         # Use stable sort (kind='mergesort') to preserve relative order for equal scores
         # ascending=False means highest scores come first
         df_sorted = df.sort_values(
-            by='multi_factor_score',
+            by=sort_by,
             ascending=False,
             kind='mergesort',  # Stable sort algorithm
             ignore_index=False  # Preserve original index
@@ -84,10 +85,10 @@ class RankingEngine:
         df_sorted['rank'] = range(1, len(df_sorted) + 1)
         
         # Log ranking results
-        logger.info(f"Ranked {len(df_sorted)} assets by multi-factor score")
+        logger.info(f"Ranked {len(df_sorted)} assets by {sort_by}")
         if len(df_sorted) > 0:
-            top_score = df_sorted.iloc[0]['multi_factor_score']
-            bottom_score = df_sorted.iloc[-1]['multi_factor_score']
+            top_score = df_sorted.iloc[0][sort_by]
+            bottom_score = df_sorted.iloc[-1][sort_by]
             logger.debug(f"Top ranked score: {top_score:.4f}, Bottom ranked score: {bottom_score:.4f}")
         
         return df_sorted

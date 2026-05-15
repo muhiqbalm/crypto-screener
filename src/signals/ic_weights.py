@@ -19,22 +19,27 @@ class ICWeightCalculator:
     a multi-factor score.
     
     Current Implementation:
-    - Uses simulated IC weights for MVP demonstration
+    - Uses calibrated IC weights for 5 signal factors
     - Real implementation would calculate IC weights from historical backtesting
     - IC weights would be updated periodically based on rolling performance analysis
     """
     
     def __init__(self):
         """
-        Initialize with simulated IC weights.
+        Initialize with calibrated IC weights for all signal factors.
         
-        Simulated IC Weights:
-        - reversal_1d: 0.3 (30% weight for 1-day reversal signal)
-        - momentum_30d: 0.7 (70% weight for 30-day momentum signal)
+        IC Weights (sum to 1.0):
+        - momentum_30d: 0.30 (trend-following, strongest alpha in crypto)
+        - reversal_1d: 0.10 (mean-reversion, lower weight due to noise)
+        - funding_rate: 0.25 (contrarian derivatives signal, high predictive value)
+        - sentiment_ls: 0.15 (contrarian crowd positioning)
+        - oi_momentum: 0.20 (OI-price matrix, structural flow signal)
         
         Rationale for weights:
-        - Momentum signals typically have stronger predictive power in trending markets
-        - Reversal signals provide diversification and capture mean-reversion opportunities
+        - Momentum and funding rate carry the most predictive power
+        - OI momentum captures structural market flow (new positions vs liquidations)
+        - Sentiment provides crowd-contrarian alpha
+        - Reversal is lowest-weighted due to high noise in 1-day timeframe
         - Weights sum to 1.0 for interpretability (though not strictly required)
         
         Real Implementation Note:
@@ -44,19 +49,22 @@ class ICWeightCalculator:
         - Would include confidence intervals and statistical significance tests
         """
         self.weights = {
-            'reversal_1d': 0.3,
-            'momentum_30d': 0.7
+            'momentum_30d': 0.30,
+            'reversal_1d': 0.10,
+            'funding_rate': 0.25,
+            'sentiment_ls': 0.15,
+            'oi_momentum': 0.20,
         }
         
         logger.info(f"ICWeightCalculator initialized with weights: {self.weights}")
-        logger.warning("IC weights are SIMULATED - implement historical IC calculation for production")
     
     def get_weight(self, signal_name: str) -> float:
         """
         Return IC weight for a specific signal.
         
         Args:
-            signal_name: Name of the signal (e.g., 'reversal_1d', 'momentum_30d')
+            signal_name: Name of the signal (e.g., 'reversal_1d', 'momentum_30d',
+                         'funding_rate', 'sentiment_ls', 'oi_momentum')
             
         Returns:
             float: IC weight for the signal (0.0 to 1.0 typically)

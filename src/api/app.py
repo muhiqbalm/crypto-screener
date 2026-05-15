@@ -216,42 +216,54 @@ def create_app() -> FastAPI:
     # Create FastAPI instance with lifespan
     app = FastAPI(
         title="Crypto Screener API",
-        version="1.0.0",
+        version="2.0.0",
         description="""
-REST API backend for crypto screener data with diagnostic capabilities.
+REST API backend for quantitative crypto screening with multi-factor scoring, 
+risk-adjusted ranking, and position sizing.
 
-## Features
+## Screener API
 
-### Main API
-- Real-time cryptocurrency market data from Binance Futures
-- Price, volume, and market metrics for multiple trading pairs
-- Caching for improved performance
+### Multi-Factor Scoring Engine
+The screener combines **5 quantitative signal factors** into a single composite score:
 
-### Debug API
-The Debug API provides diagnostic and debugging capabilities for monitoring raw responses 
-from the Binance Futures exchange API. These endpoints expose unprocessed exchange data 
-for troubleshooting and verification purposes.
+| Signal | Weight | Source |
+|--------|--------|--------|
+| **Momentum (30d)** | 30% | 30-day price trend with MA50 exhaustion penalty |
+| **Funding Rate** | 25% | Contrarian signal from perpetual swap funding rates |
+| **OI Momentum** | 20% | OI-delta × price-action matrix (new longs/shorts/squeeze/liquidation) |
+| **Sentiment (L/S)** | 15% | Contrarian signal from long/short account ratio |
+| **Reversal (1d)** | 10% | Mean-reversion signal from 24h price change |
 
-**Debug endpoints include:**
-- Raw ticker data (price, volume, 24h change)
-- Raw open interest data
-- Raw funding rate data
-- Raw long/short ratio data
-- Aggregated data (all types in one request)
-- Exchange health check
+### Risk-Adjusted Scoring
+- **`risk_adjusted_score`** = `multi_factor_score / max(atr_percent, 1.0)` — penalizes volatile assets
+- Assets are ranked by risk-adjusted score (rank 1 = highest)
 
-**Features:**
-- Request/response timing metrics
-- Field mapping documentation
-- Graceful error handling
-- Concurrent data fetching
-- Optional authentication
+### Tier Classification
+- **Tier A** (top 33%): Strong buy candidates
+- **Tier B** (middle 34%): Moderate / hold
+- **Tier C** (bottom 33%): Avoid / short candidates
+
+### Position Sizing
+- **Inverse Volatility Weighting**: lower-ATR assets get larger allocations
+- `suggested_position_pct` sums to 100% across all assets
+
+### Endpoints
+- `GET /api/v1/screener/summary` — Full screener data with market overview and ranked assets
+- `GET /api/v1/screener/assets/{symbol}` — Single asset detail with all metrics
+- `GET /api/v1/health` — API health check with cache status
+
+---
+
+## Debug API
+Diagnostic endpoints for raw exchange data inspection from Binance Futures.
+
+**Includes:** raw ticker, open interest, funding rate, long/short ratio, aggregated data, exchange health.
+
+**Features:** request/response timing, field mapping documentation, error handling, concurrent fetching, optional authentication.
 
 ## Authentication
 
-Debug API endpoints support optional Bearer token authentication. When enabled, 
-include the token in the Authorization header:
-
+Debug API endpoints support optional Bearer token authentication:
 ```
 Authorization: Bearer <your-token>
 ```
@@ -259,14 +271,14 @@ Authorization: Bearer <your-token>
         lifespan=lifespan,
         openapi_tags=[
             {
-                "name": "Main API",
-                "description": "Primary endpoints for cryptocurrency market data"
+                "name": "Screener API",
+                "description": "Quantitative crypto screener with multi-factor scoring, risk-adjusted ranking, tier classification, and position sizing",
             },
             {
                 "name": "Debug API",
-                "description": "Diagnostic endpoints for raw exchange data inspection and troubleshooting"
-            }
-        ]
+                "description": "Diagnostic endpoints for raw exchange data inspection and troubleshooting",
+            },
+        ],
     )
 
     # Store settings in app.state for access by lifespan and middleware
