@@ -20,7 +20,7 @@ class TestFetchAllRawData:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -57,8 +57,8 @@ class TestFetchAllRawData:
         }
         
         # Mock the individual fetch methods
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Mock the market lookup for long/short ratio
@@ -154,8 +154,8 @@ class TestFetchAllRawData:
         }
         
         # Mock successful ticker and open interest
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Mock failed funding rate (network error)
         debug_service.exchange.fetch_funding_rate = Mock(
@@ -195,10 +195,10 @@ class TestFetchAllRawData:
         symbol = "BTCUSDT"
         
         # Mock all methods to fail
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.NetworkError("Connection failed")
         )
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=ccxt.NetworkError("Connection failed")
         )
         debug_service.exchange.fetch_funding_rate = Mock(
@@ -234,8 +234,8 @@ class TestFetchAllRawData:
         mock_funding_rate_data = {"symbol": "BTC/USDT:USDT", "fundingRate": 0.0001}
         
         # Mock the methods
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         debug_service.exchange.market = Mock(return_value={"id": "BTCUSDT"})
         
@@ -285,8 +285,8 @@ class TestFetchAllRawData:
         mock_open_interest_data = {"symbol": "BTC/USDT:USDT", "openInterestAmount": 1000000.0}
         mock_funding_rate_data = {"symbol": "BTC/USDT:USDT", "fundingRate": 0.0001}
         
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         debug_service.exchange.market = Mock(return_value={"id": "BTCUSDT"})
         

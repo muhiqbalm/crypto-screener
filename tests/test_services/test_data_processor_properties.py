@@ -112,10 +112,12 @@ class TestProperty6PartialFailureIsolation:
             mock_scorer.calculate_score.return_value = pd.Series([0.7] * len(successful_symbols))
             mock_scorer.classify_tiers.return_value = pd.Series(["A"] * len(successful_symbols))
             MockScorer.return_value = mock_scorer
+            mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
+            mock_scorer.calculate_position_sizing.side_effect = lambda df: df
             
             # Setup mock ranker
             mock_ranker = MagicMock()
-            def mock_rank(df):
+            def mock_rank(df, sort_by=None):
                 df["rank"] = range(1, len(df) + 1)
                 return df
             mock_ranker.rank_assets.side_effect = mock_rank
@@ -211,9 +213,11 @@ class TestProperty6PartialFailureIsolation:
             mock_scorer.calculate_score.return_value = pd.Series([0.7] * len(successful_symbols))
             mock_scorer.classify_tiers.return_value = pd.Series(["A"] * len(successful_symbols))
             MockScorer.return_value = mock_scorer
+            mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
+            mock_scorer.calculate_position_sizing.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
-            def mock_rank(df):
+            def mock_rank(df, sort_by=None):
                 df["rank"] = range(1, len(df) + 1)
                 return df
             mock_ranker.rank_assets.side_effect = mock_rank
@@ -294,9 +298,11 @@ class TestProperty6PartialFailureIsolation:
             mock_scorer.calculate_score.return_value = pd.Series([0.7] * len(successful_symbols))
             mock_scorer.classify_tiers.return_value = pd.Series(["A"] * len(successful_symbols))
             MockScorer.return_value = mock_scorer
+            mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
+            mock_scorer.calculate_position_sizing.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
-            def mock_rank(df):
+            def mock_rank(df, sort_by=None):
                 df["rank"] = range(1, len(df) + 1)
                 return df
             mock_ranker.rank_assets.side_effect = mock_rank
@@ -376,9 +382,11 @@ class TestProperty6PartialFailureIsolation:
             mock_scorer.calculate_score.return_value = pd.Series([0.7] * len(successful_symbols))
             mock_scorer.classify_tiers.return_value = pd.Series(["A"] * len(successful_symbols))
             MockScorer.return_value = mock_scorer
+            mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
+            mock_scorer.calculate_position_sizing.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
-            def mock_rank(df):
+            def mock_rank(df, sort_by=None):
                 df["rank"] = range(1, len(df) + 1)
                 return df
             mock_ranker.rank_assets.side_effect = mock_rank

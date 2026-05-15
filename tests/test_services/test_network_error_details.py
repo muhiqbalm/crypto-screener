@@ -58,7 +58,7 @@ class TestNetworkErrorDetails:
         """Test that fetch_raw_ticker includes DNS error details in response."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.NetworkError("getaddrinfo failed")
         )
         
@@ -77,7 +77,7 @@ class TestNetworkErrorDetails:
         """Test that fetch_raw_ticker includes connection refused details in response."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.NetworkError("Connection refused")
         )
         
@@ -96,7 +96,7 @@ class TestNetworkErrorDetails:
         """Test that fetch_raw_open_interest includes error details in response."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=ccxt.NetworkError("getaddrinfo failed")
         )
         
@@ -110,7 +110,8 @@ class TestNetworkErrorDetails:
         assert result.error.details == "DNS resolution failed"
         assert result.metadata.http_status == 503
     
-    def test_fetch_raw_funding_rate_includes_error_details(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_includes_error_details(self, debug_service):
         """Test that fetch_raw_funding_rate includes error details in response."""
         # Arrange
         symbol = "BTCUSDT"
@@ -119,7 +120,7 @@ class TestNetworkErrorDetails:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -128,7 +129,8 @@ class TestNetworkErrorDetails:
         assert result.error.details == "Connection refused"
         assert result.metadata.http_status == 503
     
-    def test_fetch_raw_long_short_ratio_includes_error_details(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_includes_error_details(self, debug_service):
         """Test that fetch_raw_long_short_ratio includes error details in response."""
         # Arrange
         symbol = "BTCUSDT"
@@ -138,7 +140,7 @@ class TestNetworkErrorDetails:
         from unittest.mock import patch
         with patch('requests.get', side_effect=requests.exceptions.ConnectionError("Connection refused")):
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False

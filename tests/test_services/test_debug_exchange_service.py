@@ -21,7 +21,7 @@ class TestFetchRawTicker:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -43,7 +43,7 @@ class TestFetchRawTicker:
             "baseVolume": 20.0,
             "timestamp": 1234567890000
         }
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -68,7 +68,7 @@ class TestFetchRawTicker:
         # Arrange
         symbol = "  btcusdt  "
         mock_ticker_data = {"symbol": "BTC/USDT:USDT", "last": 50000.0}
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -129,7 +129,7 @@ class TestFetchRawTicker:
         """Test handling of network errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.NetworkError("Connection failed")
         )
         
@@ -148,7 +148,7 @@ class TestFetchRawTicker:
         """Test handling of timeout errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.RequestTimeout("Request timed out")
         )
         
@@ -171,7 +171,7 @@ class TestFetchRawTicker:
         symbol = "BTCUSDT"
         error = ccxt.ExchangeError("Invalid symbol")
         error.status_code = 400  # Set 4xx status code for client error
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=error
         )
         
@@ -190,7 +190,7 @@ class TestFetchRawTicker:
         """Test handling of unexpected errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=Exception("Unexpected error")
         )
         
@@ -210,7 +210,7 @@ class TestFetchRawTicker:
         # Arrange
         symbol = "BTCUSDT"
         mock_ticker_data = {"symbol": "BTC/USDT:USDT", "last": 50000.0}
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -232,7 +232,7 @@ class TestFetchRawTicker:
         # Arrange
         symbol = "BTCUSDT"
         mock_ticker_data = {"symbol": "BTC/USDT:USDT", "last": 50000.0}
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -250,7 +250,7 @@ class TestFetchRawOpenInterest:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -270,7 +270,7 @@ class TestFetchRawOpenInterest:
             "openInterest": 1000000.0,
             "timestamp": 1234567890000
         }
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -295,7 +295,7 @@ class TestFetchRawOpenInterest:
         # Arrange
         symbol = "  ethusdt  "
         mock_open_interest_data = {"symbol": "ETH/USDT:USDT", "openInterestAmount": 500000.0}
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -356,7 +356,7 @@ class TestFetchRawOpenInterest:
         """Test handling of network errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=ccxt.NetworkError("Connection failed")
         )
         
@@ -375,7 +375,7 @@ class TestFetchRawOpenInterest:
         """Test handling of timeout errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=ccxt.RequestTimeout("Request timed out")
         )
         
@@ -398,7 +398,7 @@ class TestFetchRawOpenInterest:
         symbol = "BTCUSDT"
         error = ccxt.ExchangeError("Invalid symbol")
         error.status_code = 400  # Set 4xx status code for client error
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=error
         )
         
@@ -417,7 +417,7 @@ class TestFetchRawOpenInterest:
         """Test handling of unexpected errors."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=Exception("Unexpected error")
         )
         
@@ -437,7 +437,7 @@ class TestFetchRawOpenInterest:
         # Arrange
         symbol = "BTCUSDT"
         mock_open_interest_data = {"symbol": "BTC/USDT:USDT", "openInterestAmount": 1000000.0}
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -459,7 +459,7 @@ class TestFetchRawOpenInterest:
         # Arrange
         symbol = "BTCUSDT"
         mock_open_interest_data = {"symbol": "BTC/USDT:USDT", "openInterestAmount": 1000000.0}
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -474,7 +474,7 @@ class TestFetchRawOpenInterest:
         # Arrange
         symbol = "BTCUSDT"
         mock_open_interest_data = {"symbol": "BTC/USDT:USDT", "openInterestAmount": 1000000.0}
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -517,7 +517,8 @@ class TestFetchRawFundingRate:
         """Create a DebugExchangeService instance with mocked exchange."""
         return DebugExchangeService(mock_exchange_connector)
     
-    def test_fetch_raw_funding_rate_success(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_success(self, debug_service):
         """Test successful funding rate data retrieval."""
         # Arrange
         symbol = "BTCUSDT"
@@ -531,7 +532,7 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
@@ -548,7 +549,8 @@ class TestFetchRawFundingRate:
         # Verify exchange was called with normalized symbol
         debug_service.exchange.fetch_funding_rate.assert_called_once_with("BTCUSDT")
     
-    def test_fetch_raw_funding_rate_normalizes_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_normalizes_symbol(self, debug_service):
         """Test that symbol is normalized (uppercase and trimmed)."""
         # Arrange
         symbol = "  ethusdt  "
@@ -556,19 +558,20 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
         debug_service.exchange.fetch_funding_rate.assert_called_once_with("ETHUSDT")
     
-    def test_fetch_raw_funding_rate_empty_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_empty_symbol(self, debug_service):
         """Test validation error for empty symbol."""
         # Arrange
         symbol = ""
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -579,13 +582,14 @@ class TestFetchRawFundingRate:
         assert result.metadata.exchange == "binanceusdm"
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_funding_rate_invalid_characters(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_invalid_characters(self, debug_service):
         """Test validation error for symbol with invalid characters."""
         # Arrange
         symbol = "BTC-USDT"
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -594,13 +598,14 @@ class TestFetchRawFundingRate:
         assert result.error.message == "Symbol contains invalid characters. Only alphanumeric, '/', and ':' are allowed"
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_funding_rate_exceeds_max_length(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_exceeds_max_length(self, debug_service):
         """Test validation error for symbol exceeding max length."""
         # Arrange
         symbol = "C" * 21  # 21 characters, max is 20
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -609,7 +614,8 @@ class TestFetchRawFundingRate:
         assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_funding_rate_network_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_network_error(self, debug_service):
         """Test handling of network errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -618,7 +624,7 @@ class TestFetchRawFundingRate:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -627,7 +633,8 @@ class TestFetchRawFundingRate:
         assert "Service unavailable" in result.error.message
         assert result.metadata.http_status == 503
     
-    def test_fetch_raw_funding_rate_timeout_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_timeout_error(self, debug_service):
         """Test handling of timeout errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -636,7 +643,7 @@ class TestFetchRawFundingRate:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -647,7 +654,8 @@ class TestFetchRawFundingRate:
         assert result.error.timeout_duration_ms is not None
         assert result.error.timeout_duration_ms >= 0
     
-    def test_fetch_raw_funding_rate_exchange_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_exchange_error(self, debug_service):
         """Test handling of exchange errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -658,7 +666,7 @@ class TestFetchRawFundingRate:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -667,7 +675,8 @@ class TestFetchRawFundingRate:
         assert "Exchange error" in result.error.message
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_funding_rate_unexpected_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_unexpected_error(self, debug_service):
         """Test handling of unexpected errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -676,7 +685,7 @@ class TestFetchRawFundingRate:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -685,7 +694,8 @@ class TestFetchRawFundingRate:
         assert "Internal server error" in result.error.message
         assert result.metadata.http_status == 500
     
-    def test_fetch_raw_funding_rate_timing_precision(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_timing_precision(self, debug_service):
         """Test that response time has at least 2 decimal places precision."""
         # Arrange
         symbol = "BTCUSDT"
@@ -693,7 +703,7 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
@@ -706,7 +716,8 @@ class TestFetchRawFundingRate:
             decimal_places = len(time_str.split('.')[1])
             assert decimal_places >= 2 or result.metadata.response_time_ms == int(result.metadata.response_time_ms)
     
-    def test_fetch_raw_funding_rate_timestamps_order(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_timestamps_order(self, debug_service):
         """Test that response timestamp is after request timestamp."""
         # Arrange
         symbol = "BTCUSDT"
@@ -714,13 +725,14 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
         assert result.metadata.response_timestamp >= result.metadata.request_timestamp
     
-    def test_fetch_raw_funding_rate_field_mapping_structure(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_field_mapping_structure(self, debug_service):
         """Test that field mapping has correct structure for funding rate."""
         # Arrange
         symbol = "BTCUSDT"
@@ -728,7 +740,7 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
@@ -744,7 +756,8 @@ class TestFetchRawFundingRate:
         assert funding_rate_mapping.transformation is not None
         assert "percentage" in funding_rate_mapping.transformation.lower()
     
-    def test_fetch_raw_funding_rate_preserves_exchange_error_data(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_preserves_exchange_error_data(self, debug_service):
         """Test that original exchange error response is preserved in data field."""
         # Arrange
         symbol = "BTCUSDT"
@@ -755,7 +768,7 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(side_effect=exchange_error)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -764,13 +777,14 @@ class TestFetchRawFundingRate:
         # Note: The data field may or may not contain the error response depending on implementation
         # This test verifies the attempt to preserve it
     
-    def test_fetch_raw_funding_rate_whitespace_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_whitespace_symbol(self, debug_service):
         """Test validation error for whitespace-only symbol."""
         # Arrange
         symbol = "   "
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -779,7 +793,8 @@ class TestFetchRawFundingRate:
         assert result.error.message == "Symbol parameter is required"
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_funding_rate_mixed_case_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_mixed_case_symbol(self, debug_service):
         """Test that mixed case symbol is normalized to uppercase."""
         # Arrange
         symbol = "BtCuSdT"
@@ -787,7 +802,7 @@ class TestFetchRawFundingRate:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
@@ -811,7 +826,8 @@ class TestFetchRawLongShortRatio:
         """Create a DebugExchangeService instance with mocked exchange."""
         return DebugExchangeService(mock_exchange_connector)
     
-    def test_fetch_raw_long_short_ratio_success(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_success(self, debug_service):
         """Test successful long/short ratio data retrieval."""
         # Arrange
         symbol = "BTCUSDT"
@@ -836,7 +852,7 @@ class TestFetchRawLongShortRatio:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is True
@@ -857,7 +873,8 @@ class TestFetchRawLongShortRatio:
             assert call_args[1]['params']['period'] == '5m'
             assert call_args[1]['params']['limit'] == 1
     
-    def test_fetch_raw_long_short_ratio_normalizes_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_normalizes_symbol(self, debug_service):
         """Test that symbol is normalized (uppercase and trimmed)."""
         # Arrange
         symbol = "  btcusdt  "
@@ -874,20 +891,21 @@ class TestFetchRawLongShortRatio:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is True
             # Verify the symbol was normalized before calling market()
             debug_service.exchange.market.assert_called_once_with("BTCUSDT")
     
-    def test_fetch_raw_long_short_ratio_empty_symbol(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_empty_symbol(self, debug_service):
         """Test validation error for empty symbol."""
         # Arrange
         symbol = ""
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -897,13 +915,14 @@ class TestFetchRawLongShortRatio:
         assert result.error.message == "Symbol parameter is required"
         assert result.metadata.exchange == "binanceusdm"
     
-    def test_fetch_raw_long_short_ratio_invalid_characters(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_invalid_characters(self, debug_service):
         """Test validation error for symbol with invalid characters."""
         # Arrange
         symbol = "BTC-USDT"
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -911,13 +930,14 @@ class TestFetchRawLongShortRatio:
         assert result.error.code == "INVALID_INPUT"
         assert result.error.message == "Symbol contains invalid characters. Only alphanumeric, '/', and ':' are allowed"
     
-    def test_fetch_raw_long_short_ratio_exceeds_max_length(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_exceeds_max_length(self, debug_service):
         """Test validation error for symbol exceeding max length."""
         # Arrange
         symbol = "A" * 21  # 21 characters, max is 20
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -925,7 +945,8 @@ class TestFetchRawLongShortRatio:
         assert result.error.code == "INVALID_INPUT"
         assert result.error.message == "Symbol parameter exceeds maximum length (20 characters for Binance format, 30 for CCXT format)"
     
-    def test_fetch_raw_long_short_ratio_timeout_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_timeout_error(self, debug_service):
         """Test handling of timeout errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -937,7 +958,7 @@ class TestFetchRawLongShortRatio:
             mock_get.side_effect = requests.exceptions.Timeout("Request timed out")
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False
@@ -948,7 +969,8 @@ class TestFetchRawLongShortRatio:
             assert result.error.timeout_duration_ms is not None
             assert result.error.timeout_duration_ms >= 0
     
-    def test_fetch_raw_long_short_ratio_connection_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_connection_error(self, debug_service):
         """Test handling of connection errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -960,7 +982,7 @@ class TestFetchRawLongShortRatio:
             mock_get.side_effect = requests.exceptions.ConnectionError("Connection failed")
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False
@@ -969,7 +991,8 @@ class TestFetchRawLongShortRatio:
             assert "Service unavailable" in result.error.message
             assert result.metadata.http_status == 503
     
-    def test_fetch_raw_long_short_ratio_http_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_http_error(self, debug_service):
         """Test handling of HTTP errors."""
         # Arrange
         symbol = "BTCUSDT"
@@ -987,7 +1010,7 @@ class TestFetchRawLongShortRatio:
             mock_get.side_effect = http_error
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False
@@ -997,7 +1020,8 @@ class TestFetchRawLongShortRatio:
             assert result.metadata.http_status == 400
             assert result.data is not None  # Original error response preserved
     
-    def test_fetch_raw_long_short_ratio_invalid_symbol_from_market(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_invalid_symbol_from_market(self, debug_service):
         """Test handling of invalid symbol from CCXT market lookup."""
         # Arrange
         symbol = "INVALIDSYMBOL"
@@ -1006,7 +1030,7 @@ class TestFetchRawLongShortRatio:
         debug_service.exchange.market = Mock(side_effect=ccxt.BadSymbol("Invalid symbol"))
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -1015,14 +1039,15 @@ class TestFetchRawLongShortRatio:
         assert "Invalid symbol" in result.error.message
         assert result.metadata.http_status == 400
     
-    def test_fetch_raw_long_short_ratio_unexpected_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_unexpected_error(self, debug_service):
         """Test handling of unexpected errors."""
         # Arrange
         symbol = "BTCUSDT"
         debug_service.exchange.market = Mock(side_effect=Exception("Unexpected error"))
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -1031,7 +1056,8 @@ class TestFetchRawLongShortRatio:
         assert "Internal server error" in result.error.message
         assert result.metadata.http_status == 500
     
-    def test_fetch_raw_long_short_ratio_timing_precision(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_timing_precision(self, debug_service):
         """Test that response time has at least 2 decimal places precision."""
         # Arrange
         symbol = "BTCUSDT"
@@ -1046,7 +1072,7 @@ class TestFetchRawLongShortRatio:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is True
@@ -1058,7 +1084,8 @@ class TestFetchRawLongShortRatio:
             # We verify by checking if re-rounding to 2 decimals gives the same value
             assert round(result.metadata.response_time_ms, 2) == result.metadata.response_time_ms
     
-    def test_fetch_raw_long_short_ratio_timestamps_order(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_timestamps_order(self, debug_service):
         """Test that response timestamp is after request timestamp."""
         # Arrange
         symbol = "BTCUSDT"
@@ -1073,13 +1100,14 @@ class TestFetchRawLongShortRatio:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is True
             assert result.metadata.response_timestamp >= result.metadata.request_timestamp
     
-    def test_fetch_raw_long_short_ratio_field_mapping_structure(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_field_mapping_structure(self, debug_service):
         """Test that field mapping has correct structure for long/short ratio."""
         # Arrange
         symbol = "BTCUSDT"
@@ -1094,7 +1122,7 @@ class TestFetchRawLongShortRatio:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is True

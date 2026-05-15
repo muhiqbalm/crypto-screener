@@ -16,7 +16,7 @@ class TestDebugSanitizationIntegration:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -41,7 +41,7 @@ class TestDebugSanitizationIntegration:
                 "price": 50000.0
             }
         }
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -69,7 +69,7 @@ class TestDebugSanitizationIntegration:
             "token": "bearer-token-xyz",  # Sensitive field
             "accessToken": "access-token-abc"  # Sensitive field
         }
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_oi_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_oi_data)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -83,7 +83,8 @@ class TestDebugSanitizationIntegration:
         assert result.data["token"] == "[REDACTED]"
         assert result.data["accessToken"] == "[REDACTED]"
     
-    def test_funding_rate_response_sanitizes_password(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_funding_rate_response_sanitizes_password(self, debug_service):
         """Test that password in funding rate response is sanitized."""
         # Arrange
         symbol = "BTCUSDT"
@@ -98,7 +99,7 @@ class TestDebugSanitizationIntegration:
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_fr_data)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is True
@@ -109,7 +110,8 @@ class TestDebugSanitizationIntegration:
         assert result.data["password"] == "[REDACTED]"
         assert result.data["credentials"]["privateKey"] == "[REDACTED]"
     
-    def test_long_short_ratio_response_sanitizes_nested_secrets(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_long_short_ratio_response_sanitizes_nested_secrets(self, debug_service):
         """Test that nested secrets in long/short ratio response are sanitized."""
         # Arrange
         symbol = "BTCUSDT"
@@ -140,7 +142,7 @@ class TestDebugSanitizationIntegration:
             mock_get.return_value = mock_response
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is True
@@ -172,7 +174,7 @@ class TestDebugSanitizationIntegration:
             }
         }
         
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=mock_error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=mock_error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -206,7 +208,7 @@ class TestDebugSanitizationIntegration:
             "privateKey": "private-1",
             "credential": "cred-1"
         }
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)

@@ -320,7 +320,7 @@ async def get_raw_funding_rate(
     logger.info(f"Received request for raw funding rate data: {symbol}")
     
     # Fetch raw funding rate data
-    response = debug_service.fetch_raw_funding_rate(symbol)
+    response = await debug_service.fetch_raw_funding_rate(symbol)
     
     # Determine HTTP status code based on response
     status_code = response.metadata.http_status or (200 if response.success else 500)
@@ -388,7 +388,7 @@ async def get_raw_long_short_ratio(
     logger.info(f"Received request for raw long/short ratio data: {symbol}")
     
     # Fetch raw long/short ratio data
-    response = debug_service.fetch_raw_long_short_ratio(symbol)
+    response = await debug_service.fetch_raw_long_short_ratio(symbol)
     
     # Determine HTTP status code based on response
     status_code = response.metadata.http_status or (200 if response.success else 500)

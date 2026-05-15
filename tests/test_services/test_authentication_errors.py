@@ -22,7 +22,7 @@ class TestAuthenticationErrorHandling:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -36,7 +36,7 @@ class TestAuthenticationErrorHandling:
         """Test that fetch_raw_ticker handles authentication errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.AuthenticationError("API key invalid")
         )
         
@@ -57,7 +57,7 @@ class TestAuthenticationErrorHandling:
         """Test that fetch_raw_open_interest handles authentication errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_open_interest = AsyncMock(
+        debug_service.exchange.fetch_open_interest = Mock(
             side_effect=ccxt.AuthenticationError("Authentication failed")
         )
         
@@ -73,7 +73,8 @@ class TestAuthenticationErrorHandling:
         assert result.metadata.exchange == "binanceusdm"
         assert result.metadata.response_time_ms >= 0
     
-    def test_fetch_raw_funding_rate_authentication_error(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_authentication_error(self, debug_service):
         """Test that fetch_raw_funding_rate handles authentication errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -82,7 +83,7 @@ class TestAuthenticationErrorHandling:
         )
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -93,7 +94,8 @@ class TestAuthenticationErrorHandling:
         assert result.metadata.exchange == "binanceusdm"
         assert result.metadata.response_time_ms >= 0
     
-    def test_fetch_raw_long_short_ratio_authentication_error_from_ccxt(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_authentication_error_from_ccxt(self, debug_service):
         """Test that fetch_raw_long_short_ratio handles CCXT authentication errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -103,7 +105,7 @@ class TestAuthenticationErrorHandling:
         )
         
         # Act
-        result = debug_service.fetch_raw_long_short_ratio(symbol)
+        result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -115,7 +117,8 @@ class TestAuthenticationErrorHandling:
         assert result.metadata.response_time_ms >= 0
     
     @pytest.mark.parametrize("http_status_code", [401])
-    def test_fetch_raw_long_short_ratio_authentication_error_from_http(self, debug_service, http_status_code):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_authentication_error_from_http(self, debug_service, http_status_code):
         """Test that fetch_raw_long_short_ratio handles HTTP 401 errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -134,7 +137,7 @@ class TestAuthenticationErrorHandling:
         from unittest.mock import patch
         with patch('requests.get', side_effect=http_error):
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
         
         # Assert
         assert result.success is False
@@ -176,7 +179,7 @@ class TestAuthenticationErrorHandling:
         symbol = "BTCUSDT"
         # AuthenticationError is a subclass of ExchangeError, which is a subclass of BaseError
         # We need to ensure it's caught before more general exceptions
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.AuthenticationError("Invalid credentials")
         )
         
@@ -193,7 +196,7 @@ class TestAuthenticationErrorHandling:
         """Test that authentication errors are properly logged."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.AuthenticationError("API key missing")
         )
         
@@ -211,7 +214,7 @@ class TestAuthenticationErrorHandling:
         """Test that authentication error responses have the correct structure."""
         # Arrange
         symbol = "BTCUSDT"
-        debug_service.exchange.fetch_ticker = AsyncMock(
+        debug_service.exchange.fetch_ticker = Mock(
             side_effect=ccxt.AuthenticationError("Invalid API key")
         )
         

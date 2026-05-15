@@ -629,7 +629,7 @@ class DebugExchangeService:
                 )
             )
 
-    def fetch_raw_funding_rate(self, symbol: str) -> DebugResponse:
+    async def fetch_raw_funding_rate(self, symbol: str) -> DebugResponse:
         """
         Fetch raw funding rate data from the exchange with timing and field mapping.
         
@@ -650,7 +650,7 @@ class DebugExchangeService:
         
         Examples:
             >>> service = DebugExchangeService(exchange_connector)
-            >>> response = service.fetch_raw_funding_rate("BTCUSDT")
+            >>> response = await service.fetch_raw_funding_rate("BTCUSDT")
             >>> print(response.data['fundingRate'])
             0.0001
         """
@@ -683,8 +683,8 @@ class DebugExchangeService:
         request_timestamp = datetime.now()
         
         try:
-            # Call exchange API to fetch funding rate
-            raw_data = self.exchange.fetch_funding_rate(normalized_symbol)
+            # Call exchange API to fetch funding rate (non-blocking via asyncio.to_thread)
+            raw_data = await asyncio.to_thread(self.exchange.fetch_funding_rate, normalized_symbol)
             
             # Sanitize response data to remove sensitive fields
             sanitized_data = sanitize_response_data(raw_data)
@@ -858,7 +858,7 @@ class DebugExchangeService:
                 fieldMapping=None
             )
 
-    def fetch_raw_long_short_ratio(self, symbol: str) -> DebugResponse:
+    async def fetch_raw_long_short_ratio(self, symbol: str) -> DebugResponse:
         """
         Fetch raw long/short ratio data from the exchange with timing and field mapping.
         
@@ -882,7 +882,7 @@ class DebugExchangeService:
         
         Examples:
             >>> service = DebugExchangeService(exchange_connector)
-            >>> response = service.fetch_raw_long_short_ratio("BTCUSDT")
+            >>> response = await service.fetch_raw_long_short_ratio("BTCUSDT")
             >>> print(response.data[0]['longShortRatio'])
             1.5
         """
@@ -928,9 +928,12 @@ class DebugExchangeService:
                 'limit': 1  # Get only the most recent data point
             }
             
-            # Make direct HTTP request to Binance API
+            # Make direct HTTP request to Binance API (non-blocking via asyncio.to_thread)
+            import functools
             logger.info(f"Fetching raw long/short ratio data for symbol: {binance_symbol}")
-            response = requests.get(url, params=params, timeout=10)
+            response = await asyncio.to_thread(
+                functools.partial(requests.get, url, params=params, timeout=10)
+            )
             
             # Record response timestamp
             response_timestamp = datetime.now()
@@ -1268,9 +1271,7 @@ class DebugExchangeService:
             """Wrapper for funding rate fetch with error handling."""
             try:
                 start_time = datetime.utcnow()
-                # Note: fetch_raw_funding_rate is synchronous, so we need to run it in executor
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.fetch_raw_funding_rate, normalized_symbol)
+                result = await self.fetch_raw_funding_rate(normalized_symbol)
                 end_time = datetime.utcnow()
                 timing_ms = (end_time - start_time).total_seconds() * 1000
                 return ("fundingRate", result, timing_ms)
@@ -1293,9 +1294,7 @@ class DebugExchangeService:
             """Wrapper for long/short ratio fetch with error handling."""
             try:
                 start_time = datetime.utcnow()
-                # Note: fetch_raw_long_short_ratio is synchronous, so we need to run it in executor
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.fetch_raw_long_short_ratio, normalized_symbol)
+                result = await self.fetch_raw_long_short_ratio(normalized_symbol)
                 end_time = datetime.utcnow()
                 timing_ms = (end_time - start_time).total_seconds() * 1000
                 return ("longShortRatio", result, timing_ms)

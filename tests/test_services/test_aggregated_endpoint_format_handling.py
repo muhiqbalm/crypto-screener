@@ -23,7 +23,7 @@ class TestAggregatedEndpointFormatHandling:
     def mock_exchange_connector(self):
         """Create a mock ExchangeConnector."""
         connector = Mock()
-        exchange = AsyncMock()
+        exchange = Mock()
         connector.get_exchange.return_value = exchange
         return connector
     
@@ -61,8 +61,8 @@ class TestAggregatedEndpointFormatHandling:
         }
         
         # Mock the exchange methods
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         debug_service.exchange.market = Mock(return_value={"id": "BTCUSDT"})
         
@@ -125,8 +125,8 @@ class TestAggregatedEndpointFormatHandling:
         }
         
         # Mock the exchange methods
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         debug_service.exchange.market = Mock(return_value={"id": "BTCUSDT"})
         
@@ -190,8 +190,8 @@ class TestAggregatedEndpointFormatHandling:
         }
         
         # Mock the exchange methods
-        debug_service.exchange.fetch_ticker = AsyncMock(return_value=mock_ticker_data)
-        debug_service.exchange.fetch_open_interest = AsyncMock(return_value=mock_open_interest_data)
+        debug_service.exchange.fetch_ticker = Mock(return_value=mock_ticker_data)
+        debug_service.exchange.fetch_open_interest = Mock(return_value=mock_open_interest_data)
         debug_service.exchange.fetch_funding_rate = Mock(return_value=mock_funding_rate_data)
         debug_service.exchange.market = Mock(return_value={"id": "ETHUSDT"})
         

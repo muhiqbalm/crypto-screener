@@ -86,7 +86,7 @@ class TestDataProcessorMockMode:
     async def test_mock_mode_has_valid_tiers(self, mock_mode_settings):
         dp = DataProcessor(mock_mode_settings)
         result = await dp.process_all()
-        assert set(result.data["tier"].unique()).issubset({"A", "B"})
+        assert set(result.data["tier"].unique()).issubset({"A", "B", "C"})
 
     @pytest.mark.asyncio
     async def test_mock_mode_deterministic(self, mock_mode_settings):

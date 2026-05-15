@@ -17,8 +17,8 @@ from src.exchange.connector import ExchangeConnector
 def mock_exchange():
     """Create a mock exchange instance."""
     exchange = Mock()
-    exchange.fetch_ticker = AsyncMock()
-    exchange.fetch_open_interest = AsyncMock()
+    exchange.fetch_ticker = Mock()
+    exchange.fetch_open_interest = Mock()
     exchange.fetch_funding_rate = Mock()
     exchange.fetch_time = AsyncMock()
     exchange.market = Mock()
@@ -45,7 +45,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Internal server error")
         error.status_code = 500
         error.response = {"error": "Internal server error", "code": 500}
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -66,7 +66,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Invalid symbol")
         error.status_code = 400
         error.response = {"error": "Invalid symbol", "code": 400}
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -87,7 +87,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Service unavailable")
         error.status_code = 503
         error.response = {"error": "Service unavailable", "code": 503}
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -108,7 +108,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Internal server error")
         error.status_code = 502
         error.response = {"error": "Bad gateway", "code": 502}
-        debug_service.exchange.fetch_open_interest = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_open_interest = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -129,7 +129,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Rate limit exceeded")
         error.status_code = 429
         error.response = {"error": "Rate limit exceeded", "code": 429}
-        debug_service.exchange.fetch_open_interest = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_open_interest = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_open_interest(symbol)
@@ -142,7 +142,8 @@ class TestExchangeServerErrorHandling:
         assert result.metadata.http_status == 429
         assert result.data == {"error": "Rate limit exceeded", "code": 429}
     
-    def test_fetch_raw_funding_rate_server_error_5xx(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_server_error_5xx(self, debug_service):
         """Test that funding rate endpoint handles 5xx errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -152,7 +153,7 @@ class TestExchangeServerErrorHandling:
         debug_service.exchange.fetch_funding_rate = Mock(side_effect=error)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -162,7 +163,8 @@ class TestExchangeServerErrorHandling:
         assert result.metadata.http_status == 504
         assert result.data == {"error": "Gateway timeout", "code": 504}
     
-    def test_fetch_raw_funding_rate_client_error_4xx(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_funding_rate_client_error_4xx(self, debug_service):
         """Test that funding rate endpoint handles 4xx errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -172,7 +174,7 @@ class TestExchangeServerErrorHandling:
         debug_service.exchange.fetch_funding_rate = Mock(side_effect=error)
         
         # Act
-        result = debug_service.fetch_raw_funding_rate(symbol)
+        result = await debug_service.fetch_raw_funding_rate(symbol)
         
         # Assert
         assert result.success is False
@@ -182,7 +184,8 @@ class TestExchangeServerErrorHandling:
         assert result.metadata.http_status == 404
         assert result.data == {"error": "Symbol not found", "code": 404}
     
-    def test_fetch_raw_long_short_ratio_server_error_5xx(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_server_error_5xx(self, debug_service):
         """Test that long/short ratio endpoint handles 5xx errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -200,7 +203,7 @@ class TestExchangeServerErrorHandling:
             mock_get.side_effect = http_error
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False
@@ -210,7 +213,8 @@ class TestExchangeServerErrorHandling:
             assert result.metadata.http_status == 500
             assert result.data == {"error": "Internal server error", "code": 500}
     
-    def test_fetch_raw_long_short_ratio_client_error_4xx(self, debug_service):
+    @pytest.mark.asyncio
+    async def test_fetch_raw_long_short_ratio_client_error_4xx(self, debug_service):
         """Test that long/short ratio endpoint handles 4xx errors correctly."""
         # Arrange
         symbol = "BTCUSDT"
@@ -228,7 +232,7 @@ class TestExchangeServerErrorHandling:
             mock_get.side_effect = http_error
             
             # Act
-            result = debug_service.fetch_raw_long_short_ratio(symbol)
+            result = await debug_service.fetch_raw_long_short_ratio(symbol)
             
             # Assert
             assert result.success is False
@@ -245,7 +249,7 @@ class TestExchangeServerErrorHandling:
         symbol = "BTCUSDT"
         error = ccxt.ExchangeError("Unknown error")
         # Don't set status_code attribute
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
@@ -271,7 +275,7 @@ class TestExchangeServerErrorHandling:
         error = ccxt.ExchangeError("Internal server error")
         error.status_code = 500
         error.response = original_error_data
-        debug_service.exchange.fetch_ticker = AsyncMock(side_effect=error)
+        debug_service.exchange.fetch_ticker = Mock(side_effect=error)
         
         # Act
         result = await debug_service.fetch_raw_ticker(symbol)
