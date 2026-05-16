@@ -295,11 +295,11 @@ class MultiFactorScorer:
             if pd.isna(pct):
                 return None
             if pct >= 80.0:
-                return 'High'
+                return 'HIGH'
             elif pct >= 60.0:
-                return 'Medium'
+                return 'MEDIUM'
             else:
-                return 'Low'
+                return 'LOW'
                 
         df['confidence_tier'] = df['confidence_pct'].apply(assign_confidence_tier)
         

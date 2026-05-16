@@ -110,7 +110,7 @@ class AssetSummary(BaseModel):
     )
     confidence_tier: Optional[str] = Field(
         default=None,
-        description="Confidence classification: High (>=80%), Medium (60-80%), Low (<60%)",
+        description="Confidence classification: HIGH (>=80%), MEDIUM (60-80%), LOW (<60%)",
     )
 
 
@@ -143,7 +143,7 @@ class AssetDetail(BaseModel):
     )
     confidence_tier: Optional[str] = Field(
         default=None,
-        description="Confidence classification: High (>=80%), Medium (60-80%), Low (<60%)",
+        description="Confidence classification: HIGH (>=80%), MEDIUM (60-80%), LOW (<60%)",
     )
     price: Optional[float] = Field(
         default=None,
