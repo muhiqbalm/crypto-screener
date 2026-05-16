@@ -189,6 +189,8 @@ class ResponseBuilder:
                     row.get("risk_adjusted_score", row.get("multi_factor_score")), decimals=4
                 ),
                 signal=signal,
+                confidence_pct=self._sanitize_value(row.get("confidence_pct"), decimals=2),
+                confidence_tier=row.get("confidence_tier") if row.get("confidence_tier") in ('High', 'Medium', 'Low') else None,
             )
             summaries.append(summary)
 
@@ -348,6 +350,8 @@ class ResponseBuilder:
             tier=row.get("tier") if row.get("tier") in ('A', 'B', 'C') else None,
             funding_rate_signal=funding_rate_signal_str,
             oi_signal=oi_signal_str,
+            confidence_pct=self._sanitize_value(row.get("confidence_pct"), decimals=2),
+            confidence_tier=row.get("confidence_tier") if row.get("confidence_tier") in ('High', 'Medium', 'Low') else None,
         )
 
     def _sanitize_value(self, value, decimals: int = 2) -> Optional[float]:

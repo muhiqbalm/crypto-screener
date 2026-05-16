@@ -11,7 +11,7 @@ Tests cover:
 import pytest
 import pandas as pd
 import numpy as np
-from crypto_screener import RankingEngine
+from src.ranking.engine import RankingEngine
 
 
 class TestRankingEngine:

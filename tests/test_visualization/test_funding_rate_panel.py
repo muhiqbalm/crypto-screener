@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the FundingRatePanel class from crypto_screener
-from crypto_screener import FundingRatePanel
+from src.visualization.panels import FundingRatePanel
 
 def create_sample_data():
     """

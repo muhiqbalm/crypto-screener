@@ -15,8 +15,8 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from src.data.fetcher import MarketDataFetcher
 from src.visualization.dashboard import DashboardBuilder
-from src.scoring.multi_factor import MultiFactorScorer
-from src.scoring.ic_weight import ICWeightCalculator
+from src.signals.scorer import MultiFactorScorer
+from src.signals.ic_weights import ICWeightCalculator
 from src.ranking.engine import RankingEngine
 
 

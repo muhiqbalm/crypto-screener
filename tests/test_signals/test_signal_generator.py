@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 # Import the SignalGenerator class from crypto_screener
-from crypto_screener import SignalGenerator
+from src.signals.generator import SignalGenerator
 
 def test_signal_generator():
     """Test SignalGenerator class functionality."""

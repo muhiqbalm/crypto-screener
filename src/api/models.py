@@ -104,6 +104,14 @@ class AssetSummary(BaseModel):
         default=None,
         description="Trading signal direction: BULLISH, BEARISH, or NEUTRAL",
     )
+    confidence_pct: Optional[float] = Field(
+        default=None,
+        description="Confidence rate of the signal as a percentage (0-100)",
+    )
+    confidence_tier: Optional[str] = Field(
+        default=None,
+        description="Confidence classification: High (>=80%), Medium (60-80%), Low (<60%)",
+    )
 
 
 class AssetDetail(BaseModel):
@@ -128,6 +136,14 @@ class AssetDetail(BaseModel):
     signal: Optional[str] = Field(
         default=None,
         description="Aggregate trading signal: BULLISH (score > 0.5), BEARISH (< -0.5), or NEUTRAL",
+    )
+    confidence_pct: Optional[float] = Field(
+        default=None,
+        description="Confidence rate of the signal as a percentage (0-100)",
+    )
+    confidence_tier: Optional[str] = Field(
+        default=None,
+        description="Confidence classification: High (>=80%), Medium (60-80%), Low (<60%)",
     )
     price: Optional[float] = Field(
         default=None,

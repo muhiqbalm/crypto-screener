@@ -7,7 +7,8 @@ Tests the multi-factor score calculation and tier classification functionality.
 import pytest
 import pandas as pd
 import numpy as np
-from crypto_screener import MultiFactorScorer, ICWeightCalculator
+from src.signals.scorer import MultiFactorScorer
+from src.signals.ic_weights import ICWeightCalculator
 
 
 class TestMultiFactorScorer:

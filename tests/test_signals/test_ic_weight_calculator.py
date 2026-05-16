@@ -8,7 +8,7 @@ Tests the Information Coefficient weight management functionality including:
 """
 
 import pytest
-from crypto_screener import ICWeightCalculator
+from src.signals.ic_weights import ICWeightCalculator
 
 
 def test_ic_weight_calculator_initialization():

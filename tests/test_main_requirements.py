@@ -21,7 +21,7 @@ import pandas as pd
 import re
 from datetime import datetime
 
-import crypto_screener
+import src
 
 
 class TestMainRequirements(unittest.TestCase):

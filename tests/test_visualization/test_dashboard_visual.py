@@ -11,13 +11,11 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 
-from crypto_screener import (
-    SignalGenerator,
-    ICWeightCalculator,
-    MultiFactorScorer,
-    RankingEngine,
-    DashboardBuilder
-)
+from src.signals.generator import SignalGenerator
+from src.signals.ic_weights import ICWeightCalculator
+from src.signals.scorer import MultiFactorScorer
+from src.ranking.engine import RankingEngine
+from src.visualization.dashboard import DashboardBuilder
 
 
 def create_sample_dashboard():

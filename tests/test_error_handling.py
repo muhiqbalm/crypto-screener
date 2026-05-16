@@ -16,13 +16,11 @@ import pandas as pd
 import numpy as np
 
 # Import the classes we want to test
-from crypto_screener import (
-    ExchangeConnector,
-    DashboardBuilder,
-    MultiFactorPanel,
-    FundingRatePanel,
-    LongShortRatioPanel
-)
+from src.exchange.connector import ExchangeConnector
+from src.visualization.dashboard import DashboardBuilder
+from src.visualization.panels import MultiFactorPanel
+from src.visualization.panels import FundingRatePanel
+from src.visualization.panels import LongShortRatioPanel
 
 
 class TestErrorHandling(unittest.TestCase):

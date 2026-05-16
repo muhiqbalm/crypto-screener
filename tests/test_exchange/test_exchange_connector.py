@@ -5,7 +5,7 @@ Basic tests for ExchangeConnector class
 
 import sys
 import pytest
-from crypto_screener import ExchangeConnector
+from src.exchange.connector import ExchangeConnector
 
 
 def test_exchange_connector_initialization():

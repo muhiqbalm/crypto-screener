@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
 import os
-from crypto_screener import DashboardBuilder
+from src.visualization.dashboard import DashboardBuilder
 
 
 class TestDashboardBuilderInitialization:

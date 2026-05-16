@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for testing
 import matplotlib.pyplot as plt
-from crypto_screener import MultiFactorPanel
+from src.visualization.panels import MultiFactorPanel
 
 
 class TestMultiFactorPanel:

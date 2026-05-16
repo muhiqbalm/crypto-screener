@@ -8,6 +8,7 @@ risk adjustment and position sizing.
 from __future__ import annotations
 
 import logging
+import math
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -224,6 +225,87 @@ class MultiFactorScorer:
         
         return df
     
+    def calculate_confidence_rate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate trading signal confidence rate using a Hybrid method.
+        
+        Combines Magnitude Probability (derived from z-score CDF) and
+        Confluence Probability (agreement across 5 factors).
+        
+        Args:
+            df: DataFrame containing 'risk_adjusted_score' and individual signal columns.
+            
+        Returns:
+            pd.DataFrame: Input DataFrame with new 'confidence_pct' and 'confidence_tier' columns.
+        """
+        if 'risk_adjusted_score' not in df.columns:
+            logger.warning("'risk_adjusted_score' not found, cannot calculate confidence rate")
+            df['confidence_pct'] = np.nan
+            df['confidence_tier'] = None
+            return df
+            
+        n = len(df)
+        if n == 0:
+            df['confidence_pct'] = pd.Series(dtype=float)
+            df['confidence_tier'] = pd.Series(dtype=str)
+            return df
+            
+        # 1. Magnitude Probability
+        # Using math.erf to approximate normal CDF based on the absolute z-score
+        def calc_magnitude_prob(score):
+            if pd.isna(score):
+                return np.nan
+            return (1.0 + math.erf(abs(score) / math.sqrt(2.0))) / 2.0
+            
+        magnitude_prob = df['risk_adjusted_score'].apply(calc_magnitude_prob)
+        
+        # 2. Confluence Probability
+        signal_factors = [
+            'reversal_signal', 'momentum_signal', 
+            'funding_rate_signal', 'sentiment_signal', 'oi_momentum_signal'
+        ]
+        
+        # Determine target direction (+1 for LONG, -1 for SHORT)
+        direction_sign = np.sign(df['risk_adjusted_score'].fillna(0))
+        # Handle exactly 0 to avoid matching 0 signs incorrectly, default to +1
+        direction_sign = direction_sign.replace(0, 1)
+        
+        confluence_count = pd.Series(0, index=df.index)
+        valid_factors_count = 0
+        
+        for factor in signal_factors:
+            if factor in df.columns:
+                valid_factors_count += 1
+                factor_sign = np.sign(df[factor].fillna(0))
+                # Add 1 where signs match
+                confluence_count += (factor_sign == direction_sign).astype(int)
+                
+        if valid_factors_count > 0:
+            confluence_prob = confluence_count / valid_factors_count
+        else:
+            confluence_prob = pd.Series(0.5, index=df.index) # Default neutral if no factors found
+            
+        # 3. Hybrid Probability
+        # 60% weight to magnitude, 40% weight to confluence
+        hybrid_prob = (0.6 * magnitude_prob) + (0.4 * confluence_prob)
+        df['confidence_pct'] = hybrid_prob * 100.0
+        
+        # 4. Confidence Tier
+        def assign_confidence_tier(pct):
+            if pd.isna(pct):
+                return None
+            if pct >= 80.0:
+                return 'High'
+            elif pct >= 60.0:
+                return 'Medium'
+            else:
+                return 'Low'
+                
+        df['confidence_tier'] = df['confidence_pct'].apply(assign_confidence_tier)
+        
+        logger.info(f"Calculated confidence rates for {n} assets")
+        return df
+
     def classify_tiers(self, scores: pd.Series) -> pd.Series:
         """
         Classify assets into 3 tiers based on percentile ranking of scores.

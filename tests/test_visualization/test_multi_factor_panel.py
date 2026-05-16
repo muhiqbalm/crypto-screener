@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the MultiFactorPanel class from crypto_screener
-from crypto_screener import MultiFactorPanel
+from src.visualization.panels import MultiFactorPanel
 
 def create_sample_data():
     """

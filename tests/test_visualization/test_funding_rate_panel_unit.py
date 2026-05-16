@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 
-from crypto_screener import FundingRatePanel
+from src.visualization.panels import FundingRatePanel
 
 
 class TestFundingRatePanelBasicFunctionality:

@@ -158,7 +158,12 @@ class DataProcessor:
             market_data = await asyncio.to_thread(
                 scorer.calculate_position_sizing, market_data
             )
-            logger.info("Multi-factor scores, risk adjustment, and position sizing calculated")
+            
+            # Calculate confidence rate
+            market_data = await asyncio.to_thread(
+                scorer.calculate_confidence_rate, market_data
+            )
+            logger.info("Multi-factor scores, risk adjustment, position sizing, and confidence calculated")
 
             # Stage 5: Rank assets by risk_adjusted_score
             logger.info("Ranking assets...")
@@ -403,6 +408,7 @@ class DataProcessor:
         # Risk-adjusted score and position sizing
         df = scorer.calculate_risk_adjusted_score(df)
         df = scorer.calculate_position_sizing(df)
+        df = scorer.calculate_confidence_rate(df)
 
         # Rank by risk_adjusted_score
         ranker = RankingEngine()

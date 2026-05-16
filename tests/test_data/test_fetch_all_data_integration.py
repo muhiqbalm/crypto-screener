@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 import pandas as pd
 import numpy as np
-from crypto_screener import MarketDataFetcher
+from src.data.fetcher import MarketDataFetcher
 
 
 class TestFetchAllDataIntegration(unittest.TestCase):

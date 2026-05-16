@@ -15,7 +15,7 @@ import numpy as np
 from datetime import datetime
 
 # Import the crypto_screener module
-import crypto_screener
+import src
 
 
 class TestMainFunction(unittest.TestCase):

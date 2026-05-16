@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the LongShortRatioPanel class from crypto_screener
-from crypto_screener import LongShortRatioPanel
+from src.visualization.panels import LongShortRatioPanel
 
 def test_basic_rendering():
     """Test basic rendering with sample data."""
