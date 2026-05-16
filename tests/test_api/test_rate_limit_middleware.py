@@ -238,6 +238,62 @@ class TestRateLimitMiddleware:
             response = await client.get("/api/v1/debug/health")
             assert response.status_code == 429
 
+    @pytest.mark.asyncio
+    async def test_cleanup_inactive_clients(self, app_with_rate_limit):
+        """Inactive clients are removed during periodic cleanup."""
+        # We need to access the middleware instance directly to test cleanup
+        # Find the RateLimitMiddleware instance
+        middleware = None
+        for m in app_with_rate_limit.user_middleware:
+            if getattr(m.cls, "__name__", "") == "RateLimitMiddleware":
+                middleware = m
+                break
+                
+        # If we can't find it via user_middleware, we'll instantiate one for unit testing
+        if middleware is None:
+            middleware = RateLimitMiddleware(
+                app_with_rate_limit,
+                max_requests=3,
+                window_seconds=10
+            )
+        else:
+            # Create a direct instance for easier unit testing of the cleanup logic
+            middleware = RateLimitMiddleware(
+                app_with_rate_limit,
+                max_requests=3,
+                window_seconds=10
+            )
+            
+        # Add some active and inactive clients
+        current_time = time.time()
+        
+        # Client 1: active (recent request)
+        middleware.request_history["active_client_1"].append(current_time - 1)
+        
+        # Client 2: active (multiple requests, one recent)
+        middleware.request_history["active_client_2"].extend([current_time - 25, current_time - 5])
+        
+        # Client 3: inactive (older than 2 * window_seconds)
+        middleware.request_history["inactive_client_1"].append(current_time - 25)
+        
+        # Client 4: inactive (multiple requests, all older than 2 * window_seconds)
+        middleware.request_history["inactive_client_2"].extend([current_time - 35, current_time - 21])
+        
+        # Verify initial state
+        assert middleware.active_clients == 4
+        assert "inactive_client_1" in middleware.request_history
+        assert "inactive_client_2" in middleware.request_history
+        
+        # Run cleanup
+        middleware._cleanup_inactive_clients()
+        
+        # Verify state after cleanup
+        assert middleware.active_clients == 2
+        assert "active_client_1" in middleware.request_history
+        assert "active_client_2" in middleware.request_history
+        assert "inactive_client_1" not in middleware.request_history
+        assert "inactive_client_2" not in middleware.request_history
+
 
 class TestRateLimitConfiguration:
     """Tests for rate limit configuration."""

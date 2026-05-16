@@ -305,9 +305,9 @@ class ResponseBuilder:
         score_for_signal = row.get("risk_adjusted_score", row.get("multi_factor_score"))
         signal = self._derive_signal(score_for_signal)
         
-        # Calculate RSI from reversal_signal (normalized z-score)
-        # RSI approximation: map z-score to 0-100 range
-        rsi = self._calculate_rsi_from_signal(row.get("reversal_signal"))
+        # Calculate reversal score from reversal_signal (normalized z-score)
+        # Reversal score: map z-score to 0-100 scale (not standard RSI)
+        reversal_score = self._calculate_reversal_score(row.get("reversal_signal"))
         
         # Derive MACD signal from momentum_signal
         macd_signal = self._derive_macd_signal(row.get("momentum_signal"))
@@ -339,7 +339,7 @@ class ResponseBuilder:
             funding_rate=self._sanitize_value(row.get("funding_rate"), decimals=4),
             open_interest=self._sanitize_value(row.get("open_interest"), decimals=2),
             long_short_ratio=self._sanitize_value(row.get("long_short_ratio"), decimals=4),
-            rsi=rsi,
+            reversal_score=reversal_score,
             macd_signal=macd_signal,
             volatility=volatility,
             ic_weight=ic_weight,
@@ -419,19 +419,23 @@ class ResponseBuilder:
         except (TypeError, ValueError):
             return None
 
-    def _calculate_rsi_from_signal(self, reversal_signal) -> Optional[float]:
-        """Calculate RSI approximation from reversal signal (normalized z-score).
+    def _calculate_reversal_score(self, reversal_signal) -> Optional[float]:
+        """Calculate reversal score from reversal signal (normalized z-score).
 
-        Maps z-score to 0-100 RSI range:
-        - z-score of -2 → RSI ~30 (oversold)
-        - z-score of 0 → RSI ~50 (neutral)
-        - z-score of +2 → RSI ~70 (overbought)
+        Maps z-score to 0-100 scale. Note: This is a linear mapping, NOT a standard
+        RSI (Relative Strength Index) calculation. It is used to present the z-score
+        in a familiar 0-100 oscillator format for easier consumption by users, but
+        has limitations as it does not calculate average gains/losses over periods.
+
+        - z-score of -2 → Score ~30 (strong reversal potential upward)
+        - z-score of 0 → Score ~50 (neutral)
+        - z-score of +2 → Score ~70 (strong reversal potential downward)
 
         Args:
             reversal_signal: Normalized reversal signal (z-score).
 
         Returns:
-            RSI value between 0-100, or None if signal is invalid.
+            Score value between 0-100, or None if signal is invalid.
         """
         if reversal_signal is None:
             return None
@@ -441,12 +445,12 @@ class ResponseBuilder:
             if math.isnan(signal) or math.isinf(signal):
                 return None
             
-            # Map z-score to RSI: RSI = 50 + (signal * 10)
+            # Map z-score to 0-100 scale: Score = 50 + (signal * 10)
             # Clamp to 0-100 range
-            rsi = 50 + (signal * 10)
-            rsi = max(0, min(100, rsi))
+            score = 50 + (signal * 10)
+            score = max(0, min(100, score))
             
-            return round(rsi, 2)
+            return round(score, 2)
         except (TypeError, ValueError):
             return None
 

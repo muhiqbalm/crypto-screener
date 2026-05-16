@@ -76,7 +76,7 @@ def dataframe_with_mixed_values(draw):
     funding_rates = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
     open_interests = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
     long_short_ratios = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
-    rsis = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
+    reversal_scores = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
     volatilities = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
     ic_weights = [draw(mixed_numeric_strategy()) for _ in range(num_rows)]
     
@@ -95,7 +95,7 @@ def dataframe_with_mixed_values(draw):
         "funding_rate": funding_rates,
         "open_interest": open_interests,
         "long_short_ratio": long_short_ratios,
-        "rsi": rsis,
+        "reversal_score": reversal_scores,
         "macd_signal": macd_signals,
         "volatility": volatilities,
         "ic_weight": ic_weights,
@@ -175,7 +175,7 @@ class TestProperty3ValueSanitization:
                     asset.funding_rate,
                     asset.open_interest,
                     asset.long_short_ratio,
-                    asset.rsi,
+                    asset.reversal_score,
                     asset.volatility,
                     asset.ic_weight,
                 ]
@@ -266,7 +266,7 @@ class TestProperty3ValueSanitization:
             asset.funding_rate,
             asset.open_interest,
             asset.long_short_ratio,
-            asset.rsi,
+            asset.reversal_score,
             asset.volatility,
             asset.ic_weight,
         ]
@@ -322,7 +322,7 @@ class TestProperty3ValueSanitization:
                 
                 # Fields with 2 decimals
                 for field in [asset.price, asset.volume_24h, 
-                             asset.open_interest, asset.rsi]:
+                             asset.open_interest, asset.reversal_score]:
                     if field is not None:
                         # Should be rounded to at most 2 decimals
                         assert field == round(field, 2), \

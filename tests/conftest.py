@@ -59,7 +59,7 @@ def sample_df() -> pd.DataFrame:
     symbol, price, change_24h, funding_rate, long_short_ratio, momentum_30d,
     reversal_signal, momentum_signal, multi_factor_score, tier, rank,
     atr_percent, distance_to_ma50, oi_delta_percent, composite_score,
-    signal, volume_24h, open_interest, rsi, macd_signal, volatility, ic_weight.
+    signal, volume_24h, open_interest, reversal_score, macd_signal, volatility, ic_weight.
     """
     data = {
         "symbol": [
@@ -86,7 +86,7 @@ def sample_df() -> pd.DataFrame:
         "atr_percent": [3.5, 4.2, 6.8, 5.1, 4.0],
         "distance_to_ma50": [5.2, -3.1, 12.0, 1.5, 4.8],
         "oi_delta_percent": [2.5, -1.8, 5.0, 0.3, 1.2],
-        "rsi": [62.0, 38.0, 72.0, 50.0, 58.0],
+        "reversal_score": [62.0, 38.0, 72.0, 50.0, 58.0],
         "macd_signal": ["BULLISH", "BEARISH", "BULLISH", "NEUTRAL", "BULLISH"],
         "volatility": [0.035, 0.042, 0.068, 0.051, 0.040],
         "ic_weight": [0.25, 0.15, 0.30, 0.12, 0.18],

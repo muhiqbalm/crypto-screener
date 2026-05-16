@@ -277,7 +277,7 @@ class TestBuildAsset:
         assert asset.price == 67500.50
         assert asset.change_24h == pytest.approx(2.5, abs=0.0001)
         # RSI calculated from reversal_signal: 50 + (1.5 * 10) = 65.0
-        assert asset.rsi == pytest.approx(65.0, abs=0.1)
+        assert asset.reversal_score == pytest.approx(65.0, abs=0.1)
         # MACD signal derived from momentum_signal > 0.5: BUY
         assert asset.macd_signal == "BUY"
 
@@ -291,7 +291,7 @@ class TestBuildAsset:
         assert asset.price is None
         assert asset.change_24h is None
         assert asset.funding_rate is None
-        assert asset.rsi is None
+        assert asset.reversal_score is None
         assert asset.macd_signal is None
         assert asset.volatility is None
 

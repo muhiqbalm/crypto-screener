@@ -42,7 +42,7 @@ async def test_property_preservation_non_volume_oi_fields(async_client, mock_set
     For any API request to /screener/summary or /screener/assets/{symbol},
     the response SHALL contain correct values for:
     - price, change_24h, funding_rate, long_short_ratio
-    - rsi, macd_signal, volatility, ic_weight
+    - reversal_score, macd_signal, volatility, ic_weight
     - composite_score, rank, signal
     - market_overview aggregations (avg_change_24h, avg_funding_rate, sentiment counts)
 
@@ -109,15 +109,15 @@ async def test_property_preservation_non_volume_oi_fields(async_client, mock_set
                 f"long_short_ratio should be positive, got {long_short_ratio} for {asset_symbol}"
             )
 
-        # Verify rsi field
-        assert "rsi" in asset, f"Asset {asset_symbol} missing 'rsi' field"
-        rsi = asset.get("rsi")
-        if rsi is not None:
-            assert isinstance(rsi, (int, float)), (
-                f"rsi should be numeric, got {type(rsi)} for {asset_symbol}"
+        # Verify reversal_score field
+        assert "reversal_score" in asset, f"Asset {asset_symbol} missing 'reversal_score' field"
+        reversal_score = asset.get("reversal_score")
+        if reversal_score is not None:
+            assert isinstance(reversal_score, (int, float)), (
+                f"reversal_score should be numeric, got {type(reversal_score)} for {asset_symbol}"
             )
-            assert 0 <= rsi <= 100, (
-                f"rsi should be between 0 and 100, got {rsi} for {asset_symbol}"
+            assert 0 <= reversal_score <= 100, (
+                f"reversal_score should be between 0 and 100, got {reversal_score} for {asset_symbol}"
             )
 
         # Verify macd_signal field
@@ -194,7 +194,7 @@ async def test_property_preservation_non_volume_oi_fields(async_client, mock_set
     assert "change_24h" in asset_detail, f"Asset detail missing 'change_24h' field"
     assert "funding_rate" in asset_detail, f"Asset detail missing 'funding_rate' field"
     assert "long_short_ratio" in asset_detail, f"Asset detail missing 'long_short_ratio' field"
-    assert "rsi" in asset_detail, f"Asset detail missing 'rsi' field"
+    assert "reversal_score" in asset_detail, f"Asset detail missing 'reversal_score' field"
     assert "macd_signal" in asset_detail, f"Asset detail missing 'macd_signal' field"
     assert "volatility" in asset_detail, f"Asset detail missing 'volatility' field"
     assert "ic_weight" in asset_detail, f"Asset detail missing 'ic_weight' field"
@@ -207,9 +207,9 @@ async def test_property_preservation_non_volume_oi_fields(async_client, mock_set
         assert isinstance(asset_detail["price"], (int, float))
         assert asset_detail["price"] > 0
 
-    if asset_detail.get("rsi") is not None:
-        assert isinstance(asset_detail["rsi"], (int, float))
-        assert 0 <= asset_detail["rsi"] <= 100
+    if asset_detail.get("reversal_score") is not None:
+        assert isinstance(asset_detail["reversal_score"], (int, float))
+        assert 0 <= asset_detail["reversal_score"] <= 100
 
     if asset_detail.get("signal") is not None:
         assert asset_detail["signal"] in ["BULLISH", "BEARISH", "NEUTRAL"]

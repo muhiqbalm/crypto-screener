@@ -153,9 +153,9 @@ class AssetDetail(BaseModel):
         default=None,
         description="Long/short account ratio (> 1 = more longs, < 1 = more shorts)",
     )
-    rsi: Optional[float] = Field(
+    reversal_score: Optional[float] = Field(
         default=None,
-        description="RSI approximation (0-100), derived from reversal z-score. 50 = neutral, < 30 oversold, > 70 overbought",
+        description="Reversal score (0-100 scale). Derived from normalized reversal z-score: 50 = neutral, < 30 = strong reversal potential upward, > 70 = strong reversal potential downward. NOT a standard RSI calculation.",
     )
     macd_signal: Optional[str] = Field(
         default=None,

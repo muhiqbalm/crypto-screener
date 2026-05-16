@@ -37,8 +37,8 @@ class TestCreateApp:
         assert app.title == "Crypto Screener API"
 
     def test_app_version(self, app):
-        """App version is set to '1.0.0'."""
-        assert app.version == "1.0.0"
+        """App version is set to '2.0.0'."""
+        assert app.version == "2.0.0"
 
     def test_settings_stored_in_state(self, app):
         """Settings instance is stored in app.state."""

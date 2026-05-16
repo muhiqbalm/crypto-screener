@@ -46,9 +46,38 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window_seconds = window_seconds
         # Dictionary mapping client IP to deque of request timestamps
         self.request_history: Dict[str, Deque[float]] = defaultdict(deque)
+        
+        # Cleanup configuration
+        self._request_count = 0
+        self._cleanup_threshold = 100
+        
         logger.info(
             f"Rate limiting enabled: {max_requests} requests per {window_seconds} seconds"
         )
+
+    @property
+    def active_clients(self) -> int:
+        """Return the number of clients currently tracked in memory."""
+        return len(self.request_history)
+
+    def _cleanup_inactive_clients(self) -> None:
+        """Remove clients that haven't made any requests in the cleanup window."""
+        current_time = time.time()
+        # Inactive if no requests in 2x window_seconds
+        inactive_threshold = current_time - (self.window_seconds * 2)
+        
+        # Collect keys to remove to avoid modifying dict during iteration
+        to_remove = []
+        for client_id, history in self.request_history.items():
+            # If history is empty or the most recent request is older than threshold
+            if not history or history[-1] < inactive_threshold:
+                to_remove.append(client_id)
+                
+        for client_id in to_remove:
+            del self.request_history[client_id]
+            
+        if to_remove:
+            logger.debug(f"Cleaned up {len(to_remove)} inactive rate limit entries")
 
     def _get_client_identifier(self, request: Request) -> str:
         """Get unique identifier for the client.
@@ -157,6 +186,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     },
                 },
             )
+        
+        # Increment request counter and cleanup if necessary
+        self._request_count += 1
+        if self._request_count >= self._cleanup_threshold:
+            self._cleanup_inactive_clients()
+            self._request_count = 0
         
         # Process request normally
         return await call_next(request)
