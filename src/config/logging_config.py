@@ -14,7 +14,7 @@ from logging.handlers import RotatingFileHandler
 from pythonjsonlogger import jsonlogger
 
 
-LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "output", "logs")
+LOG_DIR = os.environ.get("SCREENER_LOG_DIR", os.path.join("output", "logs"))
 LOG_FILE = os.path.join(LOG_DIR, "api_server.log")
 
 # 10 MB max per file

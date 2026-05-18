@@ -35,13 +35,19 @@ COPY --from=builder /opt/venv /opt/venv
 COPY src/ ./src/
 COPY main_api.py .
 
+# Install gosu for privilege de-escalation in entrypoint
 # Create non-root user for security
-RUN groupadd --gid 1000 appuser \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid 1000 --no-create-home appuser \
     && mkdir -p /app/output/logs /app/output/dashboards \
     && chown -R appuser:appuser /app
 
-USER appuser
+# Copy entrypoint script (runs as root to fix volume permissions, then drops to appuser)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose the default API port
 EXPOSE 8000
@@ -50,6 +56,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
 
+# Use entrypoint to fix permissions before dropping to appuser
+ENTRYPOINT ["docker-entrypoint.sh"]
+
 # Run the API server via Uvicorn with sensible production defaults
-# Workers and host/port can be overridden via environment variables
 CMD ["uvicorn", "src.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--access-log"]
