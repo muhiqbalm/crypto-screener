@@ -10,9 +10,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
-
 # Dependency validation
 try:
     import ccxt
@@ -25,14 +22,14 @@ except ImportError as e:
     print("Please install dependencies using: pip install -r requirements.txt")
     sys.exit(1)
 
-# Import modules
-from exchange.connector import ExchangeConnector
-from data.fetcher import MarketDataFetcher
-from signals.generator import SignalGenerator
-from signals.ic_weights import ICWeightCalculator
-from signals.scorer import MultiFactorScorer
-from ranking.engine import RankingEngine
-from visualization.dashboard import DashboardBuilder
+# Import modules using the correct package paths (src.*)
+from src.exchange.connector import ExchangeConnector
+from src.data.fetcher import MarketDataFetcher
+from src.signals.generator import SignalGenerator
+from src.signals.ic_weights import ICWeightCalculator
+from src.signals.scorer import MultiFactorScorer
+from src.ranking.engine import RankingEngine
+from src.visualization.dashboard import DashboardBuilder
 
 # Configure logging
 log_dir = Path('output/logs')
@@ -98,13 +95,25 @@ def main():
         logger.info("=" * 70)
         
         signal_gen = SignalGenerator()
-        market_data['reversal_signal'] = signal_gen.calculate_reversal_signal(market_data)
-        market_data['momentum_signal'] = signal_gen.calculate_momentum_signal(market_data)
         
-        market_data['reversal_signal'] = signal_gen.normalize_signal(market_data['reversal_signal'])
-        market_data['momentum_signal'] = signal_gen.normalize_signal(market_data['momentum_signal'])
+        # Calculate and normalize all 5 signal factors
+        market_data['reversal_signal'] = signal_gen.normalize_signal(
+            signal_gen.calculate_reversal_signal(market_data)
+        )
+        market_data['momentum_signal'] = signal_gen.normalize_signal(
+            signal_gen.calculate_momentum_signal(market_data)
+        )
+        market_data['funding_rate_signal'] = signal_gen.normalize_signal(
+            signal_gen.calculate_funding_rate_signal(market_data)
+        )
+        market_data['sentiment_signal'] = signal_gen.normalize_signal(
+            signal_gen.calculate_sentiment_signal(market_data)
+        )
+        market_data['oi_momentum_signal'] = signal_gen.normalize_signal(
+            signal_gen.calculate_oi_momentum_signal(market_data)
+        )
         
-        logger.info("[SUCCESS] Signals generated and normalized")
+        logger.info("[SUCCESS] All 5 signals generated and normalized")
         
         # Stage 4: Calculate multi-factor scores
         logger.info("\n" + "=" * 70)
@@ -114,10 +123,22 @@ def main():
         ic_calc = ICWeightCalculator()
         scorer = MultiFactorScorer(ic_calc)
         
+        # Calculate multi-factor score (requires all 5 signal columns)
         market_data['multi_factor_score'] = scorer.calculate_score(market_data)
+        
+        # Calculate risk-adjusted score (uses atr_percent)
+        market_data = scorer.calculate_risk_adjusted_score(market_data)
+        
+        # Calculate position sizing (uses atr_percent)
+        market_data = scorer.calculate_position_sizing(market_data)
+        
+        # Calculate confidence rate
+        market_data = scorer.calculate_confidence_rate(market_data)
+        
+        # Classify tiers
         market_data['tier'] = scorer.classify_tiers(market_data['multi_factor_score'])
         
-        logger.info("[SUCCESS] Multi-factor scores calculated")
+        logger.info("[SUCCESS] Multi-factor scores, risk adjustment, and tiers calculated")
         
         # Stage 5: Rank assets
         logger.info("\n" + "=" * 70)
@@ -128,7 +149,7 @@ def main():
         ranked_data = ranker.rank_assets(market_data)
         
         logger.info("[SUCCESS] Assets ranked")
-        logger.info(f"\nTop 3 assets:\n{ranked_data[['symbol', 'multi_factor_score', 'tier', 'rank']].head(3)}")
+        logger.info(f"\nTop 3 assets:\n{ranked_data[['symbol', 'multi_factor_score', 'risk_adjusted_score', 'tier', 'rank']].head(3)}")
         
         # Stage 6: Generate dashboard
         logger.info("\n" + "=" * 70)
