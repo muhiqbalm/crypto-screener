@@ -22,69 +22,25 @@ from src.api.debug_models import (
     HealthCheckResponse,
 )
 from src.services.debug_exchange_service import DebugExchangeService
+from src.api.auth import verify_api_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/v1/debug",
     tags=["Debug API"],
+    dependencies=[Depends(verify_api_key)],
     responses={
         400: {"description": "Invalid input parameters"},
-        401: {"description": "Authentication required (when enabled)"},
+        401: {"description": "Authentication required (when API key is enabled)"},
+        403: {"description": "Invalid API key"},
         503: {"description": "Exchange service unavailable"},
         504: {"description": "Exchange request timeout"}
     }
 )
 
-# HTTP Bearer token security scheme (optional)
-security = HTTPBearer(auto_error=False)
 
 
-def verify_authentication(
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> None:
-    """Verify authentication credentials when authentication is enabled.
-    
-    This dependency checks if authentication is enabled in the application settings.
-    If enabled, it validates the provided Bearer token against the configured token.
-    If authentication is disabled, this dependency does nothing.
-    
-    Args:
-        request: FastAPI request object (provides access to app.state)
-        credentials: HTTP Bearer token credentials (optional)
-    
-    Raises:
-        HTTPException: 401 Unauthorized if authentication is enabled and
-                      credentials are missing or invalid
-    """
-    # Get settings from app.state
-    settings = request.app.state.settings
-    
-    # If authentication is not enabled, allow the request
-    if not settings.debug_api_auth_enabled:
-        return
-    
-    # Authentication is enabled - verify credentials
-    if credentials is None:
-        logger.warning("Authentication required but no credentials provided")
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Verify the token matches the configured token
-    if credentials.credentials != settings.debug_api_auth_token:
-        logger.warning("Authentication failed: invalid token")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Authentication successful
-    logger.debug("Authentication successful")
 
 
 
@@ -152,7 +108,6 @@ def get_debug_service(request: Request) -> DebugExchangeService:
 async def get_raw_ticker(
     symbol: str,
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return raw ticker data from the exchange.
     
@@ -223,7 +178,6 @@ async def get_raw_ticker(
 async def get_raw_open_interest(
     symbol: str,
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return raw open interest data from the exchange.
     
@@ -292,7 +246,6 @@ async def get_raw_open_interest(
 async def get_raw_funding_rate(
     symbol: str,
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return raw funding rate data from the exchange.
     
@@ -361,7 +314,6 @@ async def get_raw_funding_rate(
 async def get_raw_long_short_ratio(
     symbol: str,
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return raw long/short ratio data from the exchange.
     
@@ -453,7 +405,6 @@ async def get_raw_long_short_ratio(
 async def get_all_raw_data(
     symbol: str,
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return aggregated raw data for all data types.
     
@@ -557,7 +508,6 @@ async def get_all_raw_data(
 )
 async def check_exchange_health(
     debug_service: DebugExchangeService = Depends(get_debug_service),
-    _auth: None = Depends(verify_authentication)
 ) -> JSONResponse:
     """Return exchange health check status.
     

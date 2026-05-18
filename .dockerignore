@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+.kiro/
+
+# Testing
+tests/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+pytest.ini
+scratch/
+
+# Documentation (not needed at runtime)
+*.md
+docs/
+demos/
+archive/
+
+# Output artifacts (will be mounted as volume)
+output/
+
+# Environment files (injected via docker-compose)
+.env
+.env.local
+.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak

@@ -263,10 +263,15 @@ Diagnostic endpoints for raw exchange data inspection from Binance Futures.
 
 ## Authentication
 
-Debug API endpoints support optional Bearer token authentication:
+All endpoints (except `/api/v1/health`) can be protected with an API key.
+When enabled, include the key in every request header:
 ```
-Authorization: Bearer <your-token>
+X-API-Key: <your-api-key>
 ```
+
+Configure via environment variables:
+- `SCREENER_REQUIRE_API_KEY=true` — enable authentication
+- `SCREENER_API_KEY=<your-secret>` — the secret key value
         """,
         lifespan=lifespan,
         openapi_tags=[

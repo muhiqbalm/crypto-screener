@@ -10,9 +10,10 @@ import logging
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
+from src.api.auth import verify_api_key
 from src.api.models import (
     AssetDetailResponse,
     CacheStatus,
@@ -24,10 +25,13 @@ from src.services.symbol_utils import normalize_symbol
 
 logger = logging.getLogger(__name__)
 
+# Auth dependency applied to the router — protects /screener/* endpoints.
+# Health check is registered separately without auth so monitoring tools work.
 router = APIRouter(prefix="/api/v1")
+screener_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
-@router.get(
+@screener_router.get(
     "/screener/summary",
     response_model=ScreenerResponse,
     tags=["Screener API"],
@@ -138,7 +142,7 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
             )
 
 
-@router.get(
+@screener_router.get(
     "/screener/assets/{symbol:path}",
     response_model=AssetDetailResponse,
     tags=["Screener API"],
@@ -358,3 +362,7 @@ def _is_exchange_error(exc: Exception) -> bool:
         return True
 
     return False
+
+
+# Include the auth-protected screener endpoints into the main router
+router.include_router(screener_router)

@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     mock_mode: bool = False
     cors_origins: str = "*"
     shutdown_timeout: int = 30
-    
+
+    # Global API Key authentication
+    # When enabled, all endpoints (except /health) require X-API-Key header
+    require_api_key: bool = False
+    api_key: str = ""
+
     # Rate limiting configuration for debug endpoints
     debug_rate_limit_enabled: bool = False
     debug_rate_limit_requests: int = 10  # Number of requests allowed
