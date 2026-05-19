@@ -319,8 +319,10 @@ Configure via environment variables:
     # Register API routes
     from src.api.routes import router
     from src.api.debug_routes import router as debug_router
+    from src.trading.router import router as trading_router
 
     app.include_router(router)
     app.include_router(debug_router)
+    app.include_router(trading_router)
 
     return app
