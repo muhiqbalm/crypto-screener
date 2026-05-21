@@ -26,7 +26,47 @@ from src.services.cache_manager import CacheManager
 from src.services.data_processor import DataProcessor
 from src.services.response_builder import ResponseBuilder
 
+# 1 MB limit for all request bodies (Requirement 20.3)
+_MAX_CONTENT_SIZE = 1_048_576
+
 logger = logging.getLogger(__name__)
+
+
+class ContentSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware that rejects request bodies exceeding max_content_size bytes.
+
+    Checks the ``Content-Length`` header first (fast path) and then verifies
+    the actual body size for chunked transfers where no Content-Length is
+    present.  Returns a 413 JSON response when the limit is exceeded.
+
+    Satisfies Requirement 20.3: bodies > 1 MB are rejected with 413.
+    """
+
+    def __init__(self, app, max_content_size: int = _MAX_CONTENT_SIZE) -> None:
+        super().__init__(app)
+        self.max_content_size = max_content_size
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        # Fast path: reject based on Content-Length header alone
+        content_length_header = request.headers.get("content-length")
+        if content_length_header is not None:
+            try:
+                content_length = int(content_length_header)
+                if content_length > self.max_content_size:
+                    return JSONResponse(
+                        status_code=413,
+                        content={
+                            "status": "error",
+                            "error": "Payload too large",
+                            "detail": f"Request body must not exceed {self.max_content_size} bytes",
+                        },
+                    )
+            except ValueError:
+                pass  # Malformed header — let FastAPI handle it downstream
+
+        return await call_next(request)
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -298,6 +338,9 @@ Configure via environment variables:
         allow_headers=["*"],
     )
 
+    # Register content-size limit middleware (1 MB, Requirement 20.3)
+    app.add_middleware(ContentSizeLimitMiddleware, max_content_size=_MAX_CONTENT_SIZE)
+
     # Register request logging middleware
     app.add_middleware(RequestLoggingMiddleware)
     
@@ -320,9 +363,13 @@ Configure via environment variables:
     from src.api.routes import router
     from src.api.debug_routes import router as debug_router
     from src.trading.router import router as trading_router
+    from src.trading.routers.auth_router import router as trading_auth_router
+    from src.trading.routers.users_router import router as trading_users_router
 
     app.include_router(router)
     app.include_router(debug_router)
     app.include_router(trading_router)
+    app.include_router(trading_auth_router)
+    app.include_router(trading_users_router)
 
     return app

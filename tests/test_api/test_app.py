@@ -4,6 +4,7 @@ Validates:
 - create_app() returns a properly configured FastAPI instance
 - CORS middleware is registered with correct origins
 - Request logging middleware is registered
+- ContentSizeLimitMiddleware rejects bodies > 1 MB with 413
 - Lifespan initializes shared state (cache_manager, response_builder, etc.)
 - Graceful shutdown rejects new requests with 503
 """
@@ -14,7 +15,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from src.api.app import create_app, RequestLoggingMiddleware
+from src.api.app import ContentSizeLimitMiddleware, create_app, RequestLoggingMiddleware
 
 
 @pytest.fixture
@@ -62,6 +63,14 @@ class TestCreateApp:
             for m in app.user_middleware
         ]
         assert "RequestLoggingMiddleware" in middleware_classes
+
+    def test_content_size_limit_middleware_registered(self, app):
+        """ContentSizeLimitMiddleware is registered in the middleware stack."""
+        middleware_classes = [
+            m.cls.__name__ if hasattr(m, "cls") else type(m).__name__
+            for m in app.user_middleware
+        ]
+        assert "ContentSizeLimitMiddleware" in middleware_classes
 
 
 class TestLifespan:
@@ -198,3 +207,86 @@ class TestCORSMiddleware:
                 },
             )
             assert "access-control-allow-origin" in response.headers
+
+
+class TestContentSizeLimitMiddleware:
+    """Tests for the ContentSizeLimitMiddleware (Requirement 20.3)."""
+
+    @pytest.mark.asyncio
+    async def test_rejects_body_over_1mb_via_content_length_header(self):
+        """Requests with Content-Length > 1 MB are rejected with 413."""
+        app = create_app()
+
+        @app.post("/test-upload")
+        async def test_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            # Send a request with Content-Length header claiming > 1 MB
+            oversized = 1_048_577  # 1 MB + 1 byte
+            response = await client.post(
+                "/test-upload",
+                content=b"x" * oversized,
+                headers={"content-length": str(oversized), "content-type": "application/json"},
+            )
+            assert response.status_code == 413
+            body = response.json()
+            assert body["error"] == "Payload too large"
+
+    @pytest.mark.asyncio
+    async def test_accepts_body_exactly_at_1mb(self):
+        """Requests with Content-Length exactly 1 MB are accepted."""
+        app = create_app()
+
+        @app.post("/test-upload")
+        async def test_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            exactly_1mb = 1_048_576
+            response = await client.post(
+                "/test-upload",
+                content=b"x" * exactly_1mb,
+                headers={"content-length": str(exactly_1mb), "content-type": "application/json"},
+            )
+            # Should not be rejected by the size middleware (may fail for other reasons)
+            assert response.status_code != 413
+
+    @pytest.mark.asyncio
+    async def test_accepts_request_with_no_content_length(self):
+        """Requests without a Content-Length header pass through the middleware."""
+        app = create_app()
+
+        @app.get("/test-no-body")
+        async def test_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/test-no-body")
+            assert response.status_code != 413
+
+    @pytest.mark.asyncio
+    async def test_413_response_has_correct_structure(self):
+        """413 response from ContentSizeLimitMiddleware includes expected fields."""
+        app = create_app()
+
+        @app.post("/test-upload")
+        async def test_route():
+            return {"status": "ok"}
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            oversized = 2_000_000  # 2 MB
+            response = await client.post(
+                "/test-upload",
+                content=b"x" * oversized,
+                headers={"content-length": str(oversized), "content-type": "application/json"},
+            )
+            assert response.status_code == 413
+            body = response.json()
+            assert "error" in body
+            assert "detail" in body
+            assert body["status"] == "error"

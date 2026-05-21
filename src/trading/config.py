@@ -4,6 +4,7 @@ Reads configuration from environment variables with TRADING_ prefix,
 falling back to .env file and default values.
 """
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,6 +43,30 @@ class TradingSettings(BaseSettings):
 
     # Timeout in seconds for exchange order submission
     order_timeout_seconds: int = 5
+
+    # JWT authentication settings
+    # TRADING_JWT_SECRET must be set to a non-empty value; the application will
+    # refuse to start if this variable is absent or empty (Req 19.1).
+    jwt_secret: str = ""
+
+    # Duration (in minutes) before an access token expires (default: 30)
+    # Read from TRADING_ACCESS_TOKEN_EXPIRE_MINUTES (Req 19.2)
+    access_token_expire_minutes: int = 30
+
+    # Duration (in days) before a refresh token expires (default: 7)
+    # Read from TRADING_REFRESH_TOKEN_EXPIRE_DAYS (Req 19.2)
+    refresh_token_expire_days: int = 7
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def jwt_secret_must_not_be_empty(cls, value: str) -> str:
+        """Raise ValueError if jwt_secret is absent or empty at startup."""
+        if not value or not value.strip():
+            raise ValueError(
+                "TRADING_JWT_SECRET must be set to a non-empty value. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return value
 
 
 def get_trading_settings() -> TradingSettings:

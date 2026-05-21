@@ -14,7 +14,7 @@ trade processing pipeline:
   10. Telegram notification (background task)
   11. Return TradeSuccessResponse
 
-Requirements: 1.1, 1.11, 9.1, 9.3, 11.5, 11.6
+Requirements: 1.1, 1.11, 5.7, 9.1, 9.3, 11.5, 11.6
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ async def receive_tradingview_alert(
 ) -> JSONResponse:
     """Process a TradingView webhook alert through the full trading pipeline.
 
-    Requirements: 1.1, 1.11, 9.1, 9.3, 11.5, 11.6
+    Requirements: 1.1, 1.11, 5.7, 9.1, 9.3, 11.5, 11.6
     """
 
     # ------------------------------------------------------------------
@@ -196,6 +196,27 @@ async def receive_tradingview_alert(
     except HTTPException:
         # 401 or 503 — re-raise directly (auth.py already builds the response)
         raise
+
+    # Requirement 5.7: verify the resolved user has is_active = true
+    try:
+        user_response = (
+            supabase.table("users")
+            .select("is_active")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+    except Exception as exc:
+        logger.error(
+            "Database error checking is_active for user=%s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=503, detail="Service unavailable") from exc
+
+    if not user_response.data or not user_response.data.get("is_active"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     # ------------------------------------------------------------------
     # Step 4: Retrieve exchange credentials
