@@ -1,0 +1,465 @@
+{
+  "info": {
+    "name": "Trading User Management API",
+    "_postman_id": "trading-user-mgmt-api",
+    "description": "Complete collection for Trading User Management API endpoints including auth, profile, webhook config, credentials, and monitoring.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://your-vps-ip-or-domain",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('user_id', body.id);",
+                  "    console.log('Registered user id:', body.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"name\": \"Test User\",\n  \"password\": \"password123\",\n  \"telegram_chat_id\": \"123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "auth", "register"]
+            },
+            "description": "Register a new user account. Returns 201 on success, 409 if email already exists."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                  "    console.log('Access token saved.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "auth", "login"]
+            },
+            "description": "Login and receive access + refresh tokens. Tokens are auto-saved to collection variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', body.access_token);",
+                  "    console.log('Access token refreshed.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "auth", "refresh"]
+            },
+            "description": "Exchange refresh token for a new access token. New access token is auto-saved."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "auth", "logout"]
+            },
+            "description": "Logout and revoke all refresh tokens. Requires valid access token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me"]
+            },
+            "description": "Get the authenticated user's profile. password_hash is never returned."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile - Name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me"]
+            },
+            "description": "Partial update — only provided fields are updated."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile - Telegram",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telegram_chat_id\": \"987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me"]
+            },
+            "description": "Update Telegram chat ID for notifications."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile - Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"newpassword456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me"]
+            },
+            "description": "Change password. New password is hashed with bcrypt before storage."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhook Config",
+      "item": [
+        {
+          "name": "Create Webhook Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passphrase\": \"mysecretpass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/webhook-config",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "webhook-config"]
+            },
+            "description": "Create a new webhook passphrase. Returns 409 if one already exists or passphrase is taken globally."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Webhook Config",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/webhook-config",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "webhook-config"]
+            },
+            "description": "Get the active webhook config. Returns 404 if none exists."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Webhook Passphrase",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passphrase\": \"newpassphrase456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/webhook-config",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "webhook-config"]
+            },
+            "description": "Update the passphrase on the active webhook config."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Webhook Config",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/webhook-config",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "webhook-config"]
+            },
+            "description": "Deactivate the webhook config (sets is_active=false, does not delete)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Credentials",
+      "item": [
+        {
+          "name": "Save Binance Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exchange\": \"binance\",\n  \"api_key\": \"your-binance-api-key\",\n  \"secret\": \"your-binance-secret-key\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/credentials",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "credentials"]
+            },
+            "description": "Store Binance API credentials (encrypted with Fernet). Keys are never returned in responses."
+          },
+          "response": []
+        },
+        {
+          "name": "Save OKX Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exchange\": \"okx\",\n  \"api_key\": \"your-okx-api-key\",\n  \"secret\": \"your-okx-secret-key\",\n  \"api_passphrase\": \"your-okx-passphrase\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/credentials",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "credentials"]
+            },
+            "description": "Store OKX API credentials. api_passphrase is required for OKX."
+          },
+          "response": []
+        },
+        {
+          "name": "List Credentials",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/credentials",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "credentials"]
+            },
+            "description": "List all configured exchanges. Returns exchange name and created_at only — no keys or secrets."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Binance Credentials",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/credentials/binance",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "credentials", "binance"]
+            },
+            "description": "Delete Binance credentials. Returns 404 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete OKX Credentials",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/credentials/okx",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "credentials", "okx"]
+            },
+            "description": "Delete OKX credentials. Returns 404 if not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Get Open Positions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/positions",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "positions"]
+            },
+            "description": "Get all currently open positions. Returns empty array if none."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Position History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/positions/history",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "positions", "history"]
+            },
+            "description": "Get closed position history ordered by closed_at DESC."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trade Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trading/users/me/trades",
+              "host": ["{{base_url}}"],
+              "path": ["trading", "users", "me", "trades"]
+            },
+            "description": "Get complete trade log ordered by created_at DESC."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
