@@ -1,9 +1,12 @@
 """Position manager module for TradingView webhook trading.
 
-Tracks open positions per user per symbol, enforces the one-position-per-symbol-per-user
-constraint, and serialises concurrent requests via PostgreSQL advisory locks.
+Checks open positions directly on the exchange (source of truth) and
+serialises concurrent requests for the same symbol via PostgreSQL advisory
+locks.
 
-Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 9.2, 9.4
+The ``positions`` Supabase table is kept only as an audit trail — it is
+written to after a successful trade but is never read for position-state
+decisions.
 """
 
 from __future__ import annotations
@@ -12,6 +15,8 @@ import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Any
+
+import ccxt.async_support as ccxt_async
 
 logger = logging.getLogger(__name__)
 
@@ -22,30 +27,19 @@ logger = logging.getLogger(__name__)
 
 
 class DuplicatePositionError(Exception):
-    """Raised when an "open" action is requested but a position already exists.
-
-    Requirement 6.2: If an "open" action is received and the user already has
-    an open position for the same symbol, the Position_Manager SHALL reject the
-    trade with a duplicate position error before any order is placed.
+    """Raised when an "open" action is requested but a position already exists
+    on the exchange for the given symbol.
     """
 
 
 class NoPositionError(Exception):
-    """Raised when a "close" action is requested but no open position exists.
-
-    Requirement 6.3: If a "close" action is received and no open position exists
-    for the symbol, the Position_Manager SHALL reject the trade with a
-    no-position-found error before any order is placed.
+    """Raised when a "close" action is requested but no open position exists
+    on the exchange for the given symbol.
     """
 
 
 class LockTimeoutError(Exception):
-    """Raised when the advisory lock cannot be acquired within the timeout.
-
-    Requirement 9.4: If the Position_Manager cannot acquire the database lock
-    within the 5-second timeout, the trade SHALL be rejected with a conflict
-    error.
-    """
+    """Raised when the advisory lock cannot be acquired within the timeout."""
 
 
 # ---------------------------------------------------------------------------
@@ -54,18 +48,9 @@ class LockTimeoutError(Exception):
 
 
 def _lock_key(user_id: str, symbol: str) -> int:
-    """Produce a stable 32-bit integer advisory lock key for (user_id, symbol).
-
-    Uses the first 4 bytes of the SHA-256 digest of the concatenated string
-    ``"{user_id}:{symbol}"`` to spread keys uniformly while keeping them
-    within the PostgreSQL bigint range accepted by ``pg_advisory_xact_lock``.
-
-    The result fits in a signed 32-bit integer (value in [0, 2**31-1]) so that
-    ``pg_advisory_xact_lock(key)`` works without overflow.
-    """
+    """Produce a stable 32-bit integer advisory lock key for (user_id, symbol)."""
     raw = f"{user_id}:{symbol}".encode()
     digest = hashlib.sha256(raw).digest()
-    # Interpret first 4 bytes as unsigned int, then mask to signed 32-bit range.
     unsigned = int.from_bytes(digest[:4], byteorder="big")
     return unsigned & 0x7FFFFFFF
 
@@ -76,27 +61,19 @@ def _lock_key(user_id: str, symbol: str) -> int:
 
 
 class PositionManager:
-    """Manages open positions, advisory locking, and position lifecycle.
+    """Manages position checks and advisory locking.
 
-    Each public method interacts with the Supabase-backed ``positions`` table.
+    Position existence is verified directly on the exchange (source of truth).
     Concurrent requests for the same (user_id, symbol) pair are serialised via
-    PostgreSQL ``pg_advisory_xact_lock`` so that the check-then-act sequence is
-    atomic at the database level.
+    PostgreSQL advisory locks to prevent race conditions.
 
-    Requirements: 6.1–6.6, 9.2, 9.4
+    The Supabase ``positions`` table is written to for audit purposes only —
+    it is never queried to determine whether a position is currently open.
     """
 
-    # Timeout in milliseconds for statement_timeout (lock acquisition).
-    # Corresponds to lock_timeout_seconds = 5 from TradingSettings.
     LOCK_TIMEOUT_MS: int = 5000
 
     def __init__(self, supabase: Any) -> None:
-        """Initialise the manager.
-
-        Args:
-            supabase: A Supabase client instance (sync or async).
-                      The client must expose ``.rpc()`` and ``.table()`` methods.
-        """
         self._supabase = supabase
 
     # ------------------------------------------------------------------
@@ -108,36 +85,38 @@ class PositionManager:
         user_id: str,
         symbol: str,
         action: str,
+        exchange: ccxt_async.Exchange,
     ) -> dict | None:
-        """Acquire an advisory lock for (user_id, symbol) and validate the action.
+        """Acquire an advisory lock and verify position state on the exchange.
 
-        The lock is scoped to the current database transaction via
-        ``pg_advisory_xact_lock``.  Before acquiring the lock the session's
-        ``statement_timeout`` is set to ``LOCK_TIMEOUT_MS`` milliseconds so that
-        the lock attempt itself fails fast when another session holds the lock.
+        Queries ``exchange.fetch_positions([symbol])`` as the authoritative
+        source of truth. The advisory lock serialises concurrent webhooks for
+        the same (user_id, symbol) pair.
 
         For "open":
-            - Checks that *no* open position already exists.
+            - Raises ``DuplicatePositionError`` if the exchange already has an
+              open position for this symbol.
             - Returns ``None`` on success.
-            - Raises ``DuplicatePositionError`` if a position is found.
 
         For "close":
-            - Checks that an open position *does* exist.
-            - Returns the position record dict on success.
-            - Raises ``NoPositionError`` if no position is found.
+            - Raises ``NoPositionError`` if the exchange has no open position
+              for this symbol.
+            - Returns the CCXT position dict on success.
+
+        Args:
+            user_id:  UUID string of the authenticated user (used for locking).
+            symbol:   CCXT unified symbol (e.g., "BTC/USDT:USDT").
+            action:   "open" or "close".
+            exchange: Authenticated ccxt.async_support.Exchange instance.
 
         Raises:
-            DuplicatePositionError: On "open" when a position already exists.
-            NoPositionError:        On "close" when no open position exists.
-            LockTimeoutError:       When the advisory lock cannot be acquired
-                                    within LOCK_TIMEOUT_MS milliseconds.
-
-        Requirements: 6.1, 6.2, 6.3, 9.2, 9.4
+            DuplicatePositionError: On "open" when exchange has an open position.
+            NoPositionError:        On "close" when exchange has no open position.
+            LockTimeoutError:       When advisory lock cannot be acquired.
         """
         lock_key = _lock_key(user_id, symbol)
 
         # Set statement_timeout so the lock acquisition fails fast.
-        # Requirement 9.2: 5-second lock wait timeout.
         try:
             self._supabase.rpc(
                 "set_config",
@@ -150,10 +129,8 @@ class PositionManager:
             logger.warning(
                 "Could not set statement_timeout before advisory lock: %s", exc
             )
-            # Non-fatal — proceed with default timeout.
 
         # Acquire transaction-scoped advisory lock.
-        # Requirement 9.2: pg_advisory_xact_lock serialises concurrent requests.
         try:
             self._supabase.rpc(
                 "pg_advisory_xact_lock",
@@ -162,78 +139,45 @@ class PositionManager:
         except Exception as exc:
             error_str = str(exc).lower()
             if "timeout" in error_str or "canceling" in error_str or "statement" in error_str:
-                logger.warning(
-                    "Advisory lock timeout for user=%s symbol=%s: %s",
-                    user_id,
-                    symbol,
-                    exc,
-                )
                 raise LockTimeoutError(
                     f"Could not acquire lock for symbol '{symbol}': "
                     f"symbol is currently being processed for user '{user_id}'"
                 ) from exc
-            logger.error(
-                "Unexpected error acquiring advisory lock user=%s symbol=%s: %s",
-                user_id,
-                symbol,
-                exc,
-            )
             raise LockTimeoutError(
                 f"Lock acquisition failed for symbol '{symbol}': {exc}"
             ) from exc
 
-        # Query for an existing open position.
-        try:
-            response = (
-                self._supabase.table("positions")
-                .select("id, user_id, symbol, side, entry_price, quantity, status, opened_at")
-                .eq("user_id", user_id)
-                .eq("symbol", symbol)
-                .eq("status", "open")
-                .limit(1)
-                .execute()
-            )
-        except Exception as exc:
-            logger.error(
-                "Database error querying positions for user=%s symbol=%s: %s",
-                user_id,
-                symbol,
-                exc,
-            )
-            raise
-
-        rows: list[dict] = response.data if response.data else []
+        # Query the exchange for open positions on this symbol.
+        open_position = await _fetch_open_position(exchange, symbol)
 
         if action == "open":
-            # Requirement 6.1, 6.2: reject duplicate open positions.
-            if rows:
-                existing = rows[0]
+            if open_position is not None:
                 logger.warning(
-                    "Duplicate position rejected: user=%s symbol=%s existing_id=%s",
+                    "Duplicate position rejected (exchange): user=%s symbol=%s",
                     user_id,
                     symbol,
-                    existing.get("id"),
                 )
                 raise DuplicatePositionError(
-                    f"User '{user_id}' already has an open position for symbol '{symbol}'"
+                    f"An open position for '{symbol}' already exists on the exchange "
+                    f"for user '{user_id}'"
                 )
             return None
 
         else:  # action == "close"
-            # Requirement 6.3: reject close when no open position exists.
-            if not rows:
+            if open_position is None:
                 logger.warning(
-                    "No open position to close: user=%s symbol=%s",
+                    "No open position on exchange to close: user=%s symbol=%s",
                     user_id,
                     symbol,
                 )
                 raise NoPositionError(
-                    f"No open position found for symbol '{symbol}' and user '{user_id}'"
+                    f"No open position found for symbol '{symbol}' on the exchange "
+                    f"for user '{user_id}'"
                 )
-            return rows[0]
+            return open_position
 
     # ------------------------------------------------------------------
-    # open_position
+    # open_position  (audit log write only)
     # ------------------------------------------------------------------
 
     async def open_position(
@@ -243,23 +187,11 @@ class PositionManager:
         side: str,
         entry_price: float,
         quantity: float,
+        exchange: str = "",
     ) -> dict:
-        """Create a position record after a successful open order fill.
+        """Write an audit record to Supabase after a successful open order.
 
-        Only the *actual filled quantity* from the exchange response should be
-        supplied — partial fills are recorded as-is (Requirement 6.6).
-
-        Args:
-            user_id:     UUID string of the owning user.
-            symbol:      CCXT unified symbol (e.g., "BTC/USDT:USDT").
-            side:        "long" or "short".
-            entry_price: Fill price from the exchange order response.
-            quantity:    Filled quantity from the exchange order response.
-
-        Returns:
-            The newly inserted position record dict.
-
-        Requirements: 6.4, 6.6
+        This is an audit trail only — it does not gate any trading decisions.
         """
         record: dict = {
             "user_id": user_id,
@@ -268,6 +200,7 @@ class PositionManager:
             "entry_price": entry_price,
             "quantity": quantity,
             "status": "open",
+            "exchange": exchange,
         }
 
         try:
@@ -277,38 +210,31 @@ class PositionManager:
                 .execute()
             )
         except Exception as exc:
+            # Non-fatal: audit write failure should not block the response.
             logger.error(
-                "Failed to create position record for user=%s symbol=%s: %s",
+                "Failed to write open position audit record for user=%s symbol=%s: %s",
                 user_id,
                 symbol,
                 exc,
             )
-            raise
+            return record
 
         rows: list[dict] = response.data if response.data else []
         if rows:
-            position = rows[0]
             logger.info(
-                "Position opened: id=%s user=%s symbol=%s side=%s entry=%.6f qty=%.6f",
-                position.get("id"),
+                "Position audit record opened: user=%s symbol=%s side=%s entry=%.6f qty=%.6f",
                 user_id,
                 symbol,
                 side,
                 entry_price,
                 quantity,
             )
-            return position
+            return rows[0]
 
-        # Fallback: return the record we attempted to insert (no server-generated id).
-        logger.warning(
-            "Position insert returned no rows for user=%s symbol=%s — returning input record",
-            user_id,
-            symbol,
-        )
         return record
 
     # ------------------------------------------------------------------
-    # close_position
+    # close_position  (audit log write only)
     # ------------------------------------------------------------------
 
     async def close_position(
@@ -317,24 +243,9 @@ class PositionManager:
         symbol: str,
         exit_price: float,
     ) -> dict:
-        """Mark an open position as closed with the given exit price.
+        """Update the audit record in Supabase after a successful close order.
 
-        Sets ``status = 'closed'``, records ``exit_price``, and stamps
-        ``closed_at`` with the current UTC timestamp (ISO 8601).
-
-        Only the *actual filled quantity* from the exchange response was used
-        to place the closing order — this method reflects whatever quantity was
-        recorded when the position was opened (Requirement 6.6).
-
-        Args:
-            user_id:    UUID string of the owning user.
-            symbol:     CCXT unified symbol (e.g., "BTC/USDT:USDT").
-            exit_price: Fill price from the exchange close-order response.
-
-        Returns:
-            The updated position record dict.
-
-        Requirements: 6.5, 6.6
+        This is an audit trail only — it does not gate any trading decisions.
         """
         closed_at = datetime.now(tz=timezone.utc).isoformat()
 
@@ -354,35 +265,59 @@ class PositionManager:
                 .execute()
             )
         except Exception as exc:
+            # Non-fatal: audit write failure should not block the response.
             logger.error(
-                "Failed to close position record for user=%s symbol=%s: %s",
+                "Failed to update close position audit record for user=%s symbol=%s: %s",
                 user_id,
                 symbol,
                 exc,
             )
-            raise
+            return {"user_id": user_id, "symbol": symbol, **update_data}
 
         rows: list[dict] = response.data if response.data else []
         if rows:
-            position = rows[0]
             logger.info(
-                "Position closed: id=%s user=%s symbol=%s exit=%.6f",
-                position.get("id"),
+                "Position audit record closed: user=%s symbol=%s exit=%.6f",
                 user_id,
                 symbol,
                 exit_price,
             )
-            return position
+            return rows[0]
 
-        # Fallback: return a minimal record when the update response is empty.
-        logger.warning(
-            "Position close update returned no rows for user=%s symbol=%s — "
-            "returning update data",
-            user_id,
+        return {"user_id": user_id, "symbol": symbol, **update_data}
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+
+async def _fetch_open_position(
+    exchange: ccxt_async.Exchange,
+    symbol: str,
+) -> dict | None:
+    """Fetch the open position for *symbol* from the exchange.
+
+    Returns the CCXT position dict when an open position exists (contracts > 0),
+    or ``None`` when no position is open.
+    """
+    try:
+        positions: list[dict] = await exchange.fetch_positions([symbol])
+    except Exception as exc:
+        logger.error(
+            "Failed to fetch positions from exchange for symbol=%s: %s",
             symbol,
+            exc,
         )
-        return {
-            "user_id": user_id,
-            "symbol": symbol,
-            **update_data,
-        }
+        raise
+
+    for pos in positions:
+        contracts = pos.get("contracts") or pos.get("size") or 0
+        try:
+            contracts = float(contracts)
+        except (TypeError, ValueError):
+            contracts = 0.0
+        if contracts > 0:
+            return pos
+
+    return None

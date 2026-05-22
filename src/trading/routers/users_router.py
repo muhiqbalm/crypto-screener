@@ -103,9 +103,15 @@ def get_credential_service(
 
 def get_monitoring_service(
     supabase: Annotated[Any, Depends(get_supabase_client)],
+    credential_store: Annotated[CredentialStore, Depends(get_credential_store)],
 ) -> MonitoringService:
     """FastAPI dependency that constructs and returns a :class:`MonitoringService`."""
-    return MonitoringService(supabase=supabase)
+    from ..connector import TradingConnector
+    return MonitoringService(
+        supabase=supabase,
+        credential_store=credential_store,
+        trading_connector=TradingConnector(),
+    )
 
 
 # ===========================================================================

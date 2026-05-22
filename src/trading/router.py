@@ -302,6 +302,7 @@ async def receive_tradingview_alert(
             user_id=user_id,
             symbol=payload.symbol,
             action=payload.action,
+            exchange=exchange,
         )
     except DuplicatePositionError as exc:
         error_details = str(exc)
@@ -405,6 +406,7 @@ async def receive_tradingview_alert(
             side=payload.side,
             entry_price=fill_price,
             quantity=filled_quantity,
+            exchange=payload.exchange,
         )
     else:  # "close"
         updated_position = await position_manager.close_position(

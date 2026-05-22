@@ -150,6 +150,76 @@ class TradingConnector:
         )
         return exchange
 
+    async def create_exchange_for_monitoring(
+        self,
+        exchange_name: str,
+        credentials: dict,
+    ) -> ccxt_async.Exchange:
+        """Create an authenticated CCXT exchange instance for read-only monitoring.
+
+        Unlike ``create_exchange``, this method does not set leverage and is
+        intended for fetching positions, balances, and other account data.
+
+        Args:
+            exchange_name: One of "binance" or "okx".
+            credentials:   Dict with at minimum "api_key" and "secret" keys.
+                           May also include "passphrase" for OKX.
+
+        Returns:
+            An authenticated, testnet-enabled ccxt.async_support.Exchange instance.
+
+        Raises:
+            ValueError:           If exchange_name is not supported.
+            AuthenticationError:  If exchange authentication fails.
+        """
+        exchange_name_lower = exchange_name.lower()
+        if exchange_name_lower not in self.SUPPORTED_EXCHANGES:
+            raise ValueError(
+                f"Exchange '{exchange_name}' is not supported. "
+                f"Supported exchanges: {list(self.SUPPORTED_EXCHANGES.keys())}"
+            )
+
+        exchange_class = self.SUPPORTED_EXCHANGES[exchange_name_lower]
+
+        config: dict = {
+            "apiKey": credentials.get("api_key", ""),
+            "secret": credentials.get("secret", ""),
+            "sandbox": True,
+            "options": {
+                "defaultType": "future",
+            },
+        }
+
+        if exchange_name_lower == "okx" and credentials.get("passphrase"):
+            config["password"] = credentials["passphrase"]
+
+        exchange: ccxt_async.Exchange = exchange_class(config)
+
+        try:
+            await exchange.load_markets()
+        except ccxt_async.AuthenticationError as exc:
+            await self._close_exchange(exchange)
+            error_msg = (
+                f"Exchange authentication failed for '{exchange_name}': "
+                "invalid or expired credentials."
+            )
+            logger.error("%s Original error: %s", error_msg, exc)
+            raise AuthenticationError(error_msg) from exc
+        except Exception as exc:
+            await self._close_exchange(exchange)
+            error_msg = (
+                f"Unexpected error during exchange authentication for "
+                f"'{exchange_name}': {exc}"
+            )
+            logger.error(error_msg)
+            raise AuthenticationError(error_msg) from exc
+
+        logger.info(
+            "Monitoring connector created for exchange '%s', testnet=True",
+            exchange_name,
+        )
+        return exchange
+
     @staticmethod
     async def _close_exchange(exchange: ccxt_async.Exchange) -> None:
         """Safely close an exchange instance, suppressing any errors."""

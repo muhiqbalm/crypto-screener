@@ -1,20 +1,11 @@
 """Monitoring service for the Trading User Management API.
 
-Provides :class:`MonitoringService` which implements querying open positions,
-closed position history, and trade log entries for an authenticated user.
+Open positions are fetched directly from the exchange (source of truth),
+so they reflect all positions regardless of how they were opened — via
+webhook, manually on the exchange UI, or any other method.
 
-Design decisions:
-- ``get_open_positions`` queries positions where ``status = 'open'`` (or
-  equivalent) for the given user and returns an empty list when none exist
-  (Requirement 15.2).
-- ``get_position_history`` queries closed positions ordered by ``closed_at``
-  descending so the most recent close appears first (Requirements 16.1, 16.3).
-- ``get_trade_log`` queries the trade log ordered by ``created_at`` descending
-  so the most recent entry appears first (Requirements 17.1, 17.3).
-- All three methods return an empty list (never 404) when there are no records
-  for the user (Requirements 15.2, 16.2, 17.2).
-
-Requirements: 15.1, 15.2, 16.1, 16.2, 16.3, 17.1, 17.2, 17.3
+Closed position history and trade log entries are still read from Supabase
+(audit trail written by the webhook pipeline).
 """
 
 from __future__ import annotations
@@ -25,41 +16,47 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from ..connector import AuthenticationError, TradingConnector
+from ..credentials import CredentialStore, MissingCredentialsError
 from ..user_models import ClosedPositionResponse, OpenPositionResponse, TradeLogResponse
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# MonitoringService
-# ---------------------------------------------------------------------------
 
 
 class MonitoringService:
     """Handles querying of positions and trade log for a user.
 
     Args:
-        supabase: An initialised Supabase client (``supabase-py``).
+        supabase:         An initialised Supabase client.
+        credential_store: A :class:`~..credentials.CredentialStore` instance
+                          used to retrieve exchange API keys for the user.
+        trading_connector: A :class:`~..connector.TradingConnector` instance
+                           used to create authenticated exchange connections.
     """
 
-    def __init__(self, supabase: Any) -> None:
+    def __init__(
+        self,
+        supabase: Any,
+        credential_store: CredentialStore,
+        trading_connector: TradingConnector,
+    ) -> None:
         self._supabase = supabase
+        self._credential_store = credential_store
+        self._trading_connector = trading_connector
 
     # ------------------------------------------------------------------
-    # Open positions
+    # Open positions  (source of truth: exchange)
     # ------------------------------------------------------------------
 
     async def get_open_positions(self, user_id: str) -> list[OpenPositionResponse]:
-        """Return all open positions for *user_id*.
+        """Return all open positions for *user_id* by querying each configured exchange.
 
-        Queries the ``positions`` table for rows belonging to *user_id* that
-        have not yet been closed (i.e. ``status = 'open'`` or ``closed_at``
-        is NULL).  Returns an empty list when no open positions exist
-        (Requirement 15.2).
+        Iterates over every exchange the user has credentials for, fetches
+        live positions, and returns only those with a non-zero contract size.
+        If an exchange connection fails the error is logged and that exchange
+        is skipped — partial results are returned rather than a hard 503.
 
-        Each returned record contains: ``id``, ``symbol``, ``side``,
-        ``entry_price``, ``quantity``, ``opened_at``, and ``exchange``
-        (Requirement 15.1).
+        Returns an empty list when no open positions exist on any exchange.
 
         Args:
             user_id: UUID string of the authenticated user.
@@ -68,46 +65,100 @@ class MonitoringService:
             List of :class:`~..user_models.OpenPositionResponse` (may be empty).
 
         Raises:
-            HTTPException(503): On unexpected database errors.
+            HTTPException(503): On unexpected Supabase errors when listing
+                                configured exchanges.
         """
+        # Discover which exchanges this user has credentials for.
         try:
-            response = (
-                self._supabase.table("positions")
-                .select("id, symbol, side, entry_price, quantity, opened_at, exchange")
+            cred_response = (
+                self._supabase.table("exchange_credentials")
+                .select("exchange")
                 .eq("user_id", user_id)
-                .is_("closed_at", "null")
                 .execute()
             )
         except Exception as exc:
             logger.error(
-                "Database error fetching open positions for user=%s: %s",
+                "Database error listing exchange credentials for user=%s: %s",
                 user_id,
                 exc,
                 exc_info=True,
             )
             raise HTTPException(status_code=503, detail="Service unavailable") from exc
 
-        if not response.data:
+        configured_exchanges: list[str] = [
+            row["exchange"] for row in (cred_response.data or [])
+        ]
+
+        if not configured_exchanges:
             return []
 
-        return [_to_open_position_response(row) for row in response.data]
+        results: list[OpenPositionResponse] = []
+
+        for exchange_name in configured_exchanges:
+            exchange_instance = None
+            try:
+                credentials = await self._credential_store.get_credentials(
+                    user_id, exchange_name
+                )
+                exchange_instance = await self._trading_connector.create_exchange_for_monitoring(
+                    exchange_name=exchange_name,
+                    credentials=credentials,
+                )
+                raw_positions = await exchange_instance.fetch_positions()
+            except MissingCredentialsError:
+                logger.warning(
+                    "No credentials found for user=%s exchange=%s — skipping",
+                    user_id,
+                    exchange_name,
+                )
+                continue
+            except AuthenticationError as exc:
+                logger.error(
+                    "Auth error fetching positions for user=%s exchange=%s: %s",
+                    user_id,
+                    exchange_name,
+                    exc,
+                )
+                continue
+            except Exception as exc:
+                logger.error(
+                    "Error fetching positions for user=%s exchange=%s: %s",
+                    user_id,
+                    exchange_name,
+                    exc,
+                    exc_info=True,
+                )
+                continue
+            finally:
+                if exchange_instance is not None:
+                    try:
+                        await exchange_instance.close()
+                    except Exception:
+                        pass
+
+            for pos in raw_positions:
+                contracts = pos.get("contracts") or pos.get("size") or 0
+                try:
+                    contracts = float(contracts)
+                except (TypeError, ValueError):
+                    contracts = 0.0
+
+                if contracts <= 0:
+                    continue
+
+                results.append(_ccxt_position_to_response(pos, exchange_name))
+
+        return results
 
     # ------------------------------------------------------------------
-    # Position history
+    # Position history  (source: Supabase audit trail)
     # ------------------------------------------------------------------
 
     async def get_position_history(self, user_id: str) -> list[ClosedPositionResponse]:
         """Return all closed positions for *user_id* ordered by ``closed_at`` DESC.
 
-        Queries the ``positions`` table for rows belonging to *user_id* that
-        have a non-NULL ``closed_at`` value, ordering by ``closed_at``
-        descending so the most recently closed position appears first
-        (Requirements 16.1, 16.3).  Returns an empty list when no closed
-        positions exist (Requirement 16.2).
-
-        Each returned record contains: ``id``, ``symbol``, ``side``,
-        ``entry_price``, ``exit_price``, ``quantity``, ``opened_at``,
-        ``closed_at``, and ``exchange`` (Requirement 16.1).
+        Reads from the Supabase audit trail — records positions that were
+        closed via this application's webhook pipeline.
 
         Args:
             user_id: UUID string of the authenticated user.
@@ -146,21 +197,11 @@ class MonitoringService:
         return [_to_closed_position_response(row) for row in response.data]
 
     # ------------------------------------------------------------------
-    # Trade log
+    # Trade log  (source: Supabase audit trail)
     # ------------------------------------------------------------------
 
     async def get_trade_log(self, user_id: str) -> list[TradeLogResponse]:
         """Return all trade log entries for *user_id* ordered by ``created_at`` DESC.
-
-        Queries the ``trade_logs`` table for all rows belonging to *user_id*,
-        ordering by ``created_at`` descending so the most recent trade appears
-        first (Requirements 17.1, 17.3).  Returns an empty list when no
-        entries exist (Requirement 17.2).
-
-        Each returned record contains: ``id``, ``symbol``, ``action``,
-        ``side``, ``exchange``, ``size_value``, ``status``, ``order_id``,
-        ``fill_price``, ``filled_quantity``, ``error_details``, and
-        ``created_at`` (Requirement 17.1).
 
         Args:
             user_id: UUID string of the authenticated user.
@@ -204,36 +245,72 @@ class MonitoringService:
 # ---------------------------------------------------------------------------
 
 
-def _parse_iso_datetime(value: Any) -> datetime:
-    """Parse an ISO 8601 timestamp string (or ``datetime``) to a UTC-aware ``datetime``.
+def _ccxt_position_to_response(
+    pos: dict[str, Any],
+    exchange_name: str,
+) -> OpenPositionResponse:
+    """Convert a raw CCXT position dict to an :class:`OpenPositionResponse`."""
+    side_raw = str(pos.get("side") or "long").lower()
+    side = "long" if side_raw == "long" else "short"
 
-    Supabase returns timestamps as ISO strings; we normalise to UTC-aware
-    ``datetime`` objects.
-    """
+    entry_price = _safe_float(pos.get("entryPrice") or pos.get("entry_price"))
+    quantity = _safe_float(pos.get("contracts") or pos.get("size"))
+    mark_price = _safe_float(pos.get("markPrice") or pos.get("mark_price"))
+    unrealized_pnl = _safe_float(pos.get("unrealizedPnl") or pos.get("unrealized_pnl"))
+    liquidation_price = _safe_float(
+        pos.get("liquidationPrice") or pos.get("liquidation_price")
+    )
+    leverage = _safe_float(pos.get("leverage"))
+
+    # Calculate unrealized PnL percentage when possible
+    unrealized_pnl_pct: float | None = None
+    if (
+        unrealized_pnl is not None
+        and entry_price is not None
+        and entry_price > 0
+        and quantity is not None
+        and quantity > 0
+    ):
+        cost_basis = entry_price * quantity
+        unrealized_pnl_pct = round((unrealized_pnl / cost_basis) * 100, 4)
+
+    return OpenPositionResponse(
+        symbol=str(pos.get("symbol", "")),
+        side=side,
+        entry_price=entry_price or 0.0,
+        quantity=quantity or 0.0,
+        exchange=exchange_name,
+        mark_price=mark_price,
+        unrealized_pnl=unrealized_pnl,
+        unrealized_pnl_pct=unrealized_pnl_pct,
+        liquidation_price=liquidation_price,
+        leverage=leverage,
+    )
+
+
+def _safe_float(value: Any) -> float | None:
+    """Convert *value* to float, returning ``None`` on failure or zero."""
+    if value is None:
+        return None
+    try:
+        result = float(value)
+        return result if result != 0.0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_iso_datetime(value: Any) -> datetime:
+    """Parse an ISO 8601 timestamp string to a UTC-aware datetime."""
     if isinstance(value, datetime):
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value
-
     text = str(value).replace("Z", "+00:00")
     return datetime.fromisoformat(text)
 
 
-def _to_open_position_response(row: dict[str, Any]) -> OpenPositionResponse:
-    """Convert a raw ``positions`` table row dict to an :class:`OpenPositionResponse`."""
-    return OpenPositionResponse(
-        id=str(row["id"]),
-        symbol=str(row["symbol"]),
-        side=str(row["side"]),
-        entry_price=float(row["entry_price"]),
-        quantity=float(row["quantity"]),
-        opened_at=_parse_iso_datetime(row["opened_at"]),
-        exchange=str(row["exchange"]),
-    )
-
-
 def _to_closed_position_response(row: dict[str, Any]) -> ClosedPositionResponse:
-    """Convert a raw ``positions`` table row dict to a :class:`ClosedPositionResponse`."""
+    """Convert a Supabase positions row to a :class:`ClosedPositionResponse`."""
     return ClosedPositionResponse(
         id=str(row["id"]),
         symbol=str(row["symbol"]),
@@ -248,7 +325,7 @@ def _to_closed_position_response(row: dict[str, Any]) -> ClosedPositionResponse:
 
 
 def _to_trade_log_response(row: dict[str, Any]) -> TradeLogResponse:
-    """Convert a raw ``trade_logs`` table row dict to a :class:`TradeLogResponse`."""
+    """Convert a Supabase trade_logs row to a :class:`TradeLogResponse`."""
     return TradeLogResponse(
         id=str(row["id"]),
         symbol=str(row["symbol"]),

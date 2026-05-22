@@ -162,15 +162,24 @@ class CredentialSummaryResponse(BaseModel):
 
 
 class OpenPositionResponse(BaseModel):
-    """One open (active) position record returned by GET /trading/users/me/positions."""
+    """One open (active) position record returned by GET /trading/users/me/positions.
 
-    id: str
+    Data is sourced directly from the exchange (source of truth).
+    Real-time fields (mark_price, unrealized_pnl, unrealized_pnl_pct,
+    liquidation_price) are None when the exchange does not provide them.
+    """
+
     symbol: str
     side: str
     entry_price: float
     quantity: float
-    opened_at: datetime
     exchange: str
+    # Real-time data from exchange
+    mark_price: float | None = None
+    unrealized_pnl: float | None = None
+    unrealized_pnl_pct: float | None = None
+    liquidation_price: float | None = None
+    leverage: float | None = None
 
 
 # ---------------------------------------------------------------------------
