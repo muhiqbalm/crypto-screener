@@ -19,13 +19,11 @@ Requirements: 1.1, 1.11, 5.7, 9.1, 9.3, 11.5, 11.6
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 from .auth import authenticate_by_passphrase
 from .config import TradingSettings, get_trading_settings
@@ -105,6 +103,7 @@ def get_supabase_client(
 )
 async def receive_tradingview_alert(
     request: Request,
+    body: WebhookPayload,
     background_tasks: BackgroundTasks,
     settings: Annotated[TradingSettings, Depends(get_settings)],
     supabase: Annotated[Any, Depends(get_supabase_client)],
@@ -130,8 +129,8 @@ async def receive_tradingview_alert(
         )
 
     # Requirement 11.6: reject body > max_payload_size with 413
-    body = await request.body()
-    if len(body) > settings.max_payload_size:
+    raw_body = await request.body()
+    if len(raw_body) > settings.max_payload_size:
         return JSONResponse(
             status_code=413,
             content=TradeErrorResponse(
@@ -141,33 +140,9 @@ async def receive_tradingview_alert(
         )
 
     # ------------------------------------------------------------------
-    # Step 2: Parse body into WebhookPayload
+    # Step 2: Payload already parsed and validated by FastAPI via `body: WebhookPayload`
     # ------------------------------------------------------------------
-
-    # Attempt JSON decode first so we give a 400 for malformed JSON rather
-    # than letting Pydantic produce an unhelpful 422.
-    try:
-        raw_data = json.loads(body)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        return JSONResponse(
-            status_code=400,
-            content=TradeErrorResponse(
-                error="Malformed payload",
-                detail=str(exc),
-            ).model_dump(),
-        )
-
-    # Pydantic validation — produces 422 with field-level details on failure.
-    try:
-        payload = WebhookPayload.model_validate(raw_data)
-    except ValidationError as exc:
-        return JSONResponse(
-            status_code=422,
-            content=TradeErrorResponse(
-                error="Validation error",
-                detail=exc.json(),
-            ).model_dump(),
-        )
+    payload = body
 
     # Variables for the audit log (populated as we progress)
     user_id: str | None = None
