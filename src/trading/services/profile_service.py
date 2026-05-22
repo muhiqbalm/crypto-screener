@@ -136,15 +136,8 @@ class ProfileService:
         if update.password is not None:
             patch["password_hash"] = hash_password(update.password)
 
-        # Perform the UPDATE and return the updated row via .select()
         try:
-            response = (
-                self._supabase.table("users")
-                .update(patch)
-                .eq("id", user_id)
-                .select("id, email, name, telegram_chat_id, is_active, created_at")
-                .execute()
-            )
+            self._supabase.table("users").update(patch).eq("id", user_id).execute()
         except Exception as exc:
             logger.error(
                 "Database error updating profile for user=%s: %s",
@@ -154,10 +147,7 @@ class ProfileService:
             )
             raise HTTPException(status_code=503, detail="Service unavailable") from exc
 
-        if not response.data:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        return _to_profile_response(response.data[0])
+        return await self.get_profile(user_id)
 
 
 # ---------------------------------------------------------------------------

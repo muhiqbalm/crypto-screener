@@ -142,16 +142,9 @@ class WebhookConfigService:
         }
 
         try:
-            response = (
-                self._supabase.table("webhook_configs")
-                .insert(row)
-                .select("id, passphrase, is_active, created_at")
-                .execute()
-            )
+            self._supabase.table("webhook_configs").insert(row).execute()
         except Exception as exc:
             exc_str = str(exc).lower()
-            # Guard against race-condition unique-constraint violations at
-            # the DB level that slipped past our pre-check.
             if "duplicate" in exc_str or "unique" in exc_str or "23505" in exc_str:
                 raise HTTPException(
                     status_code=409,
@@ -165,13 +158,8 @@ class WebhookConfigService:
             )
             raise HTTPException(status_code=503, detail="Service unavailable") from exc
 
-        if not response.data:
-            logger.error(
-                "Webhook config insert for user=%s returned no data", user_id
-            )
-            raise HTTPException(status_code=503, detail="Service unavailable")
-
-        return _to_webhook_config_response(response.data[0])
+        # Fetch the newly created record
+        return await self.get_active(user_id)
 
     # ------------------------------------------------------------------
     # Update config
@@ -212,14 +200,9 @@ class WebhookConfigService:
 
         # 3. Perform the update
         try:
-            response = (
-                self._supabase.table("webhook_configs")
-                .update({"passphrase": passphrase})
-                .eq("user_id", user_id)
-                .eq("is_active", True)
-                .select("id, passphrase, is_active, created_at")
-                .execute()
-            )
+            self._supabase.table("webhook_configs").update(
+                {"passphrase": passphrase}
+            ).eq("user_id", user_id).eq("is_active", True).execute()
         except Exception as exc:
             exc_str = str(exc).lower()
             if "duplicate" in exc_str or "unique" in exc_str or "23505" in exc_str:
@@ -235,12 +218,7 @@ class WebhookConfigService:
             )
             raise HTTPException(status_code=503, detail="Service unavailable") from exc
 
-        if not response.data:
-            raise HTTPException(
-                status_code=404, detail="No active webhook configuration found"
-            )
-
-        return _to_webhook_config_response(response.data[0])
+        return await self.get_active(user_id)
 
     # ------------------------------------------------------------------
     # Deactivate config
@@ -267,17 +245,32 @@ class WebhookConfigService:
         await self.get_active(user_id)  # raises 404 if none
 
         try:
+            self._supabase.table("webhook_configs").update(
+                {"is_active": False}
+            ).eq("user_id", user_id).eq("is_active", True).execute()
+        except Exception as exc:
+            logger.error(
+                "Database error deactivating webhook config for user=%s: %s",
+                user_id,
+                exc,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail="Service unavailable") from exc
+
+        # Fetch the deactivated record (is_active=False now)
+        try:
             response = (
                 self._supabase.table("webhook_configs")
-                .update({"is_active": False})
-                .eq("user_id", user_id)
-                .eq("is_active", True)
                 .select("id, passphrase, is_active, created_at")
+                .eq("user_id", user_id)
+                .eq("is_active", False)
+                .order("created_at", desc=True)
+                .limit(1)
                 .execute()
             )
         except Exception as exc:
             logger.error(
-                "Database error deactivating webhook config for user=%s: %s",
+                "Database error fetching deactivated config for user=%s: %s",
                 user_id,
                 exc,
                 exc_info=True,
