@@ -80,11 +80,18 @@ class WebhookPayload(BaseModel):
         return self
 
 
-class TradeSuccessResponse(BaseModel):
-    """Response model for a successfully executed trade.
+class BalanceInfo(BaseModel):
+    """Balance snapshot included in webhook trade responses."""
 
-    Requirement 1.1: 200 HTTP status with trade details on success
-    """
+    free: float
+    currency: str
+    min_order_amount: float
+    min_order_notional: Optional[float] = None
+    current_price: float
+
+
+class TradeSuccessResponse(BaseModel):
+    """Response model for a successfully executed trade."""
 
     status: Literal["success"] = "success"
     order_id: str
@@ -93,14 +100,13 @@ class TradeSuccessResponse(BaseModel):
     side: str
     fill_price: float
     filled_quantity: float
+    balance_info: Optional[BalanceInfo] = None
 
 
 class TradeErrorResponse(BaseModel):
-    """Response model for a failed or rejected trade.
-
-    Used for all error responses from the webhook endpoint.
-    """
+    """Response model for a failed or rejected trade."""
 
     status: Literal["error"] = "error"
     error: str
     detail: Optional[str] = None
+    balance_info: Optional[BalanceInfo] = None

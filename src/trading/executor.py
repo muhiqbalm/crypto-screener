@@ -86,29 +86,16 @@ class TradeExecutor:
         exchange: ccxt_async.Exchange,
         payload: WebhookPayload,
         position: dict | None = None,
-    ) -> dict:
+    ) -> tuple[dict, dict]:
         """Execute a market order on the exchange based on the webhook payload.
 
-        For "open" + "long":  market buy  (Requirement 5.1)
-        For "open" + "short": market sell (Requirement 5.2)
-        For "close":          opposite market order for full position quantity (Requirement 5.3)
-
-        Balance is checked before order placement (Requirement 5.6).
-        Order submission is wrapped in a 5-second timeout (Requirement 5.8).
-        No retry on exchange failure (Requirement 5.7).
-
-        Args:
-            exchange: An authenticated CCXT exchange instance
-            payload: The validated webhook payload
-            position: Open position record (required when action == "close")
-
         Returns:
-            The raw CCXT order response dict from the exchange
-
-        Raises:
-            InsufficientBalanceError: When free margin is too low for the order
-            OrderExecutionError: When the exchange returns an error during placement
-            ValueError: When position is None for a "close" action
+            Tuple of (ccxt_order_dict, balance_info_dict) where balance_info contains:
+              - free: free balance in quote currency
+              - currency: quote currency symbol
+              - min_order_amount: minimum order amount in base currency
+              - min_order_notional: minimum notional value in quote currency (optional)
+              - current_price: current market price
         """
         symbol = payload.symbol
 
@@ -123,8 +110,12 @@ class TradeExecutor:
 
     async def _fetch_free_balance(
         self, exchange: ccxt_async.Exchange, symbol: str
-    ) -> tuple[float, float]:
-        """Fetch the user's free margin balance and the current market price."""
+    ) -> tuple[float, float, str]:
+        """Fetch free margin balance, current price, and quote currency.
+
+        Returns:
+            Tuple of (free_balance, current_price, quote_currency)
+        """
         try:
             quote_currency = symbol.split("/")[1].split(":")[0]
 
@@ -134,7 +125,6 @@ class TradeExecutor:
             else:
                 balance = await exchange.fetch_balance()
 
-            # Log full balance structure for debugging
             logger.debug(
                 "Raw balance response for %s: free=%s total=%s",
                 exchange_id,
@@ -153,23 +143,51 @@ class TradeExecutor:
             ticker = await exchange.fetch_ticker(symbol)
             current_price: float = float(ticker["last"])
 
-            return free_balance, current_price
+            return free_balance, current_price, quote_currency
 
         except (ccxt_async.BaseError, KeyError, TypeError, ValueError) as exc:
             raise OrderExecutionError(
                 f"Failed to fetch balance or price for {symbol}: {exc}"
             ) from exc
 
+    def _get_balance_info(
+        self,
+        exchange: ccxt_async.Exchange,
+        symbol: str,
+        free_balance: float,
+        current_price: float,
+        quote_currency: str,
+    ) -> dict:
+        """Build balance_info dict to include in response."""
+        min_amount = 0.0
+        min_notional = None
+
+        try:
+            market = exchange.market(symbol)
+            limits = market.get("limits") or {}
+            min_amount = float((limits.get("amount") or {}).get("min") or 0.0)
+            min_notional_raw = (limits.get("cost") or {}).get("min")
+            if min_notional_raw:
+                min_notional = float(min_notional_raw)
+        except Exception:
+            pass
+
+        return {
+            "free": free_balance,
+            "currency": quote_currency,
+            "min_order_amount": min_amount,
+            "min_order_notional": min_notional,
+            "current_price": current_price,
+        }
+
     async def _execute_open(
         self, exchange: ccxt_async.Exchange, payload: WebhookPayload
-    ) -> dict:
-        """Handle 'open' action: calculate quantity, check balance, place order.
-
-        Requirements: 5.1, 5.2, 5.4, 5.5, 5.6, 5.8
-        """
+    ) -> tuple[dict, dict]:
+        """Handle 'open' action: calculate quantity, check balance, place order."""
         symbol = payload.symbol
 
-        free_balance, current_price = await self._fetch_free_balance(exchange, symbol)
+        free_balance, current_price, quote_currency = await self._fetch_free_balance(exchange, symbol)
+        balance_info = self._get_balance_info(exchange, symbol, free_balance, current_price, quote_currency)
 
         quantity = self.calculate_quantity(
             payload.size_type,
@@ -179,70 +197,69 @@ class TradeExecutor:
             leverage=payload.leverage or 1,
         )
 
-        # Round quantity to exchange-required precision
         quantity = self._round_to_precision(exchange, symbol, quantity)
-
-        # Validate against exchange minimum amount
         self._validate_min_amount(exchange, symbol, quantity)
 
-        # Requirement 5.6: check margin requirement (notional / leverage ≤ free_balance)
         leverage = payload.leverage or 1
         margin_required = (quantity * current_price) / leverage
         if margin_required > free_balance:
             raise InsufficientBalanceError(
-                f"Insufficient margin: required {margin_required:.4f} USDT "
-                f"but free balance is {free_balance:.4f} USDT for {symbol}"
+                f"Insufficient margin: required {margin_required:.4f} {quote_currency} "
+                f"but free balance is {free_balance:.4f} {quote_currency} for {symbol}"
             )
 
-        # Requirement 5.1 / 5.2: buy for long, sell for short
         order_side = "buy" if payload.side == "long" else "sell"
 
-        # For OKX: ensure cross margin mode is set before placing order
         if exchange.id.lower() == "okx":
             try:
                 await exchange.set_margin_mode("cross", symbol)
                 logger.debug("Margin mode set to cross for %s", symbol)
             except Exception as e:
-                # Non-fatal — margin mode may already be set
                 logger.debug("set_margin_mode skipped for %s: %s", symbol, e)
 
-        return await self._place_order_with_timeout(
-            exchange, symbol, order_side, quantity
-        )
+        order = await self._place_order_with_timeout(exchange, symbol, order_side, quantity)
+        return order, balance_info
 
     async def _execute_close(
         self,
         exchange: ccxt_async.Exchange,
         symbol: str,
         position: dict | None,
-    ) -> dict:
-        """Handle 'close' action: place opposite market order for full position size.
-
-        Requirements: 5.3, 5.8
-        """
+    ) -> tuple[dict, dict]:
+        """Handle 'close' action: place opposite market order for full position size."""
         if position is None:
             raise ValueError(
                 "A position record is required to close a trade, but none was provided."
             )
 
-        # Opposite side: close long → sell, close short → buy
         position_side: str = position.get("side") or position.get("info", {}).get("posSide", "long")
         close_side = "sell" if str(position_side).lower() == "long" else "buy"
 
-        # Use contracts from exchange position data
         quantity: float = float(
             position.get("contracts") or position.get("size") or position.get("quantity") or 0.0
         )
 
-        # Round to exchange precision
         quantity = self._round_to_precision(exchange, symbol, quantity)
-
-        # Validate against exchange minimum amount
         self._validate_min_amount(exchange, symbol, quantity)
 
-        return await self._place_order_with_timeout(
-            exchange, symbol, close_side, quantity
-        )
+        # Build balance info for close (fetch current balance)
+        try:
+            quote_currency = symbol.split("/")[1].split(":")[0]
+            exchange_id = exchange.id.lower()
+            if exchange_id == "okx":
+                bal = await exchange.fetch_balance({"type": "trading"})
+            else:
+                bal = await exchange.fetch_balance()
+            free_balance = float(bal.get("free", {}).get(quote_currency, 0.0) or 0.0)
+            ticker = await exchange.fetch_ticker(symbol)
+            current_price = float(ticker["last"])
+        except Exception:
+            free_balance, current_price, quote_currency = 0.0, 0.0, "USDT"
+
+        balance_info = self._get_balance_info(exchange, symbol, free_balance, current_price, quote_currency)
+
+        order = await self._place_order_with_timeout(exchange, symbol, close_side, quantity)
+        return order, balance_info
 
     @staticmethod
     def _round_to_precision(

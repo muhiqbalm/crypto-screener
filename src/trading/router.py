@@ -30,7 +30,7 @@ from .config import TradingSettings, get_trading_settings
 from .connector import AuthenticationError, LeverageSetError, TradingConnector
 from .credentials import CredentialStore, DecryptionError, MissingCredentialsError
 from .executor import InsufficientBalanceError, OrderExecutionError, TradeExecutor
-from .models import TradeErrorResponse, TradeSuccessResponse, WebhookPayload
+from .models import BalanceInfo, TradeErrorResponse, TradeSuccessResponse, WebhookPayload
 from .notifier import TelegramNotifier
 from .position_manager import (
     DuplicatePositionError,
@@ -326,8 +326,9 @@ async def receive_tradingview_alert(
     # Step 7: Execute trade
     # ------------------------------------------------------------------
 
+    balance_info_dict: dict | None = None
     try:
-        order = await executor.execute_trade(
+        order, balance_info_dict = await executor.execute_trade(
             exchange=exchange,
             payload=payload,
             position=position,
@@ -343,6 +344,7 @@ async def receive_tradingview_alert(
             content=TradeErrorResponse(
                 error="Insufficient balance",
                 detail=error_details,
+                balance_info=BalanceInfo(**exc.balance_info) if hasattr(exc, "balance_info") and exc.balance_info else None,
             ).model_dump(),
         )
     except OrderExecutionError as exc:
@@ -362,6 +364,7 @@ async def receive_tradingview_alert(
             content=TradeErrorResponse(
                 error="Order execution failed",
                 detail=error_details,
+                balance_info=BalanceInfo(**exc.balance_info) if hasattr(exc, "balance_info") and exc.balance_info else None,
             ).model_dump(),
         )
 
@@ -465,6 +468,7 @@ async def receive_tradingview_alert(
             side=payload.side,
             fill_price=fill_price,
             filled_quantity=filled_quantity,
+            balance_info=BalanceInfo(**balance_info_dict) if balance_info_dict else None,
         ).model_dump(),
     )
 
