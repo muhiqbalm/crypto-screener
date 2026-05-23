@@ -344,7 +344,7 @@ async def receive_tradingview_alert(
             content=TradeErrorResponse(
                 error="Insufficient balance",
                 detail=error_details,
-                balance_info=BalanceInfo(**exc.balance_info) if hasattr(exc, "balance_info") and exc.balance_info else None,
+                balance_info=BalanceInfo(**exc.balance_info) if exc.balance_info else None,
             ).model_dump(),
         )
     except OrderExecutionError as exc:
@@ -364,7 +364,7 @@ async def receive_tradingview_alert(
             content=TradeErrorResponse(
                 error="Order execution failed",
                 detail=error_details,
-                balance_info=BalanceInfo(**exc.balance_info) if hasattr(exc, "balance_info") and exc.balance_info else None,
+                balance_info=BalanceInfo(**exc.balance_info) if exc.balance_info else None,
             ).model_dump(),
         )
 

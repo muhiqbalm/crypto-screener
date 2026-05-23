@@ -15,20 +15,19 @@ logger = logging.getLogger(__name__)
 
 
 class InsufficientBalanceError(Exception):
-    """Raised when the user's free margin balance is too low to place the order.
+    """Raised when the user's free margin balance is too low to place the order."""
 
-    Requirement 5.6: If the user's free margin balance is less than the cost
-    of the calculated order quantity at current market price, the Executor
-    SHALL reject the trade with this error.
-    """
+    def __init__(self, message: str, balance_info: dict | None = None):
+        super().__init__(message)
+        self.balance_info = balance_info
 
 
 class OrderExecutionError(Exception):
-    """Raised when the exchange returns an error during order placement.
+    """Raised when the exchange returns an error during order placement."""
 
-    Requirement 5.7: Exchange order failures are wrapped in this error to
-    distinguish them from balance or validation failures.
-    """
+    def __init__(self, message: str, balance_info: dict | None = None):
+        super().__init__(message)
+        self.balance_info = balance_info
 
 
 class TradeExecutor:
@@ -198,14 +197,19 @@ class TradeExecutor:
         )
 
         quantity = self._round_to_precision(exchange, symbol, quantity)
-        self._validate_min_amount(exchange, symbol, quantity)
+
+        try:
+            self._validate_min_amount(exchange, symbol, quantity)
+        except InsufficientBalanceError as exc:
+            raise InsufficientBalanceError(str(exc), balance_info=balance_info) from exc
 
         leverage = payload.leverage or 1
         margin_required = (quantity * current_price) / leverage
         if margin_required > free_balance:
             raise InsufficientBalanceError(
                 f"Insufficient margin: required {margin_required:.4f} {quote_currency} "
-                f"but free balance is {free_balance:.4f} {quote_currency} for {symbol}"
+                f"but free balance is {free_balance:.4f} {quote_currency} for {symbol}",
+                balance_info=balance_info,
             )
 
         order_side = "buy" if payload.side == "long" else "sell"
@@ -217,7 +221,9 @@ class TradeExecutor:
             except Exception as e:
                 logger.debug("set_margin_mode skipped for %s: %s", symbol, e)
 
-        order = await self._place_order_with_timeout(exchange, symbol, order_side, quantity)
+        order = await self._place_order_with_timeout(
+            exchange, symbol, order_side, quantity, balance_info=balance_info
+        )
         return order, balance_info
 
     async def _execute_close(
@@ -240,9 +246,8 @@ class TradeExecutor:
         )
 
         quantity = self._round_to_precision(exchange, symbol, quantity)
-        self._validate_min_amount(exchange, symbol, quantity)
 
-        # Build balance info for close (fetch current balance)
+        # Build balance info for close
         try:
             quote_currency = symbol.split("/")[1].split(":")[0]
             exchange_id = exchange.id.lower()
@@ -253,12 +258,22 @@ class TradeExecutor:
             free_balance = float(bal.get("free", {}).get(quote_currency, 0.0) or 0.0)
             ticker = await exchange.fetch_ticker(symbol)
             current_price = float(ticker["last"])
+            quote_currency_used = quote_currency
         except Exception:
-            free_balance, current_price, quote_currency = 0.0, 0.0, "USDT"
+            free_balance, current_price, quote_currency_used = 0.0, 0.0, "USDT"
 
-        balance_info = self._get_balance_info(exchange, symbol, free_balance, current_price, quote_currency)
+        balance_info = self._get_balance_info(
+            exchange, symbol, free_balance, current_price, quote_currency_used
+        )
 
-        order = await self._place_order_with_timeout(exchange, symbol, close_side, quantity)
+        try:
+            self._validate_min_amount(exchange, symbol, quantity)
+        except InsufficientBalanceError as exc:
+            raise InsufficientBalanceError(str(exc), balance_info=balance_info) from exc
+
+        order = await self._place_order_with_timeout(
+            exchange, symbol, close_side, quantity, balance_info=balance_info
+        )
         return order, balance_info
 
     @staticmethod
@@ -310,15 +325,9 @@ class TradeExecutor:
         symbol: str,
         side: str,
         quantity: float,
+        balance_info: dict | None = None,
     ) -> dict:
-        """Submit a market order with a 5-second hard timeout.
-
-        Requirement 5.8: The Executor SHALL submit the order within 5 seconds.
-        Requirement 5.7: No retry on exchange failure.
-
-        Raises:
-            OrderExecutionError: On CCXT error or timeout
-        """
+        """Submit a market order with a 5-second hard timeout."""
         try:
             order = await asyncio.wait_for(
                 exchange.create_order(
@@ -331,19 +340,18 @@ class TradeExecutor:
             )
             logger.info(
                 "Order placed: symbol=%s side=%s quantity=%s order_id=%s",
-                symbol,
-                side,
-                quantity,
-                order.get("id"),
+                symbol, side, quantity, order.get("id"),
             )
             return order
 
         except asyncio.TimeoutError as exc:
             raise OrderExecutionError(
                 f"Order submission timed out after {self.ORDER_TIMEOUT_SECONDS}s "
-                f"for {symbol} {side} {quantity}"
+                f"for {symbol} {side} {quantity}",
+                balance_info=balance_info,
             ) from exc
         except ccxt_async.BaseError as exc:
             raise OrderExecutionError(
-                f"Exchange error placing {side} order for {symbol}: {exc}"
+                f"Exchange error placing {side} order for {symbol}: {exc}",
+                balance_info=balance_info,
             ) from exc
