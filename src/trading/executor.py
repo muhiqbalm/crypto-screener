@@ -52,29 +52,33 @@ class TradeExecutor:
         size_value: float,
         free_balance: float,
         current_price: float,
+        leverage: int = 1,
     ) -> float:
         """Calculate order quantity in base currency units.
 
         For "percent" size_type:
-            quantity = (free_balance * size_value / 100) / current_price
+            Uses free_balance as margin, applies leverage to get notional,
+            then divides by price to get quantity.
+            quantity = (free_balance * size_value/100 * leverage) / current_price
+
         For "fixed" size_type:
             quantity = size_value  (already in base currency units)
 
         Args:
-            size_type: "percent" or "fixed"
-            size_value: The percentage (0–100] or fixed quantity
-            free_balance: User's free margin balance in quote currency
-            current_price: Current market price of the base asset in quote currency
+            size_type:     "percent" or "fixed"
+            size_value:    Percentage (0–100] or fixed quantity
+            free_balance:  User's free margin balance in quote currency
+            current_price: Current market price in quote currency
+            leverage:      Leverage multiplier (default 1)
 
         Returns:
-            Order quantity in base currency units (e.g., BTC for BTC/USDT:USDT)
-
-        Requirements: 5.4, 5.5
+            Order quantity in base currency units
         """
         if size_type == "percent":
-            return (free_balance * size_value / 100) / current_price
+            margin_used = free_balance * size_value / 100
+            notional = margin_used * max(leverage, 1)
+            return notional / current_price
         else:
-            # "fixed" — size_value is already in base currency
             return size_value
 
     async def execute_trade(
@@ -122,8 +126,9 @@ class TradeExecutor:
     ) -> tuple[float, float]:
         """Fetch the user's free margin balance and the current market price.
 
-        Derives the quote currency from the CCXT unified symbol
-        (e.g., "USDT" from "BTC/USDT:USDT").
+        For OKX futures, fetches from the unified trading account which holds
+        futures margin. Uses ``defaultType: future`` already set in the
+        exchange config.
 
         Returns:
             Tuple of (free_balance_in_quote, current_price)
@@ -132,10 +137,16 @@ class TradeExecutor:
             OrderExecutionError: On CCXT errors during balance/price fetch
         """
         try:
-            # Parse quote currency: "BTC/USDT:USDT" → quote = "USDT"
             quote_currency = symbol.split("/")[1].split(":")[0]
 
-            balance = await exchange.fetch_balance()
+            # For OKX, fetch balance with 'trading' account type to get
+            # the unified account balance that covers futures margin
+            exchange_id = exchange.id.lower()
+            if exchange_id == "okx":
+                balance = await exchange.fetch_balance({"type": "trading"})
+            else:
+                balance = await exchange.fetch_balance()
+
             free_balance: float = float(
                 balance.get("free", {}).get(quote_currency, 0.0) or 0.0
             )
@@ -166,6 +177,7 @@ class TradeExecutor:
             payload.size_value,
             free_balance,
             current_price,
+            leverage=payload.leverage or 1,
         )
 
         # Round quantity to exchange-required precision
@@ -174,12 +186,13 @@ class TradeExecutor:
         # Validate against exchange minimum amount
         self._validate_min_amount(exchange, symbol, quantity)
 
-        # Requirement 5.6: reject if order cost exceeds free balance
-        order_cost = quantity * current_price
-        if order_cost > free_balance:
+        # Requirement 5.6: check margin requirement (notional / leverage ≤ free_balance)
+        leverage = payload.leverage or 1
+        margin_required = (quantity * current_price) / leverage
+        if margin_required > free_balance:
             raise InsufficientBalanceError(
-                f"Insufficient balance: order cost {order_cost:.4f} exceeds "
-                f"free balance {free_balance:.4f} for {symbol}"
+                f"Insufficient margin: required {margin_required:.4f} USDT "
+                f"but free balance is {free_balance:.4f} USDT for {symbol}"
             )
 
         # Requirement 5.1 / 5.2: buy for long, sell for short
