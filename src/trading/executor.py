@@ -124,31 +124,30 @@ class TradeExecutor:
     async def _fetch_free_balance(
         self, exchange: ccxt_async.Exchange, symbol: str
     ) -> tuple[float, float]:
-        """Fetch the user's free margin balance and the current market price.
-
-        For OKX futures, fetches from the unified trading account which holds
-        futures margin. Uses ``defaultType: future`` already set in the
-        exchange config.
-
-        Returns:
-            Tuple of (free_balance_in_quote, current_price)
-
-        Raises:
-            OrderExecutionError: On CCXT errors during balance/price fetch
-        """
+        """Fetch the user's free margin balance and the current market price."""
         try:
             quote_currency = symbol.split("/")[1].split(":")[0]
 
-            # For OKX, fetch balance with 'trading' account type to get
-            # the unified account balance that covers futures margin
             exchange_id = exchange.id.lower()
             if exchange_id == "okx":
                 balance = await exchange.fetch_balance({"type": "trading"})
             else:
                 balance = await exchange.fetch_balance()
 
+            # Log full balance structure for debugging
+            logger.debug(
+                "Raw balance response for %s: free=%s total=%s",
+                exchange_id,
+                balance.get("free", {}),
+                balance.get("total", {}),
+            )
+
             free_balance: float = float(
                 balance.get("free", {}).get(quote_currency, 0.0) or 0.0
+            )
+
+            logger.info(
+                "Free %s balance on %s: %s", quote_currency, exchange_id, free_balance
             )
 
             ticker = await exchange.fetch_ticker(symbol)
@@ -197,6 +196,15 @@ class TradeExecutor:
 
         # Requirement 5.1 / 5.2: buy for long, sell for short
         order_side = "buy" if payload.side == "long" else "sell"
+
+        # For OKX: ensure cross margin mode is set before placing order
+        if exchange.id.lower() == "okx":
+            try:
+                await exchange.set_margin_mode("cross", symbol)
+                logger.debug("Margin mode set to cross for %s", symbol)
+            except Exception as e:
+                # Non-fatal — margin mode may already be set
+                logger.debug("set_margin_mode skipped for %s: %s", symbol, e)
 
         return await self._place_order_with_timeout(
             exchange, symbol, order_side, quantity
