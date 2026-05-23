@@ -88,6 +88,9 @@ class BalanceInfo(BaseModel):
     min_order_amount: float
     min_order_notional: Optional[float] = None
     current_price: float
+    order_quantity: Optional[float] = None
+    order_notional: Optional[float] = None
+    margin_required: Optional[float] = None
 
 
 class TradeSuccessResponse(BaseModel):

@@ -198,13 +198,18 @@ class TradeExecutor:
 
         quantity = self._round_to_precision(exchange, symbol, quantity)
 
+        # Enrich balance_info with order size details now that quantity is known
+        leverage = payload.leverage or 1
+        balance_info["order_quantity"] = quantity
+        balance_info["order_notional"] = round(quantity * current_price, 6)
+        balance_info["margin_required"] = round((quantity * current_price) / leverage, 6)
+
         try:
             self._validate_min_amount(exchange, symbol, quantity)
         except InsufficientBalanceError as exc:
             raise InsufficientBalanceError(str(exc), balance_info=balance_info) from exc
 
-        leverage = payload.leverage or 1
-        margin_required = (quantity * current_price) / leverage
+        margin_required = balance_info["margin_required"]
         if margin_required > free_balance:
             raise InsufficientBalanceError(
                 f"Insufficient margin: required {margin_required:.4f} {quote_currency} "
@@ -265,6 +270,11 @@ class TradeExecutor:
         balance_info = self._get_balance_info(
             exchange, symbol, free_balance, current_price, quote_currency_used
         )
+
+        # Enrich with order size details
+        balance_info["order_quantity"] = quantity
+        balance_info["order_notional"] = round(quantity * current_price, 6) if current_price else None
+        balance_info["margin_required"] = None  # close orders release margin
 
         try:
             self._validate_min_amount(exchange, symbol, quantity)
