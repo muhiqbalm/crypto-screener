@@ -36,9 +36,11 @@ from ..services.monitoring_service import MonitoringService
 from ..services.profile_service import ProfileService
 from ..services.webhook_config_service import WebhookConfigService
 from ..user_models import (
+    BalanceResponse,
     ClosedPositionResponse,
     CredentialSummaryResponse,
     CredentialUpsertRequest,
+    ExchangeBalanceResponse,
     OpenPositionResponse,
     ProfileUpdateRequest,
     TradeLogResponse,
@@ -435,6 +437,44 @@ async def delete_credentials(
     """
     user_id: str = payload["sub"]
     return await credential_service.delete_credentials(user_id=user_id, exchange=exchange)
+
+
+# ===========================================================================
+# Balance routes
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# GET /trading/users/me/balance
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/balance",
+    status_code=status.HTTP_200_OK,
+    response_model=BalanceResponse,
+    summary="Get exchange balances for the authenticated user",
+    responses={
+        401: {"description": "Unauthorized"},
+        503: {"description": "Service unavailable"},
+    },
+)
+async def get_balance(
+    payload: Annotated[dict, Depends(active_user_guard)],
+    monitoring_service: Annotated[MonitoringService, Depends(get_monitoring_service)],
+) -> BalanceResponse:
+    """Return balances across all configured exchanges for the authenticated user.
+
+    Fetches live balance data directly from each exchange the user has
+    credentials configured for. Only currencies with a non-zero total balance
+    are returned.
+
+    If one exchange fails (e.g. wrong credentials or network issue), that
+    exchange is skipped and the remaining results are still returned.
+    """
+    user_id: str = payload["sub"]
+    balances = await monitoring_service.get_balance(user_id=user_id)
+    return BalanceResponse(balances=balances)
 
 
 # ===========================================================================

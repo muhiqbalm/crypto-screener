@@ -45,6 +45,129 @@ class MonitoringService:
         self._trading_connector = trading_connector
 
     # ------------------------------------------------------------------
+    # Balance  (source of truth: exchange)
+    # ------------------------------------------------------------------
+
+    async def get_balance(self, user_id: str) -> list:
+        """Return balances for all configured exchanges for *user_id*.
+
+        Iterates over every exchange the user has credentials for, fetches
+        the futures/trading wallet balance, and returns non-zero balances.
+        If an exchange connection fails the error is logged and that exchange
+        is skipped — partial results are returned rather than a hard 503.
+
+        Args:
+            user_id: UUID string of the authenticated user.
+
+        Returns:
+            List of :class:`~..user_models.ExchangeBalanceResponse` (may be empty).
+
+        Raises:
+            HTTPException(503): On unexpected Supabase errors.
+        """
+        from ..user_models import ExchangeBalanceResponse
+
+        try:
+            cred_response = (
+                self._supabase.table("exchange_credentials")
+                .select("exchange")
+                .eq("user_id", user_id)
+                .execute()
+            )
+        except Exception as exc:
+            logger.error(
+                "Database error listing exchange credentials for user=%s: %s",
+                user_id,
+                exc,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail="Service unavailable") from exc
+
+        configured_exchanges: list[str] = [
+            row["exchange"] for row in (cred_response.data or [])
+        ]
+
+        if not configured_exchanges:
+            return []
+
+        results: list[ExchangeBalanceResponse] = []
+
+        for exchange_name in configured_exchanges:
+            exchange_instance = None
+            try:
+                credentials = await self._credential_store.get_credentials(
+                    user_id, exchange_name
+                )
+                exchange_instance = await self._trading_connector.create_exchange_for_monitoring(
+                    exchange_name=exchange_name,
+                    credentials=credentials,
+                )
+                raw_balance = await exchange_instance.fetch_balance()
+            except MissingCredentialsError:
+                logger.warning(
+                    "No credentials found for user=%s exchange=%s — skipping",
+                    user_id,
+                    exchange_name,
+                )
+                continue
+            except AuthenticationError as exc:
+                logger.error(
+                    "Auth error fetching balance for user=%s exchange=%s: %s",
+                    user_id,
+                    exchange_name,
+                    exc,
+                )
+                continue
+            except Exception as exc:
+                logger.error(
+                    "Error fetching balance for user=%s exchange=%s: %s",
+                    user_id,
+                    exchange_name,
+                    exc,
+                    exc_info=True,
+                )
+                continue
+            finally:
+                if exchange_instance is not None:
+                    try:
+                        await exchange_instance.close()
+                    except Exception:
+                        pass
+
+            # Extract per-currency balances — only include non-zero totals
+            total_dict: dict = raw_balance.get("total") or {}
+            free_dict: dict = raw_balance.get("free") or {}
+            used_dict: dict = raw_balance.get("used") or {}
+
+            for currency, total_val in total_dict.items():
+                try:
+                    total = float(total_val or 0.0)
+                except (TypeError, ValueError):
+                    total = 0.0
+
+                if total <= 0:
+                    continue
+
+                try:
+                    free = float(free_dict.get(currency) or 0.0)
+                    used = float(used_dict.get(currency) or 0.0)
+                except (TypeError, ValueError):
+                    free = 0.0
+                    used = 0.0
+
+                results.append(
+                    ExchangeBalanceResponse(
+                        exchange=exchange_name,
+                        currency=currency,
+                        free=free,
+                        used=used,
+                        total=total,
+                    )
+                )
+
+        return results
+
+    # ------------------------------------------------------------------
     # Open positions  (source of truth: exchange)
     # ------------------------------------------------------------------
 

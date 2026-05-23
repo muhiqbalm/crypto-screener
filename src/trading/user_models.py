@@ -157,6 +157,27 @@ class CredentialSummaryResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Balance
+# ---------------------------------------------------------------------------
+
+
+class ExchangeBalanceResponse(BaseModel):
+    """Balance for one currency on one exchange."""
+
+    exchange: str
+    currency: str
+    free: float
+    used: float
+    total: float
+
+
+class BalanceResponse(BaseModel):
+    """Response for GET /trading/users/me/balance."""
+
+    balances: list[ExchangeBalanceResponse]
+
+
+# ---------------------------------------------------------------------------
 # Open positions
 # ---------------------------------------------------------------------------
 
