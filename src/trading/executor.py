@@ -168,6 +168,12 @@ class TradeExecutor:
             current_price,
         )
 
+        # Round quantity to exchange-required precision
+        quantity = self._round_to_precision(exchange, symbol, quantity)
+
+        # Validate against exchange minimum amount
+        self._validate_min_amount(exchange, symbol, quantity)
+
         # Requirement 5.6: reject if order cost exceeds free balance
         order_cost = quantity * current_price
         if order_cost > free_balance:
@@ -199,13 +205,66 @@ class TradeExecutor:
             )
 
         # Opposite side: close long → sell, close short → buy
-        position_side: str = position["side"]
-        close_side = "sell" if position_side == "long" else "buy"
-        quantity: float = float(position["quantity"])
+        position_side: str = position.get("side") or position.get("info", {}).get("posSide", "long")
+        close_side = "sell" if str(position_side).lower() == "long" else "buy"
+
+        # Use contracts from exchange position data
+        quantity: float = float(
+            position.get("contracts") or position.get("size") or position.get("quantity") or 0.0
+        )
+
+        # Round to exchange precision
+        quantity = self._round_to_precision(exchange, symbol, quantity)
+
+        # Validate against exchange minimum amount
+        self._validate_min_amount(exchange, symbol, quantity)
 
         return await self._place_order_with_timeout(
             exchange, symbol, close_side, quantity
         )
+
+    @staticmethod
+    def _round_to_precision(
+        exchange: ccxt_async.Exchange,
+        symbol: str,
+        quantity: float,
+    ) -> float:
+        """Round quantity to the exchange's required amount precision.
+
+        Uses CCXT's ``amount_to_precision`` when the market is loaded,
+        falling back to 8 decimal places.
+        """
+        try:
+            rounded = exchange.amount_to_precision(symbol, quantity)
+            return float(rounded)
+        except Exception:
+            return round(quantity, 8)
+
+    @staticmethod
+    def _validate_min_amount(
+        exchange: ccxt_async.Exchange,
+        symbol: str,
+        quantity: float,
+    ) -> None:
+        """Raise InsufficientBalanceError when quantity is below the exchange minimum.
+
+        Reads the minimum amount from the loaded market data so the error
+        message is actionable before the order is even submitted.
+        """
+        try:
+            market = exchange.market(symbol)
+            min_amount: float = float(
+                (market.get("limits") or {}).get("amount", {}).get("min") or 0.0
+            )
+        except Exception:
+            return  # Can't determine minimum — let the exchange reject it
+
+        if min_amount > 0 and quantity < min_amount:
+            raise InsufficientBalanceError(
+                f"Order quantity {quantity} is below the minimum allowed "
+                f"amount {min_amount} for {symbol}. "
+                f"Increase size_value or use a higher balance."
+            )
 
     async def _place_order_with_timeout(
         self,
