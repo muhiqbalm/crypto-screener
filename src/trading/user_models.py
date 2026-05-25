@@ -162,13 +162,20 @@ class CredentialSummaryResponse(BaseModel):
 
 
 class ExchangeBalanceResponse(BaseModel):
-    """Balance for one currency on one exchange."""
+    """Balance for one currency on one exchange wallet.
+
+    ``account_type`` indicates which wallet the balance was read from:
+      - ``"trading"`` — OKX Unified/Trading account (used by futures trading)
+      - ``"funding"`` — OKX Funding account (deposits, P2P, fiat)
+      - ``"default"`` — exchanges without a funding/trading split (e.g. Binance)
+    """
 
     exchange: str
     currency: str
     free: float
     used: float
     total: float
+    account_type: str = "default"
 
 
 class BalanceResponse(BaseModel):

@@ -102,7 +102,38 @@ class MonitoringService:
                     exchange_name=exchange_name,
                     credentials=credentials,
                 )
-                raw_balance = await exchange_instance.fetch_balance()
+
+                # Determine which wallets to query.
+                # OKX has separate Trading (Unified) and Funding wallets;
+                # users may legitimately hold balance in either, so we fetch
+                # both. Binance and other exchanges are queried with the
+                # default (futures) wallet only.
+                if exchange_name.lower() == "okx":
+                    wallets: list[tuple[str, dict]] = [
+                        ("trading", {"type": "trading"}),
+                        ("funding", {"type": "funding"}),
+                    ]
+                else:
+                    wallets = [("default", {})]
+
+                wallet_balances: list[tuple[str, dict]] = []
+                for account_type, params in wallets:
+                    try:
+                        raw = (
+                            await exchange_instance.fetch_balance(params)
+                            if params
+                            else await exchange_instance.fetch_balance()
+                        )
+                        wallet_balances.append((account_type, raw))
+                    except Exception as exc:
+                        # One wallet failing should not break the others.
+                        logger.warning(
+                            "Failed to fetch '%s' wallet for user=%s exchange=%s: %s",
+                            account_type,
+                            user_id,
+                            exchange_name,
+                            exc,
+                        )
             except MissingCredentialsError:
                 logger.warning(
                     "No credentials found for user=%s exchange=%s — skipping",
@@ -134,36 +165,25 @@ class MonitoringService:
                     except Exception:
                         pass
 
-            # Extract per-currency balances — only include non-zero totals
-            total_dict: dict = raw_balance.get("total") or {}
-            free_dict: dict = raw_balance.get("free") or {}
-            used_dict: dict = raw_balance.get("used") or {}
-
-            for currency, total_val in total_dict.items():
-                try:
-                    total = float(total_val or 0.0)
-                except (TypeError, ValueError):
-                    total = 0.0
-
-                if total <= 0:
-                    continue
-
-                try:
-                    free = float(free_dict.get(currency) or 0.0)
-                    used = float(used_dict.get(currency) or 0.0)
-                except (TypeError, ValueError):
-                    free = 0.0
-                    used = 0.0
-
-                results.append(
-                    ExchangeBalanceResponse(
-                        exchange=exchange_name,
-                        currency=currency,
-                        free=free,
-                        used=used,
-                        total=total,
-                    )
+            # Flatten each wallet's per-currency balances into the response.
+            per_wallet_summary: list[str] = []
+            for account_type, raw_balance in wallet_balances:
+                wallet_results = _extract_non_zero_balances(
+                    raw_balance=raw_balance,
+                    exchange_name=exchange_name,
+                    account_type=account_type,
                 )
+                per_wallet_summary.append(
+                    f"{account_type}={len(wallet_results)}"
+                )
+                results.extend(wallet_results)
+
+            logger.info(
+                "Balance fetched for user=%s exchange=%s wallets=[%s]",
+                user_id,
+                exchange_name,
+                ", ".join(per_wallet_summary) or "none",
+            )
 
         return results
 
@@ -366,6 +386,60 @@ class MonitoringService:
 # ---------------------------------------------------------------------------
 # Private utilities
 # ---------------------------------------------------------------------------
+
+
+def _extract_non_zero_balances(
+    raw_balance: dict[str, Any],
+    exchange_name: str,
+    account_type: str,
+) -> list:
+    """Flatten a CCXT ``fetch_balance`` response to non-zero per-currency rows.
+
+    Args:
+        raw_balance:   Raw dict returned by ``ccxt.fetch_balance``.
+        exchange_name: Exchange identifier (e.g. ``"okx"``).
+        account_type:  Wallet label to attach to each row (``"trading"``,
+                       ``"funding"``, or ``"default"``).
+
+    Returns:
+        List of :class:`~..user_models.ExchangeBalanceResponse` for currencies
+        whose ``total`` is greater than zero. May be empty.
+    """
+    from ..user_models import ExchangeBalanceResponse
+
+    total_dict: dict = raw_balance.get("total") or {}
+    free_dict: dict = raw_balance.get("free") or {}
+    used_dict: dict = raw_balance.get("used") or {}
+
+    rows: list[ExchangeBalanceResponse] = []
+    for currency, total_val in total_dict.items():
+        try:
+            total = float(total_val or 0.0)
+        except (TypeError, ValueError):
+            total = 0.0
+
+        if total <= 0:
+            continue
+
+        try:
+            free = float(free_dict.get(currency) or 0.0)
+            used = float(used_dict.get(currency) or 0.0)
+        except (TypeError, ValueError):
+            free = 0.0
+            used = 0.0
+
+        rows.append(
+            ExchangeBalanceResponse(
+                exchange=exchange_name,
+                currency=currency,
+                free=free,
+                used=used,
+                total=total,
+                account_type=account_type,
+            )
+        )
+
+    return rows
 
 
 def _ccxt_position_to_response(
