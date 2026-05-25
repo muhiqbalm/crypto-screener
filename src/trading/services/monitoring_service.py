@@ -102,38 +102,11 @@ class MonitoringService:
                     exchange_name=exchange_name,
                     credentials=credentials,
                 )
-
-                # Determine which wallets to query.
-                # OKX has separate Trading (Unified) and Funding wallets;
-                # users may legitimately hold balance in either, so we fetch
-                # both. Binance and other exchanges are queried with the
-                # default (futures) wallet only.
-                if exchange_name.lower() == "okx":
-                    wallets: list[tuple[str, dict]] = [
-                        ("trading", {"type": "trading"}),
-                        ("funding", {"type": "funding"}),
-                    ]
-                else:
-                    wallets = [("default", {})]
-
-                wallet_balances: list[tuple[str, dict]] = []
-                for account_type, params in wallets:
-                    try:
-                        raw = (
-                            await exchange_instance.fetch_balance(params)
-                            if params
-                            else await exchange_instance.fetch_balance()
-                        )
-                        wallet_balances.append((account_type, raw))
-                    except Exception as exc:
-                        # One wallet failing should not break the others.
-                        logger.warning(
-                            "Failed to fetch '%s' wallet for user=%s exchange=%s: %s",
-                            account_type,
-                            user_id,
-                            exchange_name,
-                            exc,
-                        )
+                # Single fetch_balance() call for all exchanges. The connector
+                # already configures defaultType="future", so OKX returns the
+                # unified/trading account and Binance returns the futures
+                # wallet — no per-exchange branching needed.
+                raw_balance = await exchange_instance.fetch_balance()
             except MissingCredentialsError:
                 logger.warning(
                     "No credentials found for user=%s exchange=%s — skipping",
@@ -165,24 +138,19 @@ class MonitoringService:
                     except Exception:
                         pass
 
-            # Flatten each wallet's per-currency balances into the response.
-            per_wallet_summary: list[str] = []
-            for account_type, raw_balance in wallet_balances:
-                wallet_results = _extract_non_zero_balances(
-                    raw_balance=raw_balance,
-                    exchange_name=exchange_name,
-                    account_type=account_type,
-                )
-                per_wallet_summary.append(
-                    f"{account_type}={len(wallet_results)}"
-                )
-                results.extend(wallet_results)
+            # Flatten per-currency balances into the response.
+            wallet_results = _extract_non_zero_balances(
+                raw_balance=raw_balance,
+                exchange_name=exchange_name,
+                account_type="default",
+            )
+            results.extend(wallet_results)
 
             logger.info(
-                "Balance fetched for user=%s exchange=%s wallets=[%s]",
+                "Balance fetched for user=%s exchange=%s: %d non-zero currencies",
                 user_id,
                 exchange_name,
-                ", ".join(per_wallet_summary) or "none",
+                len(wallet_results),
             )
 
         return results

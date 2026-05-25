@@ -119,10 +119,12 @@ class TradeExecutor:
             quote_currency = symbol.split("/")[1].split(":")[0]
 
             exchange_id = exchange.id.lower()
-            if exchange_id == "okx":
-                balance = await exchange.fetch_balance({"type": "trading"})
-            else:
-                balance = await exchange.fetch_balance()
+            # Single fetch_balance() call: connector configures
+            # defaultType="future", so this returns the futures/unified wallet
+            # for both OKX and Binance. Sending {"type": "trading"} on OKX
+            # Unified accounts can return an empty legacy wallet — see
+            # monitoring_service.get_balance for the same fix.
+            balance = await exchange.fetch_balance()
 
             logger.debug(
                 "Raw balance response for %s: free=%s total=%s",
@@ -255,11 +257,9 @@ class TradeExecutor:
         # Build balance info for close
         try:
             quote_currency = symbol.split("/")[1].split(":")[0]
-            exchange_id = exchange.id.lower()
-            if exchange_id == "okx":
-                bal = await exchange.fetch_balance({"type": "trading"})
-            else:
-                bal = await exchange.fetch_balance()
+            # See _fetch_free_balance — single fetch_balance() avoids the
+            # OKX Unified/legacy mismatch.
+            bal = await exchange.fetch_balance()
             free_balance = float(bal.get("free", {}).get(quote_currency, 0.0) or 0.0)
             ticker = await exchange.fetch_ticker(symbol)
             current_price = float(ticker["last"])
