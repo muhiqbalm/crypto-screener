@@ -156,7 +156,7 @@ async def receive_tradingview_alert(
     trade_logger = TradeLogger(supabase)
     position_manager = PositionManager(supabase)
     credential_store = CredentialStore(settings.encryption_key, supabase)
-    trading_connector = TradingConnector()
+    trading_connector = TradingConnector(testnet_enabled=settings.testnet_enabled)
     executor = TradeExecutor()
     notifier = TelegramNotifier(settings.telegram_bot_token)
 

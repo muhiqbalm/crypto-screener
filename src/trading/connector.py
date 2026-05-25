@@ -1,7 +1,8 @@
 """Trading connector module for authenticated CCXT exchange instances.
 
 This module is completely separate from src/exchange/connector.py (the read-only
-screener connector). It uses ccxt.async_support and always operates in testnet mode.
+screener connector). It uses ccxt.async_support and routes to the exchange's
+sandbox/testnet endpoints when ``testnet_enabled`` is True.
 """
 
 import logging
@@ -22,10 +23,15 @@ class LeverageSetError(Exception):
 
 class TradingConnector:
     """
-    Creates authenticated CCXT exchange instances for trading on testnet.
+    Creates authenticated CCXT exchange instances for trading.
 
     Completely separate from the screener's ExchangeConnector — does not inherit
     from it, does not share class hierarchy, and does not share exchange instances.
+
+    The ``testnet_enabled`` flag controls whether instances are configured to hit
+    the exchange's sandbox/testnet endpoints. It defaults to ``True`` so that
+    callers that do not pass it (e.g. unit tests) preserve the original safe
+    behaviour. Production callers should pass ``TradingSettings.testnet_enabled``.
 
     Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
     """
@@ -35,6 +41,9 @@ class TradingConnector:
         "okx": ccxt_async.okx,
     }
 
+    def __init__(self, testnet_enabled: bool = True) -> None:
+        self._testnet_enabled = bool(testnet_enabled)
+
     async def create_exchange(
         self,
         exchange_name: str,
@@ -42,8 +51,9 @@ class TradingConnector:
         symbol: str,
         leverage: Optional[int] = None,
     ) -> ccxt_async.Exchange:
-        """Create an authenticated CCXT exchange instance configured for testnet.
+        """Create an authenticated CCXT exchange instance.
 
+        Sandbox/testnet routing follows the connector's ``testnet_enabled`` flag.
         Optionally sets leverage for the symbol before returning the instance.
 
         Args:
@@ -72,11 +82,11 @@ class TradingConnector:
 
         exchange_class = self.SUPPORTED_EXCHANGES[exchange_name_lower]
 
-        # Build constructor config — testnet always enabled (Req 4.2)
+        # Build constructor config — sandbox follows TradingSettings.testnet_enabled
         config: dict = {
             "apiKey": credentials.get("api_key", ""),
             "secret": credentials.get("secret", ""),
-            "sandbox": True,  # testnet mode (Req 4.2)
+            "sandbox": self._testnet_enabled,
             "options": {
                 "defaultType": "future",  # perpetual futures for leverage trading
             },
@@ -144,9 +154,10 @@ class TradingConnector:
                 raise LeverageSetError(error_msg) from exc
 
         logger.info(
-            "Trading connector created for exchange '%s', symbol '%s', testnet=True",
+            "Trading connector created for exchange '%s', symbol '%s', testnet=%s",
             exchange_name,
             symbol,
+            self._testnet_enabled,
         )
         return exchange
 
@@ -184,7 +195,7 @@ class TradingConnector:
         config: dict = {
             "apiKey": credentials.get("api_key", ""),
             "secret": credentials.get("secret", ""),
-            "sandbox": True,
+            "sandbox": self._testnet_enabled,
             "options": {
                 "defaultType": "future",
             },
@@ -215,8 +226,9 @@ class TradingConnector:
             raise AuthenticationError(error_msg) from exc
 
         logger.info(
-            "Monitoring connector created for exchange '%s', testnet=True",
+            "Monitoring connector created for exchange '%s', testnet=%s",
             exchange_name,
+            self._testnet_enabled,
         )
         return exchange
 

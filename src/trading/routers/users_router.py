@@ -104,6 +104,7 @@ def get_credential_service(
 
 
 def get_monitoring_service(
+    settings: Annotated[Any, Depends(get_settings)],
     supabase: Annotated[Any, Depends(get_supabase_client)],
     credential_store: Annotated[CredentialStore, Depends(get_credential_store)],
 ) -> MonitoringService:
@@ -112,7 +113,7 @@ def get_monitoring_service(
     return MonitoringService(
         supabase=supabase,
         credential_store=credential_store,
-        trading_connector=TradingConnector(),
+        trading_connector=TradingConnector(testnet_enabled=settings.testnet_enabled),
     )
 
 
