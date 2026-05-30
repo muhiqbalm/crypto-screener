@@ -337,6 +337,39 @@ async def delete_webhook_config(
     return await webhook_config_service.deactivate(user_id=user_id)
 
 
+# ---------------------------------------------------------------------------
+# POST /trading/users/me/webhook-config/reactivate
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/webhook-config/reactivate",
+    status_code=status.HTTP_200_OK,
+    response_model=WebhookConfigResponse,
+    summary="Reactivate the most recent inactive webhook configuration",
+    responses={
+        401: {"description": "Unauthorized"},
+        404: {"description": "No inactive webhook configuration found to reactivate"},
+        409: {"description": "An active webhook configuration already exists"},
+        503: {"description": "Service unavailable"},
+    },
+)
+async def reactivate_webhook_config(
+    payload: Annotated[dict, Depends(active_user_guard)],
+    webhook_config_service: Annotated[WebhookConfigService, Depends(get_webhook_config_service)],
+) -> WebhookConfigResponse:
+    """Reactivate the most recently deactivated webhook configuration.
+
+    Sets ``is_active = true`` on the most recent inactive record instead of
+    creating a new one, preserving the existing passphrase and avoiding
+    unnecessary row accumulation in the database.
+
+    Returns 404 if no inactive config exists, 409 if one is already active.
+    """
+    user_id: str = payload["sub"]
+    return await webhook_config_service.reactivate(user_id=user_id)
+
+
 # ===========================================================================
 # Credential routes (task 9.2)
 # ===========================================================================

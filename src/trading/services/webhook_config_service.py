@@ -100,6 +100,81 @@ class WebhookConfigService:
         return _to_webhook_config_response(response.data)
 
     # ------------------------------------------------------------------
+    # Reactivate config
+    # ------------------------------------------------------------------
+
+    async def reactivate(self, user_id: str) -> WebhookConfigResponse:
+        """Reactivate the most recent inactive webhook configuration for *user_id*.
+
+        Instead of creating a new record, this method sets ``is_active = True``
+        on the most recently deactivated config, preserving the existing
+        passphrase and avoiding unnecessary row accumulation in the DB.
+
+        Steps:
+        1. Confirms no active config already exists (409 if one does).
+        2. Finds the most recent inactive config for this user (404 if none).
+        3. Sets ``is_active = True`` on that record.
+        4. Returns the reactivated record.
+
+        Args:
+            user_id: UUID string of the authenticated user.
+
+        Returns:
+            :class:`~..user_models.WebhookConfigResponse` with ``is_active=True``.
+
+        Raises:
+            HTTPException(404): When no inactive config exists to reactivate.
+            HTTPException(409): When the user already has an active config.
+            HTTPException(503): On unexpected database errors.
+        """
+        # 1. Ensure no active config already exists
+        await self._assert_no_active_config(user_id)
+
+        # 2. Find the most recent inactive config
+        try:
+            response = (
+                self._supabase.table("webhook_configs")
+                .select("id, passphrase, is_active, created_at")
+                .eq("user_id", user_id)
+                .eq("is_active", False)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        except Exception as exc:
+            logger.error(
+                "Database error fetching inactive config for user=%s: %s",
+                user_id,
+                exc,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail="Service unavailable") from exc
+
+        if not response.data:
+            raise HTTPException(
+                status_code=404, detail="No inactive webhook configuration found to reactivate"
+            )
+
+        config_id = response.data[0]["id"]
+
+        # 3. Set is_active = True on that record
+        try:
+            self._supabase.table("webhook_configs").update(
+                {"is_active": True}
+            ).eq("id", config_id).execute()
+        except Exception as exc:
+            logger.error(
+                "Database error reactivating webhook config id=%s for user=%s: %s",
+                config_id,
+                user_id,
+                exc,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail="Service unavailable") from exc
+
+        return await self.get_active(user_id)
+
+    # ------------------------------------------------------------------
     # Create config
     # ------------------------------------------------------------------
 
