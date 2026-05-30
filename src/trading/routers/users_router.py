@@ -113,7 +113,10 @@ def get_monitoring_service(
     return MonitoringService(
         supabase=supabase,
         credential_store=credential_store,
-        trading_connector=TradingConnector(testnet_enabled=settings.testnet_enabled),
+        trading_connector=TradingConnector(
+            testnet_enabled=settings.testnet_enabled,
+            verbose=settings.ccxt_verbose,
+        ),
     )
 
 

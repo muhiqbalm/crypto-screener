@@ -41,8 +41,9 @@ class TradingConnector:
         "okx": ccxt_async.okx,
     }
 
-    def __init__(self, testnet_enabled: bool = True) -> None:
+    def __init__(self, testnet_enabled: bool = True, verbose: bool = False) -> None:
         self._testnet_enabled = bool(testnet_enabled)
+        self._verbose = bool(verbose)
 
     async def create_exchange(
         self,
@@ -97,6 +98,8 @@ class TradingConnector:
             config["password"] = credentials["passphrase"]
 
         exchange: ccxt_async.Exchange = exchange_class(config)
+        if self._verbose:
+            exchange.verbose = True
 
         # Attempt authentication by loading markets — this validates credentials
         # (Req 4.1, 4.5)
@@ -205,6 +208,8 @@ class TradingConnector:
             config["password"] = credentials["passphrase"]
 
         exchange: ccxt_async.Exchange = exchange_class(config)
+        if self._verbose:
+            exchange.verbose = True
 
         try:
             await exchange.load_markets()

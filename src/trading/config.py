@@ -35,6 +35,11 @@ class TradingSettings(BaseSettings):
     # Use testnet/sandbox mode for all exchange connections
     testnet_enabled: bool = True
 
+    # Enable CCXT raw HTTP request/response logging (verbose=True on each
+    # exchange instance). Useful for debugging exchange responses; very noisy
+    # — leave off in production.
+    ccxt_verbose: bool = False
+
     # Maximum webhook payload size in bytes (default: 1 MB)
     max_payload_size: int = 1_048_576
 
