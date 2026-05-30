@@ -7,12 +7,19 @@ to ensure it renders correctly with proper colors, labels, reference lines, and 
 """
 
 import sys
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the FundingRatePanel class from crypto_screener
 from src.visualization.panels import FundingRatePanel
+
+# Directory for test-generated images. Resolved relative to the project root
+# so artifacts land in <project>/output/test_artifacts regardless of cwd.
+ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "output" / "test_artifacts"
+ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
 def create_sample_data():
     """
@@ -57,7 +64,7 @@ def test_funding_rate_panel():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_funding_rate_panel_output.png'
+    output_file = ARTIFACT_DIR / 'test_funding_rate_panel_output.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"\nVisualization saved to: {output_file}")
     
@@ -84,7 +91,7 @@ def test_empty_dataframe():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_funding_rate_panel_empty.png'
+    output_file = ARTIFACT_DIR / 'test_funding_rate_panel_empty.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Empty DataFrame visualization saved to: {output_file}")
     
@@ -144,7 +151,7 @@ def test_nan_values():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_funding_rate_panel_nan.png'
+    output_file = ARTIFACT_DIR / 'test_funding_rate_panel_nan.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"NaN values visualization saved to: {output_file}")
     
@@ -177,7 +184,7 @@ def test_extreme_values():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_funding_rate_panel_extreme.png'
+    output_file = ARTIFACT_DIR / 'test_funding_rate_panel_extreme.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Extreme values visualization saved to: {output_file}")
     

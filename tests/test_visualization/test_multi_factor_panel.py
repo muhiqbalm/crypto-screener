@@ -7,12 +7,19 @@ to ensure it renders correctly with proper colors, labels, and layout.
 """
 
 import sys
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the MultiFactorPanel class from crypto_screener
 from src.visualization.panels import MultiFactorPanel
+
+# Directory for test-generated images. Resolved relative to the project root
+# so artifacts land in <project>/output/test_artifacts regardless of cwd.
+ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "output" / "test_artifacts"
+ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
 def create_sample_data():
     """
@@ -55,7 +62,7 @@ def test_multi_factor_panel():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_multi_factor_panel_output.png'
+    output_file = ARTIFACT_DIR / 'test_multi_factor_panel_output.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"\nVisualization saved to: {output_file}")
     
@@ -82,7 +89,7 @@ def test_empty_dataframe():
     
     # Adjust layout and save
     plt.tight_layout()
-    output_file = 'test_multi_factor_panel_empty.png'
+    output_file = ARTIFACT_DIR / 'test_multi_factor_panel_empty.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Empty DataFrame visualization saved to: {output_file}")
     

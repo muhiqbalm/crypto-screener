@@ -50,6 +50,10 @@ htmlcov/
 output/logs/*.log
 output/dashboards/*.png
 !output/dashboards/sample_dashboard.png
+output/test_artifacts/
+
+# Stray test artifact images that may be generated at the repo root
+/test_*.png
 
 # OS
 .DS_Store

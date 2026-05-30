@@ -11,12 +11,19 @@ This script tests the LongShortRatioPanel implementation to ensure it:
 """
 
 import sys
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Import the LongShortRatioPanel class from crypto_screener
 from src.visualization.panels import LongShortRatioPanel
+
+# Directory for test-generated images. Resolved relative to the project root
+# so artifacts land in <project>/output/test_artifacts regardless of cwd.
+ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "output" / "test_artifacts"
+ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
 def test_basic_rendering():
     """Test basic rendering with sample data."""
@@ -39,7 +46,7 @@ def test_basic_rendering():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_basic.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_basic.png', dpi=100, bbox_inches='tight')
     print("✓ Basic rendering test passed - saved to test_long_short_ratio_basic.png")
     plt.close()
 
@@ -63,7 +70,7 @@ def test_threshold_highlighting():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_threshold.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_threshold.png', dpi=100, bbox_inches='tight')
     print("✓ Threshold highlighting test passed - saved to test_long_short_ratio_threshold.png")
     print("  Expected: ASSET_A (1.4) and ASSET_B (1.5) should be blue")
     print("  Expected: ASSET_C (1.51) and ASSET_D (2.0) should be amber/yellow")
@@ -89,7 +96,7 @@ def test_reference_lines():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_reference_lines.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_reference_lines.png', dpi=100, bbox_inches='tight')
     print("✓ Reference lines test passed - saved to test_long_short_ratio_reference_lines.png")
     print("  Expected: Black solid line at 1.0 (neutral)")
     print("  Expected: Red dashed line at 1.5 (warning)")
@@ -111,7 +118,7 @@ def test_empty_dataframe():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_empty.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_empty.png', dpi=100, bbox_inches='tight')
     print("✓ Empty DataFrame test passed - saved to test_long_short_ratio_empty.png")
     plt.close()
 
@@ -135,7 +142,7 @@ def test_missing_values():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_missing.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_missing.png', dpi=100, bbox_inches='tight')
     print("✓ Missing values test passed - saved to test_long_short_ratio_missing.png")
     print("  Expected: ASSET_2 and ASSET_4 should have gray bars (NaN values)")
     plt.close()
@@ -160,7 +167,7 @@ def test_order_consistency():
     
     # Save figure
     plt.tight_layout()
-    plt.savefig('test_long_short_ratio_order.png', dpi=100, bbox_inches='tight')
+    plt.savefig(ARTIFACT_DIR / 'test_long_short_ratio_order.png', dpi=100, bbox_inches='tight')
     print("✓ Order consistency test passed - saved to test_long_short_ratio_order.png")
     print("  Expected Y-axis order (top to bottom): TOP, SECOND, THIRD, FOURTH, BOTTOM")
     plt.close()
