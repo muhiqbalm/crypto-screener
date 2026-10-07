@@ -410,13 +410,11 @@ class ResponseBuilder:
             if math.isnan(score) or math.isinf(score):
                 return None
             
-            # Thresholds based on normalized z-scores
-            # Score > 0.5: Strong bullish
-            # Score < -0.5: Strong bearish
-            # Otherwise: Neutral
-            if score > 0.5:
+            # Calibrated thresholds for composite quant score distribution
+            # Composite scores typically range [-0.15, +0.15]
+            if score > 0.02:
                 return "BULLISH"
-            elif score < -0.5:
+            elif score < -0.02:
                 return "BEARISH"
             else:
                 return "NEUTRAL"

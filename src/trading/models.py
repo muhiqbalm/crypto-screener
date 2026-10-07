@@ -26,19 +26,34 @@ class WebhookPayload(BaseModel):
     exchange: Literal["binance", "okx"]
     passphrase: str
 
-    @field_validator("symbol")
+    @field_validator("symbol", mode="before")
     @classmethod
     def validate_symbol_format(cls, v: str) -> str:
-        """Validate CCXT unified symbol format (e.g., BTC/USDT:USDT).
+        """Validate and normalize symbol into CCXT unified format (e.g., BTC/USDT:USDT).
 
-        Requirement 1.6: symbol must match ^[A-Z0-9]+/[A-Z0-9]+:[A-Z0-9]+$
+        Accepts standard CCXT (BTC/USDT:USDT), simple pairs (BTC/USDT), or TradingView tickers (BTCUSDT, BINANCE:BTCUSDT).
         """
-        if not _SYMBOL_PATTERN.match(v):
+        if not isinstance(v, str):
+            raise ValueError("Symbol must be a string")
+
+        sym = v.strip().upper()
+        # Remove exchange prefixes if present (e.g. "BINANCE:ETHUSDT" -> "ETHUSDT")
+        if ":" in sym and "/" not in sym:
+            sym = sym.split(":")[-1]
+
+        # Normalize plain ticker ending in USDT (e.g. "ETHUSDT" -> "ETH/USDT:USDT")
+        if sym.endswith("USDT") and "/" not in sym and ":" not in sym:
+            base = sym[:-4]
+            sym = f"{base}/USDT:USDT"
+        # Normalize slash pair without settle (e.g. "ETH/USDT" -> "ETH/USDT:USDT")
+        elif "/" in sym and ":" not in sym:
+            sym = f"{sym}:USDT"
+
+        if not _SYMBOL_PATTERN.match(sym):
             raise ValueError(
-                "Symbol must be in CCXT unified format (e.g., BTC/USDT:USDT). "
-                "Expected pattern: BASE/QUOTE:SETTLE using uppercase alphanumeric characters."
+                f"Symbol '{v}' could not be normalized to CCXT unified format (e.g., BTC/USDT:USDT)."
             )
-        return v
+        return sym
 
     @field_validator("size_value")
     @classmethod

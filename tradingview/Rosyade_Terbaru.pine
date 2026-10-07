@@ -1,0 +1,1178 @@
+//@version=5
+strategy("ROSYADE TERBARU", overlay=true, process_orders_on_close=true, currency=currency.USDT, initial_capital=100, default_qty_type=strategy.percent_of_equity, default_qty_value=100, max_boxes_count = 500, max_lines_count = 500)
+
+// ==========================================
+// 1. INPUTS & SETTINGS
+// ==========================================
+
+// --- [BMTM & BINANCE] NATIVE WEBHOOK SETTINGS ---
+grp_bmtm = "═══ 🤖 BMTM TRADING WEBHOOK (VPS NATIVE) ═══"
+bmtm_passphrase = input.string("BMTM_SEC_8E2B5C7D0A1F4932E8C71B94A0D53F6C_LIVE", "BMTM Passphrase", group=grp_bmtm, tooltip="Token Lisensi Hook BMTM. Webhook URL: https://bmtm-trade.duckdns.org/webhook/tradingview")
+bmtm_leverage   = input.int(4, "Leverage Binance", minval=1, maxval=125, group=grp_bmtm, tooltip="Leverage Futures (contoh: 4, 10, 20).")
+bmtm_amount     = input.float(50, "Open Amount (% Balance)", minval=1, maxval=100, group=grp_bmtm, tooltip="Persentase modal saldo balance yang digunakan.")
+bmtm_exchange   = input.string("binance", "Target Exchange", options=["binance", "okx"], group=grp_bmtm)
+
+// --- LONG TP SETTINGS ---
+grp_long_tp = "═══ 📈 LONG TP/SL & TP CHECK ═══"
+enable_long = input.bool(true, "✓ Enable Long Positions", group=grp_long_tp)
+long_sl_pct = input.float(13, "Long Stop Loss %", group=grp_long_tp)
+long_tp_pct = input.float(60, "Long Hard TP % (Max)", group=grp_long_tp)
+use_long_tp1 = input.bool(true, "✓ Use Long TP Check 1", group=grp_long_tp)
+long_tp1_pct = input.float(10, " └─ Long TP Check 1 (%)", group=grp_long_tp)
+use_long_tp2 = input.bool(true, "✓ Use Long TP Check 2", group=grp_long_tp)
+long_tp2_pct = input.float(25, " └─ Long TP Check 2 (%)", group=grp_long_tp)
+
+// --- SHORT TP SETTINGS ---
+grp_short_tp = "═══ 📉 SHORT TP/SL & TP CHECK ═══"
+enable_short = input.bool(true, "✓ Enable Short Positions", group=grp_short_tp)
+short_sl_pct = input.float(3, "Short Stop Loss %", group=grp_short_tp)
+short_tp_pct = input.float(12.5, "Short Hard TP % (Max)", group=grp_short_tp)
+use_short_tp1 = input.bool(true, "✓ Use Short TP Check 1", group=grp_short_tp)
+short_tp1_pct = input.float(10, " └─ Short TP Check 1 (%)", group=grp_short_tp)
+use_short_tp2 = input.bool(false, "✓ Use Short TP Check 2", group=grp_short_tp)
+short_tp2_pct = input.float(12.5, " └─ Short TP Check 2 (%)", group=grp_short_tp)
+
+// --- TP CHECK: VOLUME & MOMENTUM EVALUATION ---
+grp_tp_check = "═══ 🔍 TP CHECK EVALUATION SETTINGS ═══"
+use_tp_check        = input.bool(true, "✓ Enable TP Check System", group=grp_tp_check, tooltip="TP1/TP2 menjadi titik evaluasi market. Close jika exhaustion, hold jika trend sehat. DEFAULT OFF untuk match IQBAL.")
+tp_chk_vol_period   = input.int(50, " ├─ Volume MA Period", group=grp_tp_check)
+tp_chk_vol_mult     = input.float(1.2, " ├─ Volume Exhaustion Multiplier", step=0.1, group=grp_tp_check, tooltip="Close jika volume < SMA × mult (volume lemah = exhaustion)")
+tp_chk_body_lookback = input.int(11, " ├─ Body Ratio Lookback", group=grp_tp_check)
+tp_chk_body_mult    = input.float(0.05, " ├─ Body Momentum Multiplier", step=0.1, group=grp_tp_check, tooltip="Close jika body ratio < avg body ratio × mult (momentum mati)")
+tp_chk_atr_decay    = input.float(0.2, " └─ Post-TP1 ATR Decay Mult", step=0.1, group=grp_tp_check, tooltip="Setelah TP1 HOLD: close jika ATR turun > 50% dari ATR saat TP1 hit")
+
+// --- EMA DYNAMIC EXIT ---
+grp_dynamic_exit = "═══ 🛑 DYNAMIC EXIT ═══"
+use_ema_tp1 = input.bool(true, "✓ Use EMA Dynamic Exit", group=grp_dynamic_exit)
+ema_tp1_len = input.int(24, " └─ EMA Exit Length", group=grp_dynamic_exit)
+
+// --- ADAPTIVE EXIT STRATEGY ---
+grp_adaptive = "═══ 🎯 ADAPTIVE EXIT (REGIME-BASED) ═══"
+use_adaptive_exit = input.bool(true, "✓ Enable Adaptive Exit System", group=grp_adaptive, tooltip="Master toggle for all adaptive exit features")
+use_atr_trailing = input.bool(true, "✓ Use ATR Trailing Stop (HH/LL)", group=grp_adaptive, tooltip="Dynamic trailing stop based on Higher High / Lower Low + ATR")
+atr_trailing_len = input.int(26, " └─ ATR Length", group=grp_adaptive)
+atr_trailing_lookback = input.int(11, " └─ HH/LL Lookback Period", group=grp_adaptive, tooltip="Bars to look back for Higher High / Lower Low")
+atr_mult_strong = input.float(3.5, " └─ ATR Mult (Strong Trend)", step=0.1, group=grp_adaptive, tooltip="Wider trailing in strong trends")
+atr_mult_medium = input.float(1.9, " └─ ATR Mult (Medium Trend)", step=0.1, group=grp_adaptive)
+atr_mult_weak = input.float(2.0, " └─ ATR Mult (Weak Trend)", step=0.1, group=grp_adaptive, tooltip="Tighter trailing in weak/ranging")
+use_structure_exit = input.bool(true, "✓ Use Structure Break Exit", group=grp_adaptive, tooltip="Exit on confirmed structure break - contributed +1.61B profit in IQBAL RUNNING")
+structure_pivot_len = input.int(5, " └─ Structure Pivot Length", group=grp_adaptive)
+adx_strong_threshold = input.int(25, "ADX Strong Trend Threshold", group=grp_adaptive, tooltip="ADX above this = strong trend")
+adx_weak_threshold = input.int(15, "ADX Weak Trend Threshold", group=grp_adaptive, tooltip="ADX below this = weak/ranging (IQBAL=20)")
+
+// --- DEAD CAT BOUNCE (DCB) ---
+grp_dcb = "═══ 🐈 DEAD CAT BOUNCE (DCB) ═══"
+dcb_htf_input = input.timeframe("240", "HTF for Dead Cat Bounce Check", group=grp_dcb)
+use_dcb_entry = input.bool(false, "✓ Use DCB Filter for Entry", group=grp_dcb)
+use_dcb_reverse = input.bool(true, "✓ Enable Reverse on Bounce w/ Vol", group=grp_dcb)
+dcb_vol_thresh = input.float(4.4, "Volume Bounce Threshold (xAvg)", step=0.1, group=grp_dcb)
+use_dcb_htf_exit = input.bool(false, "✓ Enable HTF DCB Exit Check", group=grp_dcb)
+use_dcb_close = input.bool(false, "✓ Enable Close on Bounce w/ Vol", group=grp_dcb)
+
+// --- VOLUME FILTER ---
+grp_volume = "═══ ⚙️ VOLUME FILTER ═══"
+use_entry_volume = input.bool(true, "✓ Use Volume Filter", group=grp_volume)
+entry_vol_period = input.int(50, " ├─ Volume MA Period", group=grp_volume)
+entry_vol_mult   = input.float(1.6, " └─ Volume Multiplier", step=0.1, group=grp_volume)
+
+// --- BASIC SETTINGS ---
+grp_basic = "═══ ⚙️ BASIC SETTINGS ═══"
+swing_len = input.int(2, "Swing Points Length", group=grp_basic)
+
+// --- ENTRY FILTERS ---
+grp_entry = "═══ 🟢 ENTRY STRATEGY FILTERS ═══"
+use_ema_htf = input.bool(true, "✓ Use EMA HTF Filter", group=grp_entry)
+ema_htf_len = input.int(194, " └─ EMA HTF Length", group=grp_entry)
+ema_htf_tf = input.timeframe("240", " └─ EMA HTF Timeframe", group=grp_entry)
+
+use_entry_rsi = input.bool(true, "✓ Use RSI Filter", group=grp_entry)
+entry_rsi_len = input.int(14, " └─ RSI Length", group=grp_entry)
+entry_rsi_ob = input.int(78, " └─ RSI Overbought", group=grp_entry)
+entry_rsi_os = input.int(16, " └─ RSI Oversold", group=grp_entry)
+
+use_entry_adx = input.bool(true, "✓ Use ADX Filter", group=grp_entry)
+entry_adx_threshold = input.int(11, " └─ Min ADX Strength", group=grp_entry)
+
+use_entry_macd = input.bool(true, "✓ Use MACD Filter", group=grp_entry)
+macd_fast_len = input.int(13, " └─ MACD Fast Length", group=grp_entry)
+macd_slow_len = input.int(28, " └─ MACD Slow Length", group=grp_entry)
+macd_sig_len  = input.int(9,  " └─ MACD Signal Length", group=grp_entry)
+
+use_entry_bb = input.bool(true, "✓ Use Bollinger Bands Filter", group=grp_entry)
+bb_len       = input.int(14, " └─ BB Length", group=grp_entry)
+bb_mult      = input.float(1, " └─ BB Std Dev Multiplier", group=grp_entry)
+
+// --- ANTI-SIDEWAYS ---
+grp_side = "═══ ⛔ ANTI-SIDEWAYS FILTERS ═══"
+use_chop = input.bool(true, "✓ Use Choppiness Index", group=grp_side)
+chop_len = input.int(15, " └─ Chop Length", group=grp_side)
+chop_limit = input.float(65, " └─ Chop Limit (Max)", group=grp_side)
+
+use_slope = input.bool(true, "✓ Use EMA Slope Filter", group=grp_side)
+slope_len = input.int(12, " └─ Slope EMA Length", group=grp_side)
+slope_th = input.float(0.1, " └─ Min Slope Change %", step=0.01, group=grp_side)
+
+use_sqz = input.bool(true, "✓ Use Squeeze Filter", group=grp_side)
+sqz_bb_mult = input.float(2, " └─ Squeeze BB Mult", group=grp_side)
+sqz_kc_mult = input.float(1, " └─ Squeeze KC Mult", group=grp_side)
+
+use_rvol = input.bool(true, "✓ Use RVOL Filter", group=grp_side)
+rvol_thresh = input.float(1.3, " └─ Min RVOL Threshold", step=0.1, group=grp_side)
+rvol_len = input.int(20, " └─ RVOL Avg Length", group=grp_side)
+
+use_candle = input.bool(true, "✓ Use Strong Candle Filter", group=grp_side)
+body_pct = input.float(26, " └─ Min Body % (0-100)", group=grp_side)
+
+use_atr_filter = input.bool(false, "✓ Use ATR Volatility Filter", group=grp_side)
+atr_len_filter = input.int(26, " └─ ATR Length", group=grp_side)
+atr_min_pct    = input.float(1.5, " └─ Min ATR % of Price", step=0.1, group=grp_side)
+
+// --- SHORT OVERSOLD FILTER (Prevent shorting at bottom) ---
+grp_short_os = "═══ 🛡️ SHORT OVERSOLD FILTER ═══"
+use_short_oversold = input.bool(false, "✓ Use Short Oversold Filter", group=grp_short_os, tooltip="Prevent SHORT entry when market is already oversold (at bottom)")
+short_rsi_min = input.int(30, " └─ Min RSI for Short", group=grp_short_os, tooltip="Don't SHORT if RSI < this value (oversold)")
+use_short_drop_filter = input.bool(true, "✓ Use Extended Drop Filter", group=grp_short_os, tooltip="Prevent SHORT after extended price drop")
+short_drop_lookback = input.int(11, " └─ Lookback Bars (7 days H4)", group=grp_short_os, tooltip="How many bars to look back for price drop")
+short_max_drop_pct = input.float(22, " └─ Max Drop % Allowed", group=grp_short_os, tooltip="Don't SHORT if price already dropped more than this %")
+
+// --- BREAKEVEN LOCK (Profit Protection) ---
+grp_be_lock = "═══ � BREAKEVEN LOCK ═══"
+use_be_lock = input.bool(false, "✓ Use Breakeven Lock", group=grp_be_lock, tooltip="Move SL to breakeven when profit reaches threshold. Safety net to protect profits.")
+be_lock_long_pct = input.float(8, " └─ Long Profit Trigger %", group=grp_be_lock, tooltip="Move Long SL to breakeven when profit > this %")
+be_lock_short_pct = input.float(5, " └─ Short Profit Trigger %", group=grp_be_lock, tooltip="Move Short SL to breakeven when profit > this % (Trade 347 had 6.75% profit)")
+be_lock_buffer_pct = input.float(0.5, " └─ Breakeven Buffer %", group=grp_be_lock, tooltip="Small buffer above/below entry to cover fees. 0.5% = guaranteed small profit")
+
+// --- EXIT STRATEGY ---
+grp_exit = "═══ 🟥 EXIT STRATEGY ═══"
+use_exit_rsi = input.bool(true, "✓ Use RSI Exit Signal", group=grp_exit)
+exit_rsi_ob = input.int(91, " └─ RSI Exit Overbought (Long)", group=grp_exit)
+exit_rsi_os = input.int(10, " └─ RSI Exit Oversold (Short)", group=grp_exit)
+
+// --- ORDER BLOCK EXIT ---
+grp_ob = "═══ 🧱 ORDER BLOCK (LOGIC) ═══"
+use_ob_exit     = input.bool(true, "✓ Use Order Block Exit", group=grp_ob)
+ob_pivot_len    = input.int(47, "OB Pivot Length (Main Strategy)", group=grp_ob)
+exit_wick_rej   = input.bool(true, " ├─ Exit on Wick Rejection", group=grp_ob)
+wick_body_ratio = input.float(25, " │  └─ Wick/Body Ratio", group=grp_ob)
+
+// --- OB TRAILING STOP (from IQBAL) ---
+grp_trail = "═══ ⛓️ OB TRAILING STOP (ATR) ═══"
+use_ob_trail      = input.bool(true, "✓ Use OB Trailing Stop", group=grp_trail, tooltip="Trailing stop based on OB pivot + ATR buffer")
+ob_trail_pivot_len = input.int(30, " └─ Pivot Length for Trailing", group=grp_trail)
+ob_trail_atr_len  = input.int(1, " └─ ATR Length for Buffer", group=grp_trail)
+ob_trail_mult     = input.float(1.1, " └─ ATR Multiplier (Buffer)", step=0.1, group=grp_trail)
+
+// --- RISK MANAGEMENT ---
+grp_risk = "═══ 🛡️ RISK MANAGEMENT ═══"
+leverage = input.float(4, "Leverage", minval=1.0, step=0.1, group=grp_risk)
+portfolio_risk = input.float(50, "Portfolio Margin Used (%)", minval=0.1, step=0.1, group=grp_risk)
+use_max_daily_loss = input.bool(true, "✓ Max Daily Loss Limit", group=grp_risk)
+max_daily_loss_pct = input.float(10, " └─ Max Daily Loss %", group=grp_risk)
+use_cooldown    = input.bool(true, "✓ Use Cooldown", group=grp_risk)
+cooldown_bars   = input.int(3, " └─ Wait N Bars", minval=1, group=grp_risk)
+
+// ==========================================
+// 2. LUXALGO VISUALIZATION FUNCTIONS
+// ==========================================
+get_line_style(style) =>
+    out = switch style
+        '⎯⎯⎯'  => line.style_solid
+        '----' => line.style_dashed
+        '····' => line.style_dotted
+
+get_coordinates(condition, top, btm, ob_val, len_viz)=>
+    var ob_top  = array.new_float(0)
+    var ob_btm  = array.new_float(0)
+    var ob_avg  = array.new_float(0)
+    var ob_left = array.new_int(0)
+    float ob = na
+    if condition
+        avg = math.avg(top, btm)
+        array.unshift(ob_top, top)
+        array.unshift(ob_btm, btm)
+        array.unshift(ob_avg, avg)
+        array.unshift(ob_left, time[len_viz])
+        ob := ob_val
+    [ob_top, ob_btm, ob_avg, ob_left, ob]
+
+remove_mitigated(ob_top, ob_btm, ob_left, ob_avg, target, bull)=>
+    mitigated = false
+    target_array = bull ? ob_btm : ob_top
+    if array.size(target_array) > 0
+        for i = array.size(target_array) - 1 to 0
+            element = array.get(target_array, i)
+            if (bull ? target < element : target > element)
+                mitigated := true
+                array.remove(ob_top, i)
+                array.remove(ob_btm, i)
+                array.remove(ob_avg, i)
+                array.remove(ob_left, i)
+    mitigated
+
+set_order_blocks(ob_top, ob_btm, ob_left, ob_avg, ext_last, bg_css, border_css, lvl_css, style_ln, width_ln)=>
+    var ob_box = array.new_box(0)
+    var ob_lvl = array.new_line(0)
+    if barstate.isfirst
+        for i = 0 to ext_last-1
+            array.unshift(ob_box, box.new(na,na,na,na, xloc = xloc.bar_time, extend= extend.right, bgcolor = bg_css, border_color = color.new(border_css, 70)))
+            array.unshift(ob_lvl, line.new(na,na,na,na, xloc = xloc.bar_time, extend = extend.right, color = lvl_css, style = get_line_style(style_ln), width = width_ln))
+    if array.size(ob_top) > 0
+        for i = 0 to math.min(ext_last-1, array.size(ob_top)-1)
+            get_box = array.get(ob_box, i)
+            get_lvl = array.get(ob_lvl, i)
+            box.set_lefttop(get_box, array.get(ob_left, i), array.get(ob_top, i))
+            box.set_rightbottom(get_box, array.get(ob_left, i), array.get(ob_btm, i))
+            line.set_xy1(get_lvl, array.get(ob_left, i), array.get(ob_avg, i))
+            line.set_xy2(get_lvl, array.get(ob_left, i)+1, array.get(ob_avg, i))
+
+// ==========================================
+// 3. LOGIC & CALCULATIONS
+// ==========================================
+
+// --- Custom Indicators ---
+ema_tp1 = ta.ema(close, ema_tp1_len)
+
+ema_htf_val = ta.ema(close, ema_htf_len)
+// [AUDIT FIX] Added lookahead=barmerge.lookahead_off to prevent repainting
+ema_htf = request.security(syminfo.tickerid, ema_htf_tf, ema_htf_val, lookahead=barmerge.lookahead_off)
+
+// --- ADAPTIVE EXIT: ATR Calculation ---
+atr_adaptive = ta.atr(atr_trailing_len)
+
+// --- OB TRAILING: ATR for buffer (from IQBAL) ---
+atr_trail_val = ta.atr(ob_trail_atr_len)
+
+// --- ATR TRAILING: Track HH/LL sejak entry ---
+var float entry_highest_high = na
+var float entry_lowest_low = na
+var int entry_bar_index = na
+
+// Reset tracking saat posisi berubah (entry baru atau exit)
+if strategy.position_size != strategy.position_size[1]
+    if strategy.position_size != 0
+        // New position opened
+        entry_bar_index := bar_index
+        entry_highest_high := high
+        entry_lowest_low := low
+    else
+        // Position closed
+        entry_highest_high := na
+        entry_lowest_low := na
+        entry_bar_index := na
+
+// Update HH/LL saat posisi terbuka
+if strategy.position_size > 0
+    // Long position: track highest high
+    entry_highest_high := math.max(entry_highest_high, high)
+else if strategy.position_size < 0
+    // Short position: track lowest low
+    entry_lowest_low := math.min(entry_lowest_low, low)
+
+// --- DCB LOGIC ---
+curr_vol_avg = ta.sma(volume, 50)
+is_high_vol = volume > (curr_vol_avg * dcb_vol_thresh)
+candle_body_abs = math.abs(close - open)
+upper_wick = high - math.max(close, open)
+lower_wick = math.min(close, open) - low
+dcb_bear_signal = is_high_vol and (upper_wick > candle_body_abs * 2)
+dcb_bull_signal = is_high_vol and (lower_wick > candle_body_abs * 2)
+// [AUDIT FIX] Added lookahead=barmerge.lookahead_off
+[htf_o, htf_h, htf_l, htf_c, htf_v] = request.security(syminfo.tickerid, dcb_htf_input, [open, high, low, close, volume], lookahead=barmerge.lookahead_off)
+// [AUDIT FIX] Added lookahead=barmerge.lookahead_off
+htf_vol_sma = request.security(syminfo.tickerid, dcb_htf_input, ta.sma(volume, 50), lookahead=barmerge.lookahead_off)
+is_htf_high_vol = htf_v > (htf_vol_sma * dcb_vol_thresh)
+htf_body = math.abs(htf_c - htf_o)
+htf_u_wick = htf_h - math.max(htf_c, htf_o)
+htf_l_wick = math.min(htf_c, htf_o) - htf_l
+dcb_htf_bear_signal = is_htf_high_vol and (htf_u_wick > htf_body * 2)
+dcb_htf_bull_signal = is_htf_high_vol and (htf_l_wick > htf_body * 2)
+final_dcb_exit_long = dcb_bear_signal or (use_dcb_htf_exit and dcb_htf_bear_signal)
+final_dcb_exit_short = dcb_bull_signal or (use_dcb_htf_exit and dcb_htf_bull_signal)
+
+// --- Swing Structure ---
+ph = ta.highest(high, swing_len)[1]
+pl = ta.lowest(low, swing_len)[1]
+breakout_up = close > ph
+breakout_down = close < pl
+
+// [A] MAIN STRATEGY OB LOGIC
+var os_ob = 0
+var float target_bull_ob = 0.
+var float target_bear_ob = 0.
+upper_ob = ta.highest(ob_pivot_len)
+lower_ob = ta.lowest(ob_pivot_len)
+target_bull_ob := lower_ob
+target_bear_ob := upper_ob
+os_ob := high[ob_pivot_len] > upper_ob ? 0 : low[ob_pivot_len] < lower_ob ? 1 : os_ob[1]
+phv_ob = ta.pivothigh(volume, ob_pivot_len, ob_pivot_len)
+
+var array<float> strat_bull_top_ob = array.new_float(0)
+var array<float> strat_bull_btm_ob = array.new_float(0)
+var array<float> strat_bear_top_ob = array.new_float(0)
+var array<float> strat_bear_btm_ob = array.new_float(0)
+
+if phv_ob and os_ob == 1
+    array.unshift(strat_bull_top_ob, hl2[ob_pivot_len])
+    array.unshift(strat_bull_btm_ob, low[ob_pivot_len])
+if phv_ob and os_ob == 0
+    array.unshift(strat_bear_top_ob, high[ob_pivot_len])
+    array.unshift(strat_bear_btm_ob, hl2[ob_pivot_len])
+
+mitigated_bull_ob = false
+if array.size(strat_bull_btm_ob) > 0
+    for i = array.size(strat_bull_btm_ob) - 1 to 0
+        if target_bull_ob < array.get(strat_bull_btm_ob, i)
+            mitigated_bull_ob := true
+            array.remove(strat_bull_top_ob, i)
+            array.remove(strat_bull_btm_ob, i)
+
+mitigated_bear_ob = false
+if array.size(strat_bear_top_ob) > 0
+    for i = array.size(strat_bear_top_ob) - 1 to 0
+        if target_bear_ob > array.get(strat_bear_top_ob, i)
+            mitigated_bear_ob := true
+            array.remove(strat_bear_top_ob, i)
+            array.remove(strat_bear_btm_ob, i)
+
+// [B] INDEPENDENT TRAILING OB LOGIC (from IQBAL)
+trail_len = ob_trail_pivot_len
+trail_upper = ta.highest(trail_len)
+trail_lower = ta.lowest(trail_len)
+var int os_trail = 0
+os_trail := high[trail_len] > trail_upper ? 0 : low[trail_len] < trail_lower ? 1 : os_trail[1]
+phv_trail = ta.pivothigh(volume, trail_len, trail_len)
+
+var float trail_bull_btm = na
+var float trail_bear_top = na
+
+if phv_trail and os_trail == 1
+    trail_bull_btm := low[trail_len]
+
+if phv_trail and os_trail == 0
+    trail_bear_top := high[trail_len]
+
+// Exit Triggers
+bool exit_ob_long_signal = false
+bool exit_ob_short_signal = false
+
+if use_ob_exit and strategy.position_size > 0 and array.size(strat_bear_top_ob) > 0
+    ob_top = array.get(strat_bear_top_ob, 0)
+    ob_btm = array.get(strat_bear_btm_ob, 0)
+    if exit_wick_rej and high >= ob_btm and low <= ob_top
+        body = math.abs(close - open)
+        wick = high - math.max(close, open)
+        if wick > body * wick_body_ratio
+            exit_ob_long_signal := true
+
+if use_ob_exit and strategy.position_size < 0 and array.size(strat_bull_top_ob) > 0
+    ob_top = array.get(strat_bull_top_ob, 0)
+    ob_btm = array.get(strat_bull_btm_ob, 0)
+    if exit_wick_rej and high >= ob_btm and low <= ob_top
+        body = math.abs(close - open)
+        wick = math.min(close, open) - low
+        if wick > body * wick_body_ratio
+            exit_ob_short_signal := true
+
+// --- Entry Filters ---
+rsi_val = ta.rsi(close, entry_rsi_len)
+entry_rsi_buy_ok = not use_entry_rsi or (rsi_val < entry_rsi_ob)
+entry_rsi_sell_ok = not use_entry_rsi or (rsi_val > entry_rsi_os)
+[di_plus, di_minus, adx_val] = ta.dmi(14, 14)
+entry_adx_ok = not use_entry_adx or (adx_val > entry_adx_threshold)
+
+// --- ADAPTIVE EXIT: Market Regime Detection (MUST be after ADX calculation) ---
+detect_market_regime() =>
+    // Returns: 1 = STRONG TREND, 0 = MEDIUM TREND, -1 = WEAK/RANGING
+    // Uses ADX from entry filters (calculated above)
+    if not use_adaptive_exit
+        0 // Default to medium if adaptive exit disabled
+    else
+        if adx_val >= adx_strong_threshold
+            1 // Strong trend
+        else if adx_val >= adx_weak_threshold
+            0 // Medium trend
+        else
+            -1 // Weak/ranging
+
+market_regime = detect_market_regime()
+
+// --- ADAPTIVE EXIT: Structure Detection (from IQBAL RUNNING) ---
+structure_pivot_high = use_structure_exit ? ta.pivothigh(high, structure_pivot_len, structure_pivot_len) : na
+structure_pivot_low = use_structure_exit ? ta.pivotlow(low, structure_pivot_len, structure_pivot_len) : na
+
+var float last_structure_high = na
+var float last_structure_low = na
+
+if not na(structure_pivot_high)
+    last_structure_high := high[structure_pivot_len]
+if not na(structure_pivot_low)
+    last_structure_low := low[structure_pivot_len]
+
+vol_ma = ta.sma(volume, entry_vol_period)
+entry_vol_ok = not use_entry_volume or (volume > vol_ma * entry_vol_mult)
+[macd_line, signal_line, _] = ta.macd(close, macd_fast_len, macd_slow_len, macd_sig_len)
+entry_macd_buy_ok = not use_entry_macd or (macd_line > signal_line)
+entry_macd_sell_ok = not use_entry_macd or (macd_line < signal_line)
+[bb_middle, bb_upper, bb_lower] = ta.bb(close, bb_len, bb_mult)
+entry_bb_buy_ok = not use_entry_bb or (close > bb_upper)
+entry_bb_sell_ok = not use_entry_bb or (close < bb_lower)
+chop_ci = 100 * math.log10(math.sum(ta.atr(1), chop_len) / (ta.highest(high, chop_len) - ta.lowest(low, chop_len))) / math.log10(chop_len)
+entry_chop_ok = not use_chop or (chop_ci < chop_limit)
+slope_ema_val = ta.ema(close, slope_len)
+slope_change_pct = math.abs(slope_ema_val - slope_ema_val[5]) / slope_ema_val[5] * 100
+entry_slope_ok = not use_slope or (slope_change_pct > slope_th)
+[sqz_bb_mid, sqz_bb_u, sqz_bb_l] = ta.bb(close, 20, sqz_bb_mult)
+sqz_kc_basis = ta.sma(close, 20)
+sqz_kc_range = ta.atr(20)
+sqz_kc_u = sqz_kc_basis + sqz_kc_range * sqz_kc_mult
+sqz_kc_l = sqz_kc_basis - sqz_kc_range * sqz_kc_mult
+is_squeeze = (sqz_bb_u < sqz_kc_u) and (sqz_bb_l > sqz_kc_l)
+entry_sqz_ok = not use_sqz or (not is_squeeze)
+rvol_val = volume / ta.sma(volume, rvol_len)
+entry_rvol_ok = not use_rvol or (rvol_val >= rvol_thresh)
+candle_body = math.abs(close - open)
+candle_range = high - low
+body_ratio = candle_range > 0 ? (candle_body / candle_range) * 100 : 0
+entry_candle_ok = not use_candle or (body_ratio >= body_pct)
+atr_raw = ta.atr(atr_len_filter)
+atr_pct_val = (atr_raw / close) * 100
+entry_atr_ok = not use_atr_filter or (atr_pct_val > atr_min_pct)
+entry_dcb_buy_ok = not use_dcb_entry or (not dcb_bear_signal)
+entry_dcb_sell_ok = not use_dcb_entry or (not dcb_bull_signal)
+
+// --- SHORT OVERSOLD FILTER: Calculate conditions ---
+// 1. RSI Oversold Check: Don't short if RSI already < threshold (market at bottom)
+short_rsi_ok = not use_short_oversold or (rsi_val >= short_rsi_min)
+
+// 2. Extended Drop Check: Don't short if price already dropped significantly
+float highest_in_lookback = ta.highest(high, short_drop_lookback)
+float current_drop_pct = ((highest_in_lookback - close) / highest_in_lookback) * 100
+short_drop_ok = not use_short_drop_filter or (current_drop_pct <= short_max_drop_pct)
+
+// Combined Short Oversold Filter
+entry_short_oversold_ok = short_rsi_ok and short_drop_ok
+
+// --- Daily Loss & Cooldown ---
+var float daily_pnl = 0.0
+var int last_day = 0
+if dayofmonth(time) != last_day
+    daily_pnl := 0.0
+    last_day := dayofmonth(time)
+if strategy.closedtrades != strategy.closedtrades[1]
+    daily_pnl := daily_pnl + strategy.closedtrades.profit(strategy.closedtrades - 1)
+max_daily_loss_hit = use_max_daily_loss and (daily_pnl < -(strategy.initial_capital * max_daily_loss_pct / 100))
+var int last_loss_bar_index = 0
+if strategy.closedtrades > strategy.closedtrades[1]
+    if strategy.closedtrades.profit(strategy.closedtrades - 1) < 0
+        last_loss_bar_index := bar_index
+is_cooldown_active = use_cooldown and ((bar_index - last_loss_bar_index) < cooldown_bars)
+
+// ==========================================
+// 3b. TP CHECK: STATE MANAGEMENT & CALCULATIONS
+// ==========================================
+// State variables — reset saat posisi close
+var bool tp1_hit = false           // TP1 sudah pernah tersentuh
+var bool tp2_hit = false           // TP2 sudah pernah tersentuh
+var float atr_at_tp1 = na         // ATR snapshot saat TP1 pertama kali tersentuh
+var bool tp1_hold_mode = false     // Monitoring mode setelah TP1 HOLD
+
+// Reset semua state saat posisi berubah (entry baru atau exit)
+if strategy.position_size == 0 or (strategy.position_size != strategy.position_size[1])
+    tp1_hit := false
+    tp2_hit := false
+    atr_at_tp1 := na
+    tp1_hold_mode := false
+
+// --- TP CHECK: Pre-calculate indicators (always computed, no repaint) ---
+float tp_chk_vol_ma = ta.sma(volume, tp_chk_vol_period)
+float tp_chk_body_ratio = candle_range > 0 ? (candle_body / candle_range) : 0
+float tp_chk_avg_body_ratio = ta.sma(tp_chk_body_ratio, tp_chk_body_lookback)
+
+// Exhaustion conditions (evaluated only when TP level is touched)
+bool tp_chk_vol_exhaustion = volume < (tp_chk_vol_ma * tp_chk_vol_mult)
+bool tp_chk_momentum_dead = tp_chk_avg_body_ratio > 0 and (tp_chk_body_ratio < tp_chk_avg_body_ratio * tp_chk_body_mult)
+
+// Post-TP1 ATR decay (evaluated every bar after TP1 HOLD)
+bool tp_chk_atr_decay_hit = tp1_hold_mode and not na(atr_at_tp1) and (atr_adaptive < atr_at_tp1 * tp_chk_atr_decay)
+
+
+// ==========================================
+// ==========================================
+// 4. [NATIVE BMTM & AUTO-TRADE] WEBHOOK JSON PAYLOADS
+// ==========================================
+
+// --- JSON LONG PAYLOADS ---
+// Buka Long BMTM -> action: open, side: long, exchange: binance
+string json_entry_long = '{"action": "open", "symbol": "' + syminfo.ticker + '", "side": "long", "size_type": "percent", "size_value": ' + str.tostring(bmtm_amount) + ', "leverage": ' + str.tostring(bmtm_leverage) + ', "exchange": "' + bmtm_exchange + '", "passphrase": "' + bmtm_passphrase + '"}'
+
+// Tutup Long BMTM -> action: close, side: long
+string json_exit_full_long = '{"action": "close", "symbol": "' + syminfo.ticker + '", "side": "long", "size_type": "percent", "size_value": 100, "exchange": "' + bmtm_exchange + '", "passphrase": "' + bmtm_passphrase + '"}'
+
+// --- JSON SHORT PAYLOADS ---
+// Buka Short BMTM -> action: open, side: short, exchange: binance
+string json_entry_short = '{"action": "open", "symbol": "' + syminfo.ticker + '", "side": "short", "size_type": "percent", "size_value": ' + str.tostring(bmtm_amount) + ', "leverage": ' + str.tostring(bmtm_leverage) + ', "exchange": "' + bmtm_exchange + '", "passphrase": "' + bmtm_passphrase + '"}'
+
+// Tutup Short BMTM -> action: close, side: short
+string json_exit_full_short = '{"action": "close", "symbol": "' + syminfo.ticker + '", "side": "short", "size_type": "percent", "size_value": 100, "exchange": "' + bmtm_exchange + '", "passphrase": "' + bmtm_passphrase + '"}'
+
+
+// --- Entry Logic (FIXED SIZE) ---
+// [SAFE FOR LIVE] Chaos Barrier: Only entry when no position (prevents re-entry/reverse issues with Finandy)
+long_cond = enable_long and breakout_up and (not use_ema_htf or close > ema_htf) and entry_rsi_buy_ok and entry_adx_ok and entry_vol_ok and entry_macd_buy_ok and entry_bb_buy_ok and entry_chop_ok and entry_slope_ok and entry_sqz_ok and entry_rvol_ok and entry_candle_ok and entry_atr_ok and entry_dcb_buy_ok and not max_daily_loss_hit and not is_cooldown_active and strategy.position_size == 0
+short_cond = enable_short and breakout_down and (not use_ema_htf or close < ema_htf) and entry_rsi_sell_ok and entry_adx_ok and entry_vol_ok and entry_macd_sell_ok and entry_bb_sell_ok and entry_chop_ok and entry_slope_ok and entry_sqz_ok and entry_rvol_ok and entry_candle_ok and entry_atr_ok and entry_dcb_sell_ok and entry_short_oversold_ok and not max_daily_loss_hit and not is_cooldown_active and strategy.position_size == 0
+
+margin_used = strategy.equity * (portfolio_risk / 100)
+buying_power = margin_used * leverage
+final_qty = buying_power / close
+
+float est_entry_price = close
+
+// [AUDIT FIX] Removed immediate exit registration. Exits are now handled in the main execution block.
+if long_cond
+    strategy.entry("Long", strategy.long, qty=final_qty, alert_message=json_entry_long)
+
+if short_cond
+    strategy.entry("Short", strategy.short, qty=final_qty, alert_message=json_entry_short)
+
+// ==========================================
+// 4. EXIT LOGIC WITH TEXT TRACKING (FIXED CHAINING)
+// ==========================================
+var float viz_ltp1 = na
+var float viz_ltp2 = na
+var float viz_stp1 = na
+var float viz_stp2 = na
+var float active_sl_price = na 
+var string trade_exit_id = "TP/SL" // Variabel untuk melacak alasan exit
+
+// [AUDIT FIX] Guard for Intrabar Execution
+var bool exit_executed_this_bar = false
+if barstate.isconfirmed
+    exit_executed_this_bar := false
+
+if strategy.position_size != strategy.position_size[1]
+    viz_ltp1 := na
+    viz_ltp2 := na
+    viz_stp1 := na
+    viz_stp2 := na
+    active_sl_price := na
+
+exit_rsi_long_signal = use_exit_rsi and (rsi_val > exit_rsi_ob)
+exit_rsi_short_signal = use_exit_rsi and (rsi_val < exit_rsi_os)
+
+// Definisi variabel trigger EMA agar rapi
+exit_ema1_cross_long = use_ema_tp1 and ta.crossunder(close, ema_tp1)
+exit_ema1_cross_short = use_ema_tp1 and ta.crossover(close, ema_tp1)
+
+// --- ADAPTIVE EXIT: ATR TRAILING MANUAL CHECK ---
+// Calculate trailing stop price (TIDAK update active_sl_price, tapi check manual)
+float atr_trailing_long_price = na
+float atr_trailing_short_price = na
+bool atr_trailing_hit_long = false
+bool atr_trailing_hit_short = false
+
+if use_adaptive_exit and use_atr_trailing and strategy.position_size != 0
+    // Select ATR multiplier based on market regime
+    float atr_multiplier = market_regime == 1 ? atr_mult_strong : market_regime == 0 ? atr_mult_medium : atr_mult_weak
+    
+    if strategy.position_size > 0 and not na(entry_highest_high)
+        // LONG: Trailing stop dari Highest High sejak entry
+        atr_trailing_long_price := entry_highest_high - (atr_adaptive * atr_multiplier)
+        
+        // Check if price hit trailing stop
+        if close <= atr_trailing_long_price
+            atr_trailing_hit_long := true
+    
+    else if strategy.position_size < 0 and not na(entry_lowest_low)
+        // SHORT: Trailing stop dari Lowest Low sejak entry
+        atr_trailing_short_price := entry_lowest_low + (atr_adaptive * atr_multiplier)
+        
+        // Check if price hit trailing stop
+        if close >= atr_trailing_short_price
+            atr_trailing_hit_short := true
+
+// --- ADAPTIVE EXIT: Structure Break Detection (from IQBAL RUNNING - contributed +1.61B profit) ---
+bool structure_break_long = false
+bool structure_break_short = false
+
+if use_adaptive_exit and use_structure_exit
+    // Long position: exit if price breaks below last confirmed pivot low
+    if strategy.position_size > 0 and not na(last_structure_low)
+        structure_break_long := close < last_structure_low
+    
+    // Short position: exit if price breaks above last confirmed pivot high
+    if strategy.position_size < 0 and not na(last_structure_high)
+        structure_break_short := close > last_structure_high
+
+// --- OB TRAILING: Update SL price only, NOT direct exit (from IQBAL) ---
+// OB Trailing hanya menggeser stop loss, bukan trigger exit langsung
+// Exit akan terjadi via strategy.exit() di PASSIVE EXITS
+
+if strategy.position_size > 0 and not exit_executed_this_bar // LONG EXITS with Guard
+    avg_entry = strategy.position_avg_price
+    base_tp_price = avg_entry * (1 + long_tp_pct / 100)
+    base_sl_price = avg_entry * (1 - long_sl_pct / 100)
+    viz_ltp1 := avg_entry * (1 + long_tp1_pct / 100)
+    viz_ltp2 := avg_entry * (1 + long_tp2_pct / 100)
+    if na(active_sl_price)
+        active_sl_price := base_sl_price
+
+    // --- OB TRAILING: Update SL price (from IQBAL) ---
+    // OB Trailing hanya menggeser stop loss ke atas, bukan trigger exit langsung
+    if use_ob_trail and not na(trail_bull_btm)
+        potential_sl = trail_bull_btm - (atr_trail_val * ob_trail_mult)
+        if potential_sl > active_sl_price and potential_sl < close
+            active_sl_price := potential_sl
+
+    // --- BREAKEVEN LOCK: Move SL to breakeven when profit threshold reached ---
+    if use_be_lock
+        float current_profit_pct = ((high - avg_entry) / avg_entry) * 100
+        float be_price = avg_entry * (1 + be_lock_buffer_pct / 100)  // Entry + small buffer
+        if current_profit_pct >= be_lock_long_pct and be_price > active_sl_price
+            active_sl_price := be_price
+
+    // --- WATERFALL EXIT LOGIC (PRIORITY) ---
+    // 0a. TP CHECK: Evaluate market condition at TP levels
+    // TP1 touch detection (first time only)
+    bool long_tp1_touched = use_tp_check and use_long_tp1 and not tp1_hit and (high >= viz_ltp1)
+    bool long_tp2_touched = use_tp_check and use_long_tp2 and not tp2_hit and (high >= viz_ltp2)
+    
+    // TP2 evaluation (higher priority — check first)
+    if long_tp2_touched and not exit_executed_this_bar
+        tp2_hit := true
+        if tp_chk_vol_exhaustion
+            trade_exit_id := "TP2 Vol Exhaustion"
+            strategy.close("Long", comment="TP2 Vol Exhaustion", alert_message=json_exit_full_long)
+            exit_executed_this_bar := true
+        else if tp_chk_momentum_dead
+            trade_exit_id := "TP2 Momentum Dead"
+            strategy.close("Long", comment="TP2 Momentum Dead", alert_message=json_exit_full_long)
+            exit_executed_this_bar := true
+        // Else: HOLD — let Hard TP or other exits handle
+    
+    // TP1 evaluation
+    if long_tp1_touched and not exit_executed_this_bar
+        tp1_hit := true
+        if tp_chk_vol_exhaustion
+            trade_exit_id := "TP1 Vol Exhaustion"
+            strategy.close("Long", comment="TP1 Vol Exhaustion", alert_message=json_exit_full_long)
+            exit_executed_this_bar := true
+        else if tp_chk_momentum_dead
+            trade_exit_id := "TP1 Momentum Dead"
+            strategy.close("Long", comment="TP1 Momentum Dead", alert_message=json_exit_full_long)
+            exit_executed_this_bar := true
+        else
+            // HOLD — activate post-TP1 monitoring
+            atr_at_tp1 := atr_adaptive
+            tp1_hold_mode := true
+    
+    // 0b. POST-TP1 ATR DECAY: Volatility died after TP1 hold
+    if not exit_executed_this_bar and tp_chk_atr_decay_hit
+        trade_exit_id := "Post TP1 Vol Decay"
+        strategy.close("Long", comment="Post TP1 Vol Decay", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+
+    // 1. ATR TRAILING HIT (MANUAL CHECK - HIGHEST PRIORITY FOR TRAILING)
+    if not exit_executed_this_bar and atr_trailing_hit_long
+        trade_exit_id := "ATR Trail"
+        strategy.close("Long", comment="ATR Trailing Stop", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+    
+    // 2. DCB Reverse (Flip Position)
+    // [AUDIT FIX] Changed from strategy.entry to strategy.close to prevent double execution chaos
+    else if final_dcb_exit_long and use_dcb_reverse
+        trade_exit_id := "DCB Reverse"
+        strategy.close("Long", comment="DCB Reverse", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+        // Entry baru akan dieksekusi oleh logic Entry di bar selanjutnya
+    
+    // 3. Order Block Hard Close
+    else if use_ob_exit and exit_ob_long_signal
+        trade_exit_id := "OB Exit"
+        strategy.close("Long", comment="OB Exit", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+    
+    // 4. ADAPTIVE: Structure Break Exit (from IQBAL RUNNING - contributed +1.61B profit, 67% winrate)
+    else if structure_break_long
+        trade_exit_id := "Structure Break"
+        strategy.close("Long", comment="Structure Break", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+    
+    // 5. DCB Volatility Exit (Hard Close)
+    else if final_dcb_exit_long and use_dcb_close
+        trade_exit_id := "DCB Vol Exit"
+        strategy.close("Long", comment="DCB Vol Exit", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+
+    // 6. EMA Dynamic Exit
+    else if exit_ema1_cross_long
+        trade_exit_id := "EMA Exit"
+        strategy.close("Long", comment="EMA Exit", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+
+    // 7. RSI Exit
+    else if exit_rsi_long_signal
+        trade_exit_id := "RSI Exit"
+        strategy.close("Long", comment="RSI Exit Signal", alert_message=json_exit_full_long)
+        exit_executed_this_bar := true
+
+   // 8. PASSIVE EXITS (Hard TP/SL only — TP Check handles smart exits above)
+    else
+        strategy.exit("Exit Long", "Long", stop=active_sl_price, limit=base_tp_price, alert_message=json_exit_full_long)
+
+
+if strategy.position_size < 0 and not exit_executed_this_bar // SHORT EXITS with Guard
+    avg_entry = strategy.position_avg_price
+    base_tp_price = avg_entry * (1 - short_tp_pct / 100)
+    base_sl_price = avg_entry * (1 + short_sl_pct / 100)
+    viz_stp1 := avg_entry * (1 - short_tp1_pct / 100)
+    viz_stp2 := avg_entry * (1 - short_tp2_pct / 100)
+    if na(active_sl_price)
+        active_sl_price := base_sl_price
+
+    // --- OB TRAILING: Update SL price (from IQBAL) ---
+    // OB Trailing hanya menggeser stop loss ke bawah, bukan trigger exit langsung
+    if use_ob_trail and not na(trail_bear_top)
+        potential_sl_short = trail_bear_top + (atr_trail_val * ob_trail_mult)
+        if potential_sl_short < active_sl_price and potential_sl_short > close
+            active_sl_price := potential_sl_short
+
+    // --- BREAKEVEN LOCK: Move SL to breakeven when profit threshold reached ---
+    if use_be_lock
+        float current_profit_pct_short = ((avg_entry - low) / avg_entry) * 100
+        float be_price_short = avg_entry * (1 - be_lock_buffer_pct / 100)  // Entry - small buffer
+        if current_profit_pct_short >= be_lock_short_pct and be_price_short < active_sl_price
+            active_sl_price := be_price_short
+
+    // --- WATERFALL EXIT LOGIC (PRIORITY) ---
+    // 0a. TP CHECK: Evaluate market condition at TP levels
+    bool short_tp1_touched = use_tp_check and use_short_tp1 and not tp1_hit and (low <= viz_stp1)
+    bool short_tp2_touched = use_tp_check and use_short_tp2 and not tp2_hit and (low <= viz_stp2)
+    
+    // TP2 evaluation (higher priority — check first)
+    if short_tp2_touched and not exit_executed_this_bar
+        tp2_hit := true
+        if tp_chk_vol_exhaustion
+            trade_exit_id := "TP2 Vol Exhaustion"
+            strategy.close("Short", comment="TP2 Vol Exhaustion", alert_message=json_exit_full_short)
+            exit_executed_this_bar := true
+        else if tp_chk_momentum_dead
+            trade_exit_id := "TP2 Momentum Dead"
+            strategy.close("Short", comment="TP2 Momentum Dead", alert_message=json_exit_full_short)
+            exit_executed_this_bar := true
+    
+    // TP1 evaluation
+    if short_tp1_touched and not exit_executed_this_bar
+        tp1_hit := true
+        if tp_chk_vol_exhaustion
+            trade_exit_id := "TP1 Vol Exhaustion"
+            strategy.close("Short", comment="TP1 Vol Exhaustion", alert_message=json_exit_full_short)
+            exit_executed_this_bar := true
+        else if tp_chk_momentum_dead
+            trade_exit_id := "TP1 Momentum Dead"
+            strategy.close("Short", comment="TP1 Momentum Dead", alert_message=json_exit_full_short)
+            exit_executed_this_bar := true
+        else
+            atr_at_tp1 := atr_adaptive
+            tp1_hold_mode := true
+    
+    // 0b. POST-TP1 ATR DECAY
+    if not exit_executed_this_bar and tp_chk_atr_decay_hit
+        trade_exit_id := "Post TP1 Vol Decay"
+        strategy.close("Short", comment="Post TP1 Vol Decay", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+
+    // 1. ATR TRAILING HIT (MANUAL CHECK - HIGHEST PRIORITY FOR TRAILING)
+    if not exit_executed_this_bar and atr_trailing_hit_short
+        trade_exit_id := "ATR Trail"
+        strategy.close("Short", comment="ATR Trailing Stop", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+    
+    // 2. DCB Reverse (Flip Position)
+    // [AUDIT FIX] Changed from strategy.entry to strategy.close
+    else if final_dcb_exit_short and use_dcb_reverse
+        trade_exit_id := "DCB Reverse"
+        strategy.close("Short", comment="DCB Reverse", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+        // Entry baru akan dieksekusi oleh logic Entry di bar selanjutnya
+
+    // 3. Order Block Hard Close
+    else if use_ob_exit and exit_ob_short_signal
+        trade_exit_id := "OB Exit"
+        strategy.close("Short", comment="OB Exit", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+    
+    // 4. ADAPTIVE: Structure Break Exit (from IQBAL RUNNING - contributed +1.61B profit, 67% winrate)
+    else if structure_break_short
+        trade_exit_id := "Structure Break"
+        strategy.close("Short", comment="Structure Break", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+    
+    // 5. DCB Volatility Exit
+    else if final_dcb_exit_short and use_dcb_close
+        trade_exit_id := "DCB Vol Exit"
+        strategy.close("Short", comment="DCB Vol Exit", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+
+    // 6. EMA Dynamic Exit
+    else if exit_ema1_cross_short
+        trade_exit_id := "EMA Exit"
+        strategy.close("Short", comment="EMA Exit", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+
+    // 7. RSI Exit
+    else if exit_rsi_short_signal
+        trade_exit_id := "RSI Exit"
+        strategy.close("Short", comment="RSI Exit Signal", alert_message=json_exit_full_short)
+        exit_executed_this_bar := true
+
+  // 8. PASSIVE EXITS (Hard TP/SL only — TP Check handles smart exits above)
+    else
+        strategy.exit("Exit Short", "Short", stop=active_sl_price, limit=base_tp_price, alert_message=json_exit_full_short)
+            
+// ==========================================
+// 5. VISUALIZATION
+// ==========================================
+plot(ema_htf, color=color.yellow, linewidth=2, title="EMA HTF")
+plot(use_ema_tp1 ? ema_tp1 : na, color=color.new(color.aqua, 30), linewidth=2, title="EMA Dynamic Exit")
+
+exit_ema1_long = use_ema_tp1 and strategy.position_size > 0 and ta.crossunder(close, ema_tp1)
+exit_ema1_short = use_ema_tp1 and strategy.position_size < 0 and ta.crossover(close, ema_tp1)
+
+plotshape(exit_ema1_long, title="Exit Long EMA", style=shape.xcross, location=location.belowbar, color=color.aqua, size=size.small, text="EMA")
+plotshape(exit_ema1_short, title="Exit Short EMA", style=shape.xcross, location=location.abovebar, color=color.aqua, size=size.small, text="EMA")
+
+bgcolor(not entry_adx_ok ? color.new(color.gray, 90) : na, title="Weak Trend")
+bgcolor(max_daily_loss_hit ? color.new(color.red, 80) : na, title="Daily Loss Limit Hit")
+bgcolor(is_cooldown_active ? color.new(color.orange, 85) : na, title="Cooldown Active") 
+bgcolor(use_chop and not entry_chop_ok ? color.new(color.purple, 90) : na, title="CHOP Filter Active")
+bgcolor(final_dcb_exit_long ? color.new(color.fuchsia, 70) : na, title="Bearish DCB Rejection")
+bgcolor(final_dcb_exit_short ? color.new(color.lime, 70) : na, title="Bullish DCB Rejection")
+
+// --- SHORT OVERSOLD FILTER VISUALIZATION ---
+bgcolor(use_short_oversold and not short_rsi_ok ? color.new(color.teal, 80) : na, title="Short Blocked: RSI Oversold")
+bgcolor(use_short_drop_filter and not short_drop_ok ? color.new(color.maroon, 80) : na, title="Short Blocked: Extended Drop")
+
+// --- BREAKEVEN LOCK VISUALIZATION ---
+// Show when BE Lock is active (SL moved to breakeven)
+var bool be_lock_active_long = false
+var bool be_lock_active_short = false
+
+if strategy.position_size > 0
+    float profit_pct_viz = ((high - strategy.position_avg_price) / strategy.position_avg_price) * 100
+    be_lock_active_long := use_be_lock and profit_pct_viz >= be_lock_long_pct
+else
+    be_lock_active_long := false
+
+if strategy.position_size < 0
+    float profit_pct_viz_short = ((strategy.position_avg_price - low) / strategy.position_avg_price) * 100
+    be_lock_active_short := use_be_lock and profit_pct_viz_short >= be_lock_short_pct
+else
+    be_lock_active_short := false
+
+plotshape(be_lock_active_long and be_lock_active_long != be_lock_active_long[1], title="BE Lock Long", style=shape.flag, location=location.abovebar, color=color.lime, size=size.small, text="BE🔒")
+plotshape(be_lock_active_short and be_lock_active_short != be_lock_active_short[1], title="BE Lock Short", style=shape.flag, location=location.belowbar, color=color.lime, size=size.small, text="BE🔒")
+
+// --- ADAPTIVE EXIT VISUALIZATION ---
+bgcolor(use_adaptive_exit and market_regime == 1 ? color.new(color.green, 95) : na, title="Strong Trend (ADX)")
+bgcolor(use_adaptive_exit and market_regime == -1 ? color.new(color.orange, 95) : na, title="Weak/Ranging (ADX)")
+
+// --- ATR TRAILING VISUALIZATION ---
+plot(use_adaptive_exit and use_atr_trailing and strategy.position_size > 0 ? atr_trailing_long_price : na, color=color.new(color.blue, 0), style=plot.style_linebr, linewidth=2, title="ATR Trailing Stop (Long)")
+plot(use_adaptive_exit and use_atr_trailing and strategy.position_size < 0 ? atr_trailing_short_price : na, color=color.new(color.orange, 0), style=plot.style_linebr, linewidth=2, title="ATR Trailing Stop (Short)")
+plotshape(atr_trailing_hit_long, title="ATR Trail Hit Long", style=shape.xcross, location=location.belowbar, color=color.blue, size=size.normal, text="ATR")
+plotshape(atr_trailing_hit_short, title="ATR Trail Hit Short", style=shape.xcross, location=location.abovebar, color=color.orange, size=size.normal, text="ATR")
+
+// --- STRUCTURE BREAK VISUALIZATION ---
+plotshape(use_adaptive_exit and structure_break_long, title="Structure Break Long", style=shape.xcross, location=location.belowbar, color=color.red, size=size.normal, text="SB")
+plotshape(use_adaptive_exit and structure_break_short, title="Structure Break Short", style=shape.xcross, location=location.abovebar, color=color.red, size=size.normal, text="SB")
+
+var float plot_tp = na
+var float plot_sl = na
+var float plot_entry = na
+if strategy.position_size != 0
+    plot_entry := strategy.position_avg_price
+    if strategy.position_size > 0
+        plot_tp := plot_entry * (1 + long_tp_pct / 100)
+    else
+        plot_tp := plot_entry * (1 - short_tp_pct / 100)
+    plot_sl := active_sl_price
+else
+    plot_tp := na
+    plot_sl := na
+    plot_entry := na
+
+p_tp = plot(plot_tp, color=color.green, style=plot.style_linebr, linewidth=2, title="Target Profit Line")
+p_sl = plot(plot_sl, color=color.red, style=plot.style_linebr, linewidth=2, title="Stop Loss Line")
+p_entry = plot(plot_entry, color=color.gray, style=plot.style_linebr, linewidth=1, title="Entry Price")
+plot(use_long_tp1 and strategy.position_size > 0 ? viz_ltp1 : na, color=color.yellow, style=plot.style_linebr, linewidth=1, title="Long TP 1")
+plot(use_long_tp2 and strategy.position_size > 0 ? viz_ltp2 : na, color=color.yellow, style=plot.style_linebr, linewidth=1, title="Long TP 2")
+plot(use_short_tp1 and strategy.position_size < 0 ? viz_stp1 : na, color=color.yellow, style=plot.style_linebr, linewidth=1, title="Short TP 1")
+plot(use_short_tp2 and strategy.position_size < 0 ? viz_stp2 : na, color=color.yellow, style=plot.style_linebr, linewidth=1, title="Short TP 2")
+fill(p_entry, p_tp, color=strategy.position_size > 0 ? color.new(color.green, 90) : color.new(color.green, 90), title="Profit Zone")
+fill(p_entry, p_sl, color=strategy.position_size > 0 ? color.new(color.red, 90) : color.new(color.red, 90), title="Loss Zone")
+
+if strategy.closedtrades > strategy.closedtrades[1]
+    float last_profit = strategy.closedtrades.profit(strategy.closedtrades - 1)
+    float entry_price_last = strategy.closedtrades.entry_price(strategy.closedtrades - 1)
+    float exit_price_last = strategy.closedtrades.exit_price(strategy.closedtrades - 1)
+    float move_pct = entry_price_last != 0 ? (math.abs(exit_price_last - entry_price_last) / entry_price_last) * 100 : 0
+    
+    // LOGIKA PENENTUAN TEKS TOOLTIP
+    string reason_text = ""
+    
+    if trade_exit_id != "TP/SL"
+        // Jika exit disebabkan manual trigger (EMA, OB, DCB, dll)
+        reason_text := trade_exit_id
+    else
+        // Jika exit disebabkan oleh TP/SL otomatis (Limit Order)
+        if last_profit > 0
+            // Cek apakah profit mendekati TP1 atau TP2
+            // Kita cek berdasarkan input user
+            float target_tp1 = (strategy.position_size[1] > 0) ? long_tp1_pct : short_tp1_pct
+            float target_tp2 = (strategy.position_size[1] > 0) ? long_tp2_pct : short_tp2_pct
+            
+            // Beri toleransi 0.5% untuk slippage/gap
+            if math.abs(move_pct - target_tp1) < 1.0
+                reason_text := "TP 1 Hit 🎯"
+            else if math.abs(move_pct - target_tp2) < 1.0
+                reason_text := "TP 2 Hit 🚀"
+            else
+                reason_text := "TP Hit 💰"
+        else
+            reason_text := "SL Hit 💀"
+
+    string res_text = reason_text + "\n" + (last_profit > 0 ? "+" : "-") + str.tostring(move_pct, "#.2") + "%"
+    color res_color = last_profit > 0 ? color.green : color.red
+    string res_style = last_profit > 0 ? label.style_label_down : label.style_label_up
+    label.new(bar_index, last_profit > 0 ? high : low, text=res_text, color=res_color, textcolor=color.white, style=res_style, size=size.small)
+    
+    // Reset variable untuk trade selanjutnya
+    trade_exit_id := "TP/SL"
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MONTHLY TABLE
+// ✅ FIXED V2: Drawdown calculation now EXACTLY matches TradingView Strategy Tester
+// - Peak: Updated from CLOSED EQUITY only (when position is flat)
+// - Drawdown: Calculated from TOTAL EQUITY (closed + open P&L) every bar
+// - This captures intrabar drawdown during open positions (like TradingView does)
+// - Includes commission (0.08%) and slippage (10 ticks) in calculations
+// - Result: Table MaxDD should match TradingView Strategy Tester MaxDD exactly
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+var string GROUP_PERFORMANCE_TABLE = "📊 TABLE SETTINGS"
+bool mptable_on                 = input.bool(title="Turn On |", defval=true, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles")
+bool mptable_debug              = input.bool(title="Debug Mode |", defval=false, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles")
+int mptable_precision           = input.int(title="Decimal Precision", defval=2, minval=1, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Toggles")
+color mptable_titleColor        = input.color(title="Title Cell Color", defval=#cccccc, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+color mptable_titleTextColor    = input.color(title="Title Text Color", defval=#363a45, display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+color mptable_ProfitColor       = input.color(title="Year Profit Color", defval=color.new(color.green, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+color mptable_LossColor         = input.color(title="Year Loss Color", defval=color.new(color.red, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+color mptable_BreakEvenColor    = input.color(title="Year B/E Color", defval=color.new(color.white, 50), display=display.none, group=GROUP_PERFORMANCE_TABLE, inline="MPT_Colors")
+int mptable_pageNumber          = input.int(title="Page Number", defval=1, minval=1, step=1, maxval=10, display=display.none, group=GROUP_PERFORMANCE_TABLE) - 1 
+int mptable_pageSize            = input.int(title="Page Size (Rows)", defval=20, minval=1, display=display.none, group=GROUP_PERFORMANCE_TABLE) - 1 
+string mptable_tableTextSize    = input.string(title="Text Size", defval="Small", options=["Auto",  "Huge",  "Large", "Normal", "Small", "Tiny"], display=display.none, group=GROUP_PERFORMANCE_TABLE)
+
+table_text_size(_size) =>
+    switch _size
+        "Auto"   => size.auto   
+        "Huge"   => size.huge   
+        "Large"  => size.large  
+        "Normal" => size.normal 
+        "Small"  => size.small
+        => size.tiny
+tableTextSize = table_text_size(mptable_tableTextSize)
+
+getRoundingPrecision(float num) =>
+    if (num > 0 and num < 0.05) or (num < 0 and num > -0.05)
+        3
+    else
+        mptable_precision
+
+type StrategyReturn
+    float profit
+    float drawdown
+    int timestamp
+
+var float equity_peak_overall = 0.0
+var float worst_dd_overall = 0.0
+var float equity_start_year = 0.0
+var float equity_peak_year = 0.0
+var float worst_dd_year = 0.0
+var float equity_start_month = 0.0
+var float equity_peak_month = 0.0
+var int maxDrawdownBars = 0
+var int currentDrawdownBars = 0
+
+if barstate.isfirst
+    equity_peak_overall := strategy.initial_capital
+    equity_start_year := strategy.initial_capital
+    equity_peak_year := strategy.initial_capital
+    equity_start_month := strategy.initial_capital
+
+// ✅ FIXED V2: Match TradingView Strategy Tester exactly
+// Peak: Update dari closed equity (saat flat)
+// DD: Calculate dari total equity (closed + open P&L) setiap bar
+float closed_equity = strategy.initial_capital + strategy.netprofit
+float total_equity = closed_equity + strategy.openprofit
+bool is_flat = strategy.position_size == 0
+
+// Update peak HANYA saat posisi flat (dari closed equity)
+if is_flat and barstate.isconfirmed
+    if closed_equity > equity_peak_overall
+        equity_peak_overall := closed_equity
+        currentDrawdownBars := 0
+    
+    if closed_equity > equity_peak_year
+        equity_peak_year := closed_equity
+
+// Calculate drawdown SETIAP BAR dari total equity (termasuk open position)
+// Ini akan capture intrabar drawdown seperti TradingView
+if total_equity < equity_peak_overall
+    currentDrawdownBars += 1
+    if currentDrawdownBars > maxDrawdownBars
+        maxDrawdownBars := currentDrawdownBars
+else if is_flat
+    currentDrawdownBars := 0
+
+float current_dd_pct = ((total_equity - equity_peak_overall) / equity_peak_overall) * 100
+if current_dd_pct < worst_dd_overall
+    worst_dd_overall := current_dd_pct
+
+float current_dd_year = ((total_equity - equity_peak_year) / equity_peak_year) * 100
+if current_dd_year < worst_dd_year
+    worst_dd_year := current_dd_year
+
+bool new_month = month(time) != month(time[1])
+bool new_year = year(time) != year(time[1])
+var bool firstEntryTime = false
+if not firstEntryTime and strategy.opentrades > 0
+    firstEntryTime := true
+
+var array<StrategyReturn> monthlyReturns = array.new<StrategyReturn>(0)
+var array<StrategyReturn> yearlyReturns = array.new<StrategyReturn>(0)
+
+if (not barstate.isfirst and firstEntryTime) or barstate.islastconfirmedhistory
+    // ✅ PERBAIKAN: Gunakan closed equity untuk monthly/yearly returns
+    float prev_closed_equity = strategy.initial_capital + strategy.netprofit[1]
+    float current_closed_equity = strategy.initial_capital + strategy.netprofit
+    
+    if new_month
+        float month_pl = ((prev_closed_equity - equity_start_month) / equity_start_month) * 100
+        monthlyReturns.push(StrategyReturn.new(month_pl, 0.0, time[1])) 
+        equity_start_month := prev_closed_equity
+
+    if new_year
+        float year_pl = ((prev_closed_equity - equity_start_year) / equity_start_year) * 100
+        yearlyReturns.push(StrategyReturn.new(year_pl, worst_dd_year, time[1]))
+        equity_start_year := prev_closed_equity
+        equity_peak_year := prev_closed_equity
+        worst_dd_year := 0.0
+
+    if barstate.islastconfirmedhistory and not new_year
+        float year_pl = ((current_closed_equity - equity_start_year) / equity_start_year) * 100
+        yearlyReturns.push(StrategyReturn.new(year_pl, worst_dd_year, time))
+        float month_pl = ((current_closed_equity - equity_start_month) / equity_start_month) * 100
+        monthlyReturns.push(StrategyReturn.new(month_pl, 0.0, time))
+
+var table performance_table = table(na)
+if yearlyReturns.size() < mptable_pageSize
+    mptable_pageSize := yearlyReturns.size()
+int startIndex = math.max(math.min(yearlyReturns.size() - 1, yearlyReturns.size() - 1 - (mptable_pageSize + 1) * mptable_pageNumber), mptable_pageSize - 1)
+int endIndex = math.max(startIndex - mptable_pageSize, 0)
+mptable_pageSize := endIndex <= mptable_pageSize ? endIndex : mptable_pageSize
+var int EXTRA_STAT_ROWS = 6
+
+if mptable_on and monthlyReturns.size() > 0 and barstate.islastconfirmedhistory
+    performance_table := table.new(position.bottom_right, columns=17, rows=yearlyReturns.size() + EXTRA_STAT_ROWS, border_width=1)
+    
+    performance_table.cell(1, 0, "Year", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(2, 0, "Jan", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(3, 0, "Feb", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(4, 0, "Mar", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(5, 0, "Apr", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(6, 0, "May", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(7, 0, "Jun", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(8, 0, "Jul", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(9, 0, "Aug", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(10, 0, "Sep", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(11, 0, "Oct", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(12, 0, "Nov", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(13, 0, "Dec", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(14, 0, "TOTAL", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(15, 0, "MaxDD", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+    performance_table.cell(16, 0, "StdDev", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+
+    var array<float> all_monthly_returns = array.new<float>(0)
+    for year_index = startIndex to yearlyReturns.size() == 0 ? na : endIndex
+        StrategyReturn yearlyReturn = yearlyReturns.get(year_index)
+        performance_table.cell(1, year_index + 1, str.tostring(year(yearlyReturn.timestamp)), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_size=tableTextSize)
+        color y_color = yearlyReturn.profit > 0 ? mptable_ProfitColor : yearlyReturn.profit == 0 ? mptable_BreakEvenColor : mptable_LossColor
+        performance_table.cell(14, year_index + 1, (yearlyReturn.profit > 0 ? "+" : "") + str.tostring(math.round(yearlyReturn.profit, getRoundingPrecision(yearlyReturn.profit))) + "%", bgcolor=y_color, text_color=color.white, text_size=tableTextSize)
+        performance_table.cell(15, year_index + 1, str.tostring(math.round(yearlyReturn.drawdown, getRoundingPrecision(yearlyReturn.drawdown))) + "%", bgcolor=mptable_BreakEvenColor, text_color=color.white, text_size=tableTextSize)
+        
+        var array<float> year_monthly_returns = array.new<float>(0)
+        array.clear(year_monthly_returns)
+        for month_index = 0 to monthlyReturns.size() - 1
+            StrategyReturn monthlyReturn = monthlyReturns.get(month_index)
+            if year(monthlyReturn.timestamp) == year(yearlyReturn.timestamp)
+                year_monthly_returns.push(monthlyReturn.profit)
+                color m_color = monthlyReturn.profit > 0 ? color.new(mptable_ProfitColor, color.t(mptable_ProfitColor) + 20) : monthlyReturn.profit == 0 ? color.new(mptable_BreakEvenColor, color.t(mptable_BreakEvenColor) + 20) : color.new(mptable_LossColor, color.t(mptable_LossColor) + 20)
+                performance_table.cell(month(monthlyReturn.timestamp) + 1, year_index + 1, str.tostring(math.round(monthlyReturn.profit, getRoundingPrecision(monthlyReturn.profit))), bgcolor=m_color, text_color=color.white, text_size=tableTextSize)
+        float year_std = array.stdev(year_monthly_returns)
+        performance_table.cell(16, year_index + 1, str.tostring(math.round(year_std, 2)), bgcolor=mptable_BreakEvenColor, text_color=color.white, text_size=tableTextSize)
+
+    array.clear(all_monthly_returns)
+    for i = 0 to monthlyReturns.size() - 1
+        all_monthly_returns.push(monthlyReturns.get(i).profit)
+    float total_std_dev = array.stdev(all_monthly_returns)
+    float time_diff = strategy.closedtrades.exit_time(strategy.closedtrades - 1) - strategy.closedtrades.entry_time(0)
+    float years_traded = time_diff / 31536000000.0
+    float cagr = (math.pow((strategy.netprofit + strategy.initial_capital) / strategy.initial_capital, 1 / years_traded) - 1) * 100
+    float mar = cagr / math.abs(worst_dd_overall)
+    lastMonthRowIndex = startIndex < 6 ? 6 : startIndex
+
+    performance_table.cell(0, lastMonthRowIndex, "Return: " + (strategy.netprofit > 0 ? "+" : "") + str.tostring(math.round((strategy.netprofit / strategy.initial_capital) * 100, 2)) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 1, "MAR: " + str.tostring(mar, "#.##"), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 2, "DD Bars: " + str.tostring(maxDrawdownBars), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 3, "MaxDD: " + str.tostring(math.round(worst_dd_overall, 2)) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 4, "Avg Monthly StdDev: " + str.tostring(math.round(total_std_dev, 2)), bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 5, "CAGR: " + (cagr > 0 ? "+" : "") + str.tostring(math.round(cagr, 2)) + "%", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+    performance_table.cell(0, lastMonthRowIndex - 6, "REALIZED P&L", bgcolor=mptable_titleColor, text_color=mptable_titleTextColor, text_font_family=font.family_monospace, text_size=tableTextSize)
+
+// ==========================================
+// MOVED ORDER BLOCK VISUALIZATION
+// ==========================================
+grp_ob_viz = "═══ 🧱 ORDER BLOCK VISUALS ═══"
+show_ob_viz     = input.bool(true, "👁 Show OB Viz (LuxAlgo Style)", group=grp_ob_viz)
+ob_len_viz      = input.int(5, 'Volume Pivot Length (Viz)', minval=1, group=grp_ob_viz)
+bull_ext_last   = input.int(3, 'Bullish OB Shown', minval=1, group=grp_ob_viz)
+bg_bull_css     = input.color(color.new(#169400, 80), 'Bullish Bg', group=grp_ob_viz)
+bull_css        = input.color(#169400, 'Bullish Border', group=grp_ob_viz)
+bull_avg_css    = input.color(color.new(#9598a1, 37), 'Bullish Avg Line', group=grp_ob_viz)
+bear_ext_last   = input.int(3, 'Bearish OB Shown', minval=1, group=grp_ob_viz)
+bg_bear_css     = input.color(color.new(#ff1100, 80), 'Bearish Bg', group=grp_ob_viz)
+bear_css        = input.color(#ff1100, 'Bearish Border', group=grp_ob_viz)
+bear_avg_css    = input.color(color.new(#9598a1, 37), 'Bearish Avg Line', group=grp_ob_viz)
+line_style      = input.string('⎯⎯⎯', 'Average Line Style', options = ['⎯⎯⎯', '----', '····'], group=grp_ob_viz)
+line_width      = input.int(1, 'Average Line Width', minval = 1, group=grp_ob_viz)
+mitigation      = input.string('Wick', 'Mitigation Methods', options = ['Wick', 'Close'], group=grp_ob_viz)
+
+if show_ob_viz
+    var os = 0
+    var float target_bull = 0.
+    var float target_bear = 0.
+    upper = ta.highest(ob_len_viz)
+    lower = ta.lowest(ob_len_viz)
+    if mitigation == 'Close'
+        target_bull := ta.lowest(close, ob_len_viz)
+        target_bear := ta.highest(close, ob_len_viz)
+    else
+        target_bull := lower
+        target_bear := upper
+    os := high[ob_len_viz] > upper ? 0 : low[ob_len_viz] < lower ? 1 : os[1]
+    phv = ta.pivothigh(volume, ob_len_viz, ob_len_viz)
+    [bull_top, bull_btm, bull_avg, bull_left, bull_ob] = get_coordinates(phv and os == 1, hl2[ob_len_viz], low[ob_len_viz], low[ob_len_viz], ob_len_viz)
+    [bear_top, bear_btm, bear_avg, bear_left, bear_ob] = get_coordinates(phv and os == 0, high[ob_len_viz], hl2[ob_len_viz], high[ob_len_viz], ob_len_viz)
+    remove_mitigated(bull_top, bull_btm, bull_left, bull_avg, target_bull, true)
+    remove_mitigated(bear_top, bear_btm, bear_left, bear_avg, target_bear, false)
+    set_order_blocks(bull_top, bull_btm, bull_left, bull_avg, bull_ext_last, bg_bull_css, bull_css, bull_avg_css, line_style, line_width)
+    set_order_blocks(bear_top, bear_btm, bear_left, bear_avg, bear_ext_last, bg_bear_css, bear_css, bear_avg_css, line_style, line_width)

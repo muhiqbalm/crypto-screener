@@ -18,13 +18,14 @@ class Settings(BaseSettings):
         env_prefix="SCREENER_",
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     cache_ttl: int = 60
     log_level: str = "INFO"
-    symbols: str = "BTC/USDT:USDT,ETH/USDT:USDT,SOL/USDT:USDT,AAVE/USDT:USDT,LINK/USDT:USDT,AVAX/USDT:USDT,DOGE/USDT:USDT"
+    symbols: str = "BTC/USDT:USDT,ETH/USDT:USDT,SOL/USDT:USDT,BNB/USDT:USDT,XRP/USDT:USDT,DOGE/USDT:USDT,ADA/USDT:USDT,AVAX/USDT:USDT,LINK/USDT:USDT,SUI/USDT:USDT,NEAR/USDT:USDT,APT/USDT:USDT,1000PEPE/USDT:USDT,1000SHIB/USDT:USDT,WIF/USDT:USDT,FET/USDT:USDT,RENDER/USDT:USDT,ARB/USDT:USDT,OP/USDT:USDT,TIA/USDT:USDT,INJ/USDT:USDT,DOT/USDT:USDT,LTC/USDT:USDT,UNI/USDT:USDT,AAVE/USDT:USDT,GALA/USDT:USDT,SEI/USDT:USDT,HYPE/USDT:USDT,ZEC/USDT:USDT"
     mock_mode: bool = False
     cors_origins: str = "*"
     shutdown_timeout: int = 30

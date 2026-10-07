@@ -19,6 +19,7 @@ class TradingSettings(BaseSettings):
         env_prefix="TRADING_",
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     # Supabase connection

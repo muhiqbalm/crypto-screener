@@ -78,10 +78,14 @@ class DataProcessor:
             fetcher = MarketDataFetcher(exchange, self._symbols)
 
             records: list[dict] = []
-            for symbol in self._symbols:
-                data_dict, error_info = await self._fetch_with_error_isolation(
-                    fetcher, symbol
-                )
+            sem = asyncio.Semaphore(6)
+
+            async def _fetch_task(sym: str):
+                async with sem:
+                    return await self._fetch_with_error_isolation(fetcher, sym)
+
+            results = await asyncio.gather(*[_fetch_task(s) for s in self._symbols])
+            for data_dict, error_info in results:
                 if data_dict is not None:
                     records.append(data_dict)
                 if error_info is not None:

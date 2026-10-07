@@ -216,9 +216,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         },
     )
 
+    # Start background cache warmer to keep screener responses instant (< 10 ms)
+    async def _background_cache_warmer():
+        await asyncio.sleep(2)
+        while not getattr(app.state, "shutting_down", False):
+            try:
+                entry = app.state.cache_manager.get()
+                threshold = max(20, settings.cache_ttl - 15)
+                if entry is None or entry.age_seconds >= threshold:
+                    logger.info("Background cache warmer: pre-fetching fresh screener data...")
+                    result = await app.state.data_processor.process_all()
+                    app.state.cache_manager.set(result)
+                    logger.info("Background cache warmer: fresh screener data cached successfully!")
+            except Exception as e:
+                logger.error(f"Background cache warmer error: {e}")
+            await asyncio.sleep(10)
+
+    warmer_task = asyncio.create_task(_background_cache_warmer())
+
     yield
 
     # --- Shutdown ---
+    warmer_task.cancel()
+    try:
+        await warmer_task
+    except asyncio.CancelledError:
+        pass
+
     app.state.shutting_down = True
     logger.info("Application shutting down, waiting for active requests to complete")
 
@@ -365,11 +389,13 @@ Configure via environment variables:
     from src.trading.router import router as trading_router
     from src.trading.routers.auth_router import router as trading_auth_router
     from src.trading.routers.users_router import router as trading_users_router
+    from src.api.intel_routes import router as intel_router
 
     app.include_router(router)
     app.include_router(debug_router)
     app.include_router(trading_router)
     app.include_router(trading_auth_router)
     app.include_router(trading_users_router)
+    app.include_router(intel_router)
 
     return app

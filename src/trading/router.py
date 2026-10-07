@@ -58,25 +58,32 @@ def get_settings() -> TradingSettings:
 def get_supabase_client(
     settings: Annotated[TradingSettings, Depends(get_settings)],
 ) -> Any:
-    """FastAPI dependency that creates and returns a Supabase client.
+    """FastAPI dependency that creates and returns a database client.
 
-    Returns None when the Supabase URL or key is not configured (e.g. during
-    tests where individual components are mocked).
+    Uses LocalDatabaseClient (SQLite on VPS) when TRADING_USE_LOCAL_DB is enabled,
+    or when Supabase URL is not configured / points to an expired cloud domain.
+    This guarantees 100% self-hosted, zero-latency persistence directly on the VPS.
     """
-    if not settings.supabase_url or not settings.supabase_key:
-        logger.warning(
-            "Supabase credentials not configured — returning None client. "
-            "Ensure TRADING_SUPABASE_URL and TRADING_SUPABASE_KEY are set."
-        )
-        return None
+    import os
+    from .local_db import LocalDatabaseClient
+
+    use_local = (
+        os.environ.get("TRADING_USE_LOCAL_DB", "true").lower() in ("1", "true", "yes")
+        or not settings.supabase_url
+        or "supabase.co" in (settings.supabase_url or "")
+    )
+    if use_local:
+        return LocalDatabaseClient()
 
     try:
         from supabase import create_client
 
         return create_client(settings.supabase_url, settings.supabase_key)
     except Exception as exc:
-        logger.error("Failed to create Supabase client: %s", exc, exc_info=True)
-        return None
+        logger.warning(
+            "Failed to create Supabase client (%s) — falling back to LocalDatabaseClient", exc
+        )
+        return LocalDatabaseClient()
 
 
 # ---------------------------------------------------------------------------
