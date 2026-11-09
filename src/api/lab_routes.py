@@ -1,0 +1,302 @@
+"""/api/v1/lab — Strategy Lab API.
+
+Thin by design: SQL against lab.db and file reads only. It never runs a
+backtest and never imports the engine; heavy work is queued for the separate
+``bmtm-lab-worker`` process. All endpoints are admin-only (LAB_ADMIN_EMAILS).
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Annotated, Any, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from src.lab import db as labdb
+from src.lab import queue as q
+from src.lab.data_cache import read_index
+from src.lab.settings import get_lab_settings
+from src.lab.templates import TEMPLATES, get_template
+from src.lab.templates.rosyade_family import ParamError
+
+from .lab_auth import lab_admin, lab_user
+from .lab_models import RunCreate, ScanCreate
+
+router = APIRouter(prefix="/api/v1/lab", tags=["lab"])
+Admin = Annotated[dict, Depends(lab_admin)]
+
+MAX_SCAN_COMBOS = 200
+
+
+def _conn():
+    conn = labdb.connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+Conn = Annotated[Any, Depends(_conn)]
+
+
+# ── helpers ──────────────────────────────────────────────────────────────
+
+def _template_or_422(template_id: str):
+    t = get_template(template_id)
+    if t is None:
+        raise HTTPException(422, f"unknown template_id {template_id}")
+    return t
+
+
+def _validate(t, timeframe: str, params: dict) -> dict:
+    if timeframe not in t.TIMEFRAMES:
+        raise HTTPException(422, f"timeframe must be one of {t.TIMEFRAMES}")
+    try:
+        return t.validate_params(params)
+    except ParamError as e:
+        raise HTTPException(422, f"invalid params: {e}")
+
+
+def create_run(conn, *, template_id: str, symbol: str, timeframe: str, mode: str, params: dict,
+               costs: dict, start: Optional[str], end: Optional[str], n_trials: Optional[int] = None,
+               scan_id: Optional[int] = None, priority: int = 0) -> tuple[int, int]:
+    now = labdb.utcnow()
+    cfg = conn.execute(
+        "INSERT INTO strategy_configs (template_id, params_json, created_at) VALUES (?, ?, ?)",
+        (template_id, labdb.dumps(params), now)).lastrowid
+    run_id = conn.execute(
+        "INSERT INTO lab_runs (scan_id, config_id, template_id, symbol, timeframe, mode, status, start_date, "
+        "end_date, params_json, costs_json, created_at) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)",
+        (scan_id, cfg, template_id, symbol, timeframe, mode, start, end, labdb.dumps(params),
+         labdb.dumps(costs), now)).lastrowid
+    job_id = q.enqueue(conn, "run", run_id, {"n_trials": n_trials} if n_trials else {}, priority=priority)
+    conn.execute("UPDATE lab_runs SET job_id=? WHERE id=?", (job_id, run_id))
+    return int(run_id), int(job_id)
+
+
+_LIST_FIELDS = ("id", "template_id", "symbol", "timeframe", "mode", "status", "verdict", "net_return_pct",
+                "profit_factor", "max_dd_pct", "trades", "created_at")
+
+
+def _run_list_item(r) -> dict:
+    d = {k: r[k] for k in _LIST_FIELDS}
+    d["job_id"] = r["job_id"]
+    d["scan_id"] = r["scan_id"]
+    return d
+
+
+def _run_detail(r) -> dict:
+    d = _run_list_item(r)
+    oos = labdb.loads(r["oos_metrics_json"])
+    d.update({
+        "params": labdb.loads(r["params_json"], {}),
+        "costs": labdb.loads(r["costs_json"], {}),
+        "start": r["start_date"],
+        "end": r["end_date"],
+        "metrics": labdb.loads(r["metrics_json"], {}) or {},
+        "oos_metrics": oos,
+        "checks": labdb.loads(r["checks_json"], []) or [],
+        "holdout_touches": r["holdout_touches"],
+        "holdout_start": r["holdout_start"],
+        "honesty_version": r["honesty_version"],
+        "engine_commit": r["engine_commit"],
+        "error": r["error"],
+        "finished_at": r["finished_at"],
+        "best_params": labdb.loads(r["best_params_json"]),
+    })
+    extra = labdb.loads(r["extra_json"], {}) or {}
+    if extra.get("sensitivity"):
+        d["sensitivity"] = extra["sensitivity"]
+    return d
+
+
+def _get_run(conn, run_id: int):
+    r = conn.execute("SELECT * FROM lab_runs WHERE id=?", (run_id,)).fetchone()
+    if r is None:
+        raise HTTPException(404, "run not found")
+    return r
+
+
+def _artifact(run_id: int, name: str) -> list:
+    p = Path(get_lab_settings().artifacts_dir) / "runs" / str(run_id) / name
+    try:
+        return json.loads(p.read_text())
+    except (OSError, ValueError):
+        return []
+
+
+def _screener_symbols() -> list[str]:
+    try:
+        from src.config.settings import Settings
+        out = []
+        for s in Settings().symbols_list:
+            sym = s.split(":")[0].replace("/", "")
+            if sym not in out:
+                out.append(sym)
+        return out
+    except Exception:  # noqa: BLE001
+        return ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+
+# ── meta ─────────────────────────────────────────────────────────────────
+
+@router.get("/me")
+def me(user: Annotated[dict, Depends(lab_user)]) -> dict:
+    return {"is_admin": bool(user["is_admin"])}
+
+
+@router.get("/templates")
+def templates(_: Admin) -> list[dict]:
+    return [t.public_schema() for t in TEMPLATES.values()]
+
+
+@router.get("/symbols")
+def symbols(_: Admin) -> list[dict]:
+    idx = read_index()
+    cached: dict[str, list[str]] = {}
+    for v in idx.values():
+        cached.setdefault(v["symbol"], []).append(v["timeframe"])
+    order = _screener_symbols()
+    for s in sorted(cached):
+        if s not in order:
+            order.append(s)
+    return [{"symbol": s, "has_data": s in cached, "timeframes": sorted(cached.get(s, []))} for s in order]
+
+
+@router.get("/data/status")
+def data_status(_: Admin) -> list[dict]:
+    idx = read_index()
+    return [{"symbol": v["symbol"], "timeframe": v["timeframe"], "first": v["first"], "last": v["last"],
+             "rows": v["rows"]} for _, v in sorted(idx.items())]
+
+
+# ── runs ─────────────────────────────────────────────────────────────────
+
+@router.post("/runs")
+def create_run_ep(body: RunCreate, _: Admin, conn: Conn) -> dict:
+    t = _template_or_422(body.template_id)
+    params = _validate(t, body.timeframe, body.params)
+    if body.start and body.end and body.start >= body.end:
+        raise HTTPException(422, "start must be before end")
+    run_id, job_id = create_run(
+        conn, template_id=body.template_id, symbol=body.symbol, timeframe=body.timeframe, mode=body.mode,
+        params=params, costs=body.costs.model_dump(), start=body.start, end=body.end, n_trials=body.n_trials)
+    conn.commit()
+    return {"run_id": run_id, "job_id": job_id}
+
+
+@router.get("/runs")
+def list_runs(_: Admin, conn: Conn, limit: int = Query(50, ge=1, le=500)) -> list[dict]:
+    rows = conn.execute("SELECT * FROM lab_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [_run_list_item(r) for r in rows]
+
+
+@router.get("/runs/{run_id}")
+def get_run(run_id: int, _: Admin, conn: Conn) -> dict:
+    return _run_detail(_get_run(conn, run_id))
+
+
+@router.get("/runs/{run_id}/equity")
+def run_equity(run_id: int, _: Admin, conn: Conn) -> list[dict]:
+    _get_run(conn, run_id)
+    return _artifact(run_id, "equity.json")
+
+
+@router.get("/runs/{run_id}/trades")
+def run_trades(run_id: int, _: Admin, conn: Conn) -> list[dict]:
+    _get_run(conn, run_id)
+    return _artifact(run_id, "trades.json")
+
+
+# ── scans ────────────────────────────────────────────────────────────────
+
+@router.post("/scans")
+def create_scan(body: ScanCreate, _: Admin, conn: Conn) -> dict:
+    t = _template_or_422(body.template_id)
+    tfs = list(dict.fromkeys(body.timeframes))
+    params = None
+    for tf in tfs:
+        params = _validate(t, tf, body.params)
+    combos = [(s, tf) for s in body.symbols for tf in tfs]
+    if len(combos) > MAX_SCAN_COMBOS:
+        raise HTTPException(422, f"too many combinations ({len(combos)} > {MAX_SCAN_COMBOS})")
+    scan_id = conn.execute(
+        "INSERT INTO lab_scans (template_id, mode, symbols_json, timeframes_json, params_json, costs_json, "
+        "created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (body.template_id, body.mode, labdb.dumps(body.symbols), labdb.dumps(tfs), labdb.dumps(params),
+         labdb.dumps(body.costs.model_dump()), labdb.utcnow())).lastrowid
+    for s, tf in combos:
+        run_id, _job = create_run(conn, template_id=body.template_id, symbol=s, timeframe=tf, mode=body.mode,
+                                  params=params, costs=body.costs.model_dump(), start=body.start,
+                                  end=body.end, n_trials=body.n_trials, scan_id=scan_id, priority=-1)
+        conn.execute("INSERT INTO scan_rows (scan_id, symbol, timeframe, run_id) VALUES (?, ?, ?, ?)",
+                     (scan_id, s, tf, run_id))
+    conn.commit()
+    return {"scan_id": int(scan_id)}
+
+
+_VERDICT_ORDER = {"PASS": 0, "FAIL": 1, None: 2}
+
+
+def _scan_out(conn, scan) -> dict:
+    rows = conn.execute(
+        "SELECT sr.symbol, sr.timeframe, sr.run_id, r.status, r.verdict, r.oos_metrics_json, r.trades "
+        "FROM scan_rows sr JOIN lab_runs r ON r.id = sr.run_id WHERE sr.scan_id=?", (scan["id"],)).fetchall()
+    out_rows = []
+    for r in rows:
+        oos = labdb.loads(r["oos_metrics_json"], {}) or {}
+        out_rows.append({
+            "symbol": r["symbol"], "timeframe": r["timeframe"], "run_id": r["run_id"], "status": r["status"],
+            "verdict": r["verdict"], "oos_net_return_pct": oos.get("net_return_pct"),
+            "oos_profit_factor": oos.get("profit_factor"), "oos_max_dd_pct": oos.get("max_dd_pct"),
+            "trades": oos.get("trades") if oos else r["trades"],
+        })
+    out_rows.sort(key=lambda x: (_VERDICT_ORDER.get(x["verdict"], 2),
+                                 -(x["oos_profit_factor"] if x["oos_profit_factor"] is not None else -1e9)))
+    statuses = [r["status"] for r in out_rows]
+    done = sum(1 for s in statuses if s in q.TERMINAL)
+    if statuses and all(s == "cancelled" for s in statuses):
+        status = "cancelled"
+    elif done == len(statuses):
+        status = "done"
+    elif any(s == "running" for s in statuses) or done:
+        status = "running"
+    else:
+        status = "queued"
+    return {"id": scan["id"], "template_id": scan["template_id"], "mode": scan["mode"],
+            "created_at": scan["created_at"], "status": status,
+            "progress": {"done": done, "total": len(statuses)}, "rows": out_rows}
+
+
+@router.get("/scans")
+def list_scans(_: Admin, conn: Conn, limit: int = Query(20, ge=1, le=200)) -> list[dict]:
+    scans = conn.execute("SELECT * FROM lab_scans ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [_scan_out(conn, s) for s in scans]
+
+
+@router.get("/scans/{scan_id}")
+def get_scan(scan_id: int, _: Admin, conn: Conn) -> dict:
+    s = conn.execute("SELECT * FROM lab_scans WHERE id=?", (scan_id,)).fetchone()
+    if s is None:
+        raise HTTPException(404, "scan not found")
+    return _scan_out(conn, s)
+
+
+# ── jobs ─────────────────────────────────────────────────────────────────
+
+@router.get("/jobs/{job_id}")
+def get_job(job_id: int, _: Admin, conn: Conn) -> dict:
+    j = q.get_job(conn, job_id)
+    if j is None:
+        raise HTTPException(404, "job not found")
+    return {"id": j["id"], "kind": j["kind"], "ref_id": j["ref_id"], "status": j["status"],
+            "progress": j["progress"], "error": j["error"], "created_at": j["created_at"],
+            "started_at": j["started_at"], "finished_at": j["finished_at"]}
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel_job(job_id: int, _: Admin, conn: Conn) -> dict:
+    status = q.request_cancel(conn, job_id)
+    if status is None:
+        raise HTTPException(404, "job not found")
+    return {"id": job_id, "status": status}

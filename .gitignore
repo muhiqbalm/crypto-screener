@@ -70,3 +70,6 @@ Thumbs.db
 *.tmp
 *.bak
 *.backup
+
+# Strategy Lab runtime data (lab.db, parquet cache, artifacts)
+data/lab/
