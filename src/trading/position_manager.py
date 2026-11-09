@@ -123,20 +123,17 @@ class PositionManager:
                 f"symbol is currently being processed for user '{user_id}'"
             )
 
+        # On success the lock stays held so that the order cannot race another
+        # webhook; the caller must call release_lock() once the order is done.
         try:
             open_position = await _fetch_open_position(exchange, symbol)
         except Exception:
             lock.release()
             raise
 
-        # Note: lock is intentionally kept held until the caller releases it.
-        # The caller (router.py) must release after the trade is complete.
-        # For simplicity we release immediately after the check — the exchange
-        # itself enforces the actual constraint.
-        lock.release()
-
         if action == "open":
             if open_position is not None:
+                lock.release()
                 logger.warning(
                     "Duplicate position rejected (exchange): user=%s symbol=%s",
                     user_id,
@@ -150,6 +147,7 @@ class PositionManager:
 
         else:  # action == "close"
             if open_position is None:
+                lock.release()
                 logger.warning(
                     "No open position on exchange to close: user=%s symbol=%s",
                     user_id,
@@ -160,6 +158,52 @@ class PositionManager:
                     f"for user '{user_id}'"
                 )
             return open_position
+
+    def release_lock(self, user_id: str, symbol: str) -> None:
+        """Release the lock left held by a successful check_and_lock()."""
+        lock = _position_locks.get(f"{user_id}:{symbol}")
+        if lock is not None and lock.locked():
+            lock.release()
+
+    # ------------------------------------------------------------------
+    # Bot-owned position records
+    # ------------------------------------------------------------------
+
+    def get_open_record(self, user_id: str, symbol: str) -> dict | None:
+        """Return the newest open position the bot itself recorded, or None.
+
+        Closes are limited to what the bot opened so that a manual position on
+        the same account is never closed by a strategy signal.
+        """
+        response = (
+            self._supabase.table("positions")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("symbol", symbol)
+            .eq("status", "open")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        return rows[0] if rows else None
+
+    def mark_missing(self, user_id: str, symbol: str) -> None:
+        """Mark open records as gone when the exchange no longer holds them."""
+        try:
+            (
+                self._supabase.table("positions")
+                .update({
+                    "status": "missing",
+                    "closed_at": datetime.now(tz=timezone.utc).isoformat(),
+                })
+                .eq("user_id", user_id)
+                .eq("symbol", symbol)
+                .eq("status", "open")
+                .execute()
+            )
+        except Exception as exc:
+            logger.error("Failed to mark missing position user=%s symbol=%s: %s", user_id, symbol, exc)
 
     # ------------------------------------------------------------------
     # open_position  (audit log write only)

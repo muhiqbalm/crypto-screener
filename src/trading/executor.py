@@ -45,6 +45,9 @@ class TradeExecutor:
     # Timeout in seconds for order submission (Requirement 5.8)
     ORDER_TIMEOUT_SECONDS: int = 5
 
+    def __init__(self, max_notional: float = 0.0) -> None:
+        self._max_notional = max_notional
+
     def calculate_quantity(
         self,
         size_type: str,
@@ -198,6 +201,13 @@ class TradeExecutor:
             leverage=payload.leverage or 1,
         )
 
+        if self._max_notional and quantity * current_price > self._max_notional:
+            logger.warning(
+                "Order for %s capped from %.2f to %.2f notional",
+                symbol, quantity * current_price, self._max_notional,
+            )
+            quantity = self._max_notional / current_price
+
         quantity = self._round_to_precision(exchange, symbol, quantity)
 
         # Enrich balance_info with order size details now that quantity is known
@@ -282,7 +292,9 @@ class TradeExecutor:
             raise InsufficientBalanceError(str(exc), balance_info=balance_info) from exc
 
         order = await self._place_order_with_timeout(
-            exchange, symbol, close_side, quantity, balance_info=balance_info
+            exchange, symbol, close_side, quantity,
+            balance_info=balance_info,
+            params={"reduceOnly": True},
         )
         return order, balance_info
 
@@ -336,6 +348,7 @@ class TradeExecutor:
         side: str,
         quantity: float,
         balance_info: dict | None = None,
+        params: dict | None = None,
     ) -> dict:
         """Submit a market order with a 5-second hard timeout."""
         try:
@@ -345,6 +358,7 @@ class TradeExecutor:
                     type="market",
                     side=side,
                     amount=quantity,
+                    params=params or {},
                 ),
                 timeout=self.ORDER_TIMEOUT_SECONDS,
             )

@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Redeploy Docker on VPS
+    name: Redeploy PM2 on VPS
     runs-on: ubuntu-latest
 
     steps:

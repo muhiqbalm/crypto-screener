@@ -6,6 +6,7 @@ sandbox/testnet endpoints when ``testnet_enabled`` is True.
 """
 
 import logging
+import time
 from typing import Optional
 
 import ccxt.async_support as ccxt_async
@@ -19,6 +20,10 @@ class AuthenticationError(Exception):
 
 class LeverageSetError(Exception):
     """Raised when setting leverage on the exchange fails."""
+
+
+MARKETS_TTL_SECONDS = 3600
+_markets_cache: dict[tuple[str, bool], tuple[float, dict, dict]] = {}
 
 
 class TradingConnector:
@@ -37,7 +42,7 @@ class TradingConnector:
     """
 
     SUPPORTED_EXCHANGES: dict[str, type] = {
-        "binance": ccxt_async.binance,
+        "binance": ccxt_async.binanceusdm,
         "okx": ccxt_async.okx,
     }
 
@@ -104,7 +109,7 @@ class TradingConnector:
         # Attempt authentication by loading markets — this validates credentials
         # (Req 4.1, 4.5)
         try:
-            await exchange.load_markets()
+            await self._load_markets(exchange, exchange_name_lower)
         except ccxt_async.AuthenticationError as exc:
             await self._close_exchange(exchange)
             error_msg = (
@@ -131,30 +136,7 @@ class TradingConnector:
 
         # Set leverage when provided (Req 4.4, 4.6)
         if leverage is not None:
-            try:
-                await exchange.set_leverage(leverage, symbol)
-                logger.info(
-                    "Leverage set to %d for symbol '%s' on '%s'",
-                    leverage,
-                    symbol,
-                    exchange_name,
-                )
-            except ccxt_async.ExchangeError as exc:
-                await self._close_exchange(exchange)
-                error_msg = (
-                    f"Failed to set leverage {leverage} for symbol '{symbol}' "
-                    f"on '{exchange_name}': {exc}"
-                )
-                logger.error(error_msg)
-                raise LeverageSetError(error_msg) from exc
-            except Exception as exc:
-                await self._close_exchange(exchange)
-                error_msg = (
-                    f"Unexpected error setting leverage {leverage} for symbol "
-                    f"'{symbol}' on '{exchange_name}': {exc}"
-                )
-                logger.error(error_msg)
-                raise LeverageSetError(error_msg) from exc
+            await self.apply_leverage(exchange, exchange_name, leverage, symbol)
 
         logger.info(
             "Trading connector created for exchange '%s', symbol '%s', testnet=%s",
@@ -163,6 +145,39 @@ class TradingConnector:
             self._testnet_enabled,
         )
         return exchange
+
+    async def apply_leverage(
+        self,
+        exchange: ccxt_async.Exchange,
+        exchange_name: str,
+        leverage: int,
+        symbol: str,
+    ) -> None:
+        """Set leverage for *symbol*; closes the exchange and raises LeverageSetError on failure."""
+        try:
+            await exchange.set_leverage(leverage, symbol)
+            logger.info(
+                "Leverage set to %d for symbol '%s' on '%s'",
+                leverage,
+                symbol,
+                exchange_name,
+            )
+        except ccxt_async.ExchangeError as exc:
+            await self._close_exchange(exchange)
+            error_msg = (
+                f"Failed to set leverage {leverage} for symbol '{symbol}' "
+                f"on '{exchange_name}': {exc}"
+            )
+            logger.error(error_msg)
+            raise LeverageSetError(error_msg) from exc
+        except Exception as exc:
+            await self._close_exchange(exchange)
+            error_msg = (
+                f"Unexpected error setting leverage {leverage} for symbol "
+                f"'{symbol}' on '{exchange_name}': {exc}"
+            )
+            logger.error(error_msg)
+            raise LeverageSetError(error_msg) from exc
 
     async def create_exchange_for_monitoring(
         self,
@@ -212,7 +227,7 @@ class TradingConnector:
             exchange.verbose = True
 
         try:
-            await exchange.load_markets()
+            await self._load_markets(exchange, exchange_name_lower)
         except ccxt_async.AuthenticationError as exc:
             await self._close_exchange(exchange)
             error_msg = (
@@ -237,6 +252,18 @@ class TradingConnector:
         )
         return exchange
 
+    async def _load_markets(self, exchange: ccxt_async.Exchange, exchange_name: str) -> None:
+        """Load markets once per hour; each webhook builds a new client."""
+        key = (exchange_name, self._testnet_enabled)
+        cached = _markets_cache.get(key)
+        if cached and time.monotonic() - cached[0] < MARKETS_TTL_SECONDS:
+            exchange.set_markets(cached[1], cached[2])
+            return
+
+        await exchange.load_markets()
+        if isinstance(exchange.markets, dict) and exchange.markets:
+            _markets_cache[key] = (time.monotonic(), exchange.markets, exchange.currencies)
+
     @staticmethod
     async def _close_exchange(exchange: ccxt_async.Exchange) -> None:
         """Safely close an exchange instance, suppressing any errors."""
@@ -244,3 +271,15 @@ class TradingConnector:
             await exchange.close()
         except Exception:
             pass  # Ignore close errors during error handling
+
+
+async def warm_markets(exchange_name: str, testnet_enabled: bool) -> None:
+    """Load public market data into the cache so the first webhook skips it."""
+    connector = TradingConnector(testnet_enabled=testnet_enabled)
+    exchange_class = connector.SUPPORTED_EXCHANGES[exchange_name]
+    exchange = exchange_class({"sandbox": testnet_enabled, "options": {"defaultType": "future"}})
+    try:
+        _markets_cache.pop((exchange_name, bool(testnet_enabled)), None)
+        await connector._load_markets(exchange, exchange_name)
+    finally:
+        await connector._close_exchange(exchange)

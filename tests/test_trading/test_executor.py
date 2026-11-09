@@ -109,7 +109,8 @@ class TestExecuteTradeOpenLong:
         call_kwargs = exchange.create_order.call_args
         assert call_kwargs.kwargs["side"] == "buy"
         assert call_kwargs.kwargs["type"] == "market"
-        assert result["id"] == "order-123"
+        order, _balance_info = result
+        assert order["id"] == "order-123"
 
     @pytest.mark.asyncio
     async def test_percent_quantity_used(self):
@@ -214,8 +215,8 @@ class TestExecuteTradeClose:
             await executor.execute_trade(exchange, payload, position=None)
 
     @pytest.mark.asyncio
-    async def test_close_does_not_fetch_balance_or_ticker(self):
-        """Close action skips balance/ticker fetching entirely."""
+    async def test_close_is_reduce_only_for_position_quantity(self):
+        """Close sends a reduceOnly order sized from the position record."""
         executor = TradeExecutor()
         exchange = AsyncMock()
         exchange.create_order.return_value = {
@@ -227,8 +228,9 @@ class TestExecuteTradeClose:
 
         await executor.execute_trade(exchange, payload, position=position)
 
-        exchange.fetch_balance.assert_not_called()
-        exchange.fetch_ticker.assert_not_called()
+        kwargs = exchange.create_order.call_args.kwargs
+        assert kwargs["side"] == "sell"
+        assert kwargs["params"] == {"reduceOnly": True}
 
 
 # ---------------------------------------------------------------------------

@@ -234,9 +234,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     warmer_task = asyncio.create_task(_background_cache_warmer())
 
+    from src.trading.config import get_trading_settings
+    from src.trading.local_db import LocalDatabaseClient
+    from src.trading.reconciliation import run_reconciliation
+
+    try:
+        trading_settings = get_trading_settings()
+    except Exception as e:
+        # The screener still runs without trading configured; the webhook
+        # itself will report the configuration error.
+        logger.error(f"Trading settings unavailable, trading background tasks disabled: {e}")
+        trading_settings = None
+
+    reconcile_task = None
+    if trading_settings and trading_settings.reconcile_interval_seconds > 0:
+        reconcile_task = asyncio.create_task(
+            run_reconciliation(LocalDatabaseClient(), trading_settings)
+        )
+
+    from src.trading.connector import MARKETS_TTL_SECONDS, warm_markets
+
+    async def _trading_markets_warmer():
+        # Keeps the webhook's market cache hot; TradingView drops requests
+        # that take longer than 3 seconds.
+        while True:
+            try:
+                await warm_markets("binance", trading_settings.testnet_enabled)
+                logger.info("Trading market cache warmed")
+            except Exception as e:
+                logger.error(f"Trading market warm-up failed: {e}")
+            await asyncio.sleep(MARKETS_TTL_SECONDS - 300)
+
+    markets_task = asyncio.create_task(_trading_markets_warmer()) if trading_settings else None
+
     yield
 
     # --- Shutdown ---
+    if markets_task is not None:
+        markets_task.cancel()
+    if reconcile_task is not None:
+        reconcile_task.cancel()
     warmer_task.cancel()
     try:
         await warmer_task

@@ -41,6 +41,10 @@ class WebhookPayload(BaseModel):
         if ":" in sym and "/" not in sym:
             sym = sym.split(":")[-1]
 
+        # TradingView perpetual charts report "BTCUSDT.P"
+        if sym.endswith(".P"):
+            sym = sym[:-2]
+
         # Normalize plain ticker ending in USDT (e.g. "ETHUSDT" -> "ETH/USDT:USDT")
         if sym.endswith("USDT") and "/" not in sym and ":" not in sym:
             base = sym[:-4]

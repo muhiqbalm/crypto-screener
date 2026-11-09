@@ -29,8 +29,9 @@ def _calculate_pnl(position: dict, exit_price: float) -> float:
     Returns:
         Realized PnL in quote currency units.
     """
-    entry_price: float = float(position["entry_price"])
-    quantity: float = float(position["quantity"])
+    # Close orders pass the CCXT position, audit records use snake_case keys.
+    entry_price: float = float(position.get("entry_price") or position["entryPrice"])
+    quantity: float = float(position.get("quantity") or position["contracts"])
     side: str = position["side"]
 
     if side == "long":
@@ -74,6 +75,7 @@ def _format_notification_message(
     lines = [
         f"{action_emoji} Trade Executed",
         f"",
+        *([f"Account:  {trade_result['account']}"] if trade_result.get("account") else []),
         f"Exchange: {exchange.upper()}",
         f"Symbol:   {symbol}",
         f"Action:   {action.upper()} {side.upper()} {side_emoji}",
@@ -112,6 +114,26 @@ class TelegramNotifier:
         """
         self._bot_token = bot_token
         self._base_url = f"https://api.telegram.org/bot{bot_token}"
+
+    async def send_alert(self, chat_id: str | None, text: str) -> None:
+        """Send a plain operational alert; failures are logged, never raised."""
+        if not chat_id or not self._bot_token:
+            logger.warning("Telegram alert skipped (not configured): %s", text)
+            return
+        try:
+            async with httpx.AsyncClient(timeout=self.TIMEOUT_SECONDS) as client:
+                response = await client.post(
+                    f"{self._base_url}/sendMessage",
+                    json={"chat_id": chat_id, "text": text},
+                )
+            if not response.is_success:
+                logger.error(
+                    "Telegram alert failed with status %d: %s",
+                    response.status_code,
+                    response.text,
+                )
+        except httpx.HTTPError as exc:
+            logger.error("Telegram alert failed: %s", exc)
 
     async def send_trade_notification(
         self,

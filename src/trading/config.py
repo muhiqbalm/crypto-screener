@@ -33,6 +33,19 @@ class TradingSettings(BaseSettings):
     # Telegram bot token for trade notifications (optional)
     telegram_bot_token: str = ""
 
+    # Chat that receives notifications when a user has no telegram_chat_id
+    telegram_default_chat_id: str = ""
+
+    # While this file exists, new positions are rejected; closes still run.
+    halt_file: str = "TRADING_HALT"
+
+    # Risk limits; 0 disables the limit.
+    max_leverage: int = 0
+    max_notional_usdt: float = 0.0
+
+    # Seconds between exchange/audit position checks; 0 disables the check.
+    reconcile_interval_seconds: int = 0
+
     # Use testnet/sandbox mode for all exchange connections
     testnet_enabled: bool = True
 

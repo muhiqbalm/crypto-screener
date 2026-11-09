@@ -282,6 +282,14 @@ class LocalTableQuery:
         return d
 
 
+# Columns added after the first release; CREATE TABLE IF NOT EXISTS does not
+# alter existing databases, so these are applied on start-up.
+_ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "positions": {"quantity": "REAL", "exit_price": "REAL"},
+    "trade_logs": {"error_details": "TEXT"},
+}
+
+
 class LocalDatabaseClient:
     """Local SQLite Client matching the Supabase-py client interface."""
 
@@ -380,6 +388,12 @@ class LocalDatabaseClient:
                 created_at TEXT NOT NULL
             );
         """)
+
+        for table, columns in _ADDED_COLUMNS.items():
+            existing = {row[1] for row in cursor.execute(f"PRAGMA table_info({table})")}
+            for column, column_type in columns.items():
+                if column not in existing:
+                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
 
         conn.commit()
         conn.close()
