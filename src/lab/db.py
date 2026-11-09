@@ -13,6 +13,14 @@ from .settings import get_lab_settings
 
 _SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 _init_lock = threading.Lock()
+
+# Additive column migrations for lab.db files created by an earlier version.
+_COLUMN_MIGRATIONS = [
+    ("lab_runs", "search_json", "TEXT"),
+    ("lab_runs", "n_trials", "INTEGER"),
+    ("lab_runs", "trials_done", "INTEGER"),
+    ("lab_runs", "top_trials_json", "TEXT"),
+]
 _initialised: set[str] = set()
 
 
@@ -82,6 +90,10 @@ def init_db(conn: sqlite3.Connection, path: str) -> None:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
+        for table, col, typ in _COLUMN_MIGRATIONS:
+            cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if col not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typ}")
         conn.commit()
         _initialised.add(path)
 

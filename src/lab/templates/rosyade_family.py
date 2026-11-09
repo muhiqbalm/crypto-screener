@@ -258,3 +258,52 @@ def public_schema() -> dict:
         "timeframes": list(TIMEFRAMES),
         "params": [dict(p) for p in PARAMS],
     }
+
+
+N_TRIALS_OPTIONS = (10, 30, 60)
+
+
+def resolve_search(search: dict | None) -> list[dict]:
+    """Validate an optimize search spec and return the param specs to search.
+
+    search = {"params": [keys], "ranges": {key: [min, max]}}; None -> all tunables
+    with template ranges. Keys must be tunable; ranges are clamped to the
+    template min/max (int params get integer bounds) and must stay non-empty.
+    """
+    tun = {p["key"]: p for p in tunable_params()}
+    if not search:
+        return [dict(p) for p in tun.values()]
+    keys = list(search.get("params") or [])
+    ranges = dict(search.get("ranges") or {})
+    if not keys:
+        keys = list(ranges) or list(tun)
+    errors = []
+    for k in keys + [k for k in ranges if k not in keys]:
+        if k not in PARAM_INDEX:
+            errors.append(f"{k}: unknown param")
+        elif k not in tun:
+            errors.append(f"{k}: not tunable (tunable: {', '.join(tun)})")
+    for k in ranges:
+        if k not in keys and k in tun:
+            errors.append(f"{k}: range given but param not in search.params")
+    if len(set(keys)) != len(keys):
+        errors.append("duplicate keys in search.params")
+    if errors:
+        raise ParamError("; ".join(errors))
+    out = []
+    for k in keys:
+        spec = dict(tun[k])
+        if k in ranges:
+            r = ranges[k]
+            if not isinstance(r, (list, tuple)) or len(r) != 2 or any(
+                    isinstance(x, bool) or not isinstance(x, (int, float)) for x in r):
+                raise ParamError(f"{k}: range must be [min, max] numbers")
+            lo, hi = max(float(r[0]), spec["min"]), min(float(r[1]), spec["max"])
+            if spec["type"] == "int":
+                import math
+                lo, hi = int(math.ceil(lo)), int(math.floor(hi))
+            if lo >= hi:
+                raise ParamError(f"{k}: empty range after clamping to [{spec['min']}, {spec['max']}]")
+            spec["min"], spec["max"] = lo, hi
+        out.append(spec)
+    return out

@@ -17,7 +17,7 @@ from src.lab import journal as jr
 from src.lab import market
 from src.lab import paper
 from src.lab import queue as q
-from src.lab.data_cache import read_index
+from src.lab.data_cache import cached_datasets
 from src.lab.settings import get_lab_settings
 from src.lab.templates import TEMPLATES, get_template
 from src.lab.templates.rosyade_family import ParamError
@@ -61,18 +61,33 @@ def _validate(t, timeframe: str, params: dict) -> dict:
         raise HTTPException(422, f"invalid params: {e}")
 
 
+def _resolve_search(t, mode: str, search) -> Optional[dict]:
+    """Validate an optimize search spec -> normalised {params, ranges} (422 on error)."""
+    if search is None:
+        return None
+    if mode != "optimize":
+        raise HTTPException(422, "search is only allowed with mode=optimize")
+    try:
+        specs = t.resolve_search(search.model_dump())
+    except ParamError as e:
+        raise HTTPException(422, f"invalid search: {e}")
+    return {"params": [x["key"] for x in specs], "ranges": {x["key"]: [x["min"], x["max"]] for x in specs}}
+
+
 def create_run(conn, *, template_id: str, symbol: str, timeframe: str, mode: str, params: dict,
                costs: dict, start: Optional[str], end: Optional[str], n_trials: Optional[int] = None,
-               scan_id: Optional[int] = None, priority: int = 0) -> tuple[int, int]:
+               scan_id: Optional[int] = None, priority: int = 0,
+               search: Optional[dict] = None) -> tuple[int, int]:
     now = labdb.utcnow()
     cfg = conn.execute(
         "INSERT INTO strategy_configs (template_id, params_json, created_at) VALUES (?, ?, ?)",
         (template_id, labdb.dumps(params), now)).lastrowid
     run_id = conn.execute(
         "INSERT INTO lab_runs (scan_id, config_id, template_id, symbol, timeframe, mode, status, start_date, "
-        "end_date, params_json, costs_json, created_at) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)",
+        "end_date, params_json, costs_json, search_json, n_trials, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?, ?)",
         (scan_id, cfg, template_id, symbol, timeframe, mode, start, end, labdb.dumps(params),
-         labdb.dumps(costs), now)).lastrowid
+         labdb.dumps(costs), labdb.dumps(search), n_trials if mode == "optimize" else None, now)).lastrowid
     job_id = q.enqueue(conn, "run", run_id, {"n_trials": n_trials} if n_trials else {}, priority=priority)
     conn.execute("UPDATE lab_runs SET job_id=? WHERE id=?", (job_id, run_id))
     return int(run_id), int(job_id)
@@ -111,6 +126,14 @@ def _run_detail(r) -> dict:
     extra = labdb.loads(r["extra_json"], {}) or {}
     if extra.get("sensitivity"):
         d["sensitivity"] = extra["sensitivity"]
+    opt = extra.get("optimizer") or {}
+    d.update({
+        "search": labdb.loads(r["search_json"]),
+        "n_trials": r["n_trials"],
+        "trials_done": r["trials_done"],
+        "top_trials": labdb.loads(r["top_trials_json"]),
+        "objective": opt.get("objective"),
+    })
     return d
 
 
@@ -156,7 +179,7 @@ def templates(_: Admin) -> list[dict]:
 
 @router.get("/symbols")
 def symbols(_: Admin) -> list[dict]:
-    idx = read_index()
+    idx = cached_datasets()
     cached: dict[str, list[str]] = {}
     for v in idx.values():
         cached.setdefault(v["symbol"], []).append(v["timeframe"])
@@ -169,7 +192,7 @@ def symbols(_: Admin) -> list[dict]:
 
 @router.get("/data/status")
 def data_status(_: Admin) -> list[dict]:
-    idx = read_index()
+    idx = cached_datasets()
     return [{"symbol": v["symbol"], "timeframe": v["timeframe"], "first": v["first"], "last": v["last"],
              "rows": v["rows"]} for _, v in sorted(idx.items())]
 
@@ -182,9 +205,11 @@ def create_run_ep(body: RunCreate, _: Admin, conn: Conn) -> dict:
     params = _validate(t, body.timeframe, body.params)
     if body.start and body.end and body.start >= body.end:
         raise HTTPException(422, "start must be before end")
+    search = _resolve_search(t, body.mode, body.search)
     run_id, job_id = create_run(
         conn, template_id=body.template_id, symbol=body.symbol, timeframe=body.timeframe, mode=body.mode,
-        params=params, costs=body.costs.model_dump(), start=body.start, end=body.end, n_trials=body.n_trials)
+        params=params, costs=body.costs.model_dump(), start=body.start, end=body.end, n_trials=body.n_trials,
+        search=search)
     conn.commit()
     return {"run_id": run_id, "job_id": job_id}
 
@@ -221,6 +246,7 @@ def create_scan(body: ScanCreate, _: Admin, conn: Conn) -> dict:
     params = None
     for tf in tfs:
         params = _validate(t, tf, body.params)
+    search = _resolve_search(t, body.mode, body.search)
     combos = [(s, tf) for s in body.symbols for tf in tfs]
     if len(combos) > MAX_SCAN_COMBOS:
         raise HTTPException(422, f"too many combinations ({len(combos)} > {MAX_SCAN_COMBOS})")
@@ -232,7 +258,8 @@ def create_scan(body: ScanCreate, _: Admin, conn: Conn) -> dict:
     for s, tf in combos:
         run_id, _job = create_run(conn, template_id=body.template_id, symbol=s, timeframe=tf, mode=body.mode,
                                   params=params, costs=body.costs.model_dump(), start=body.start,
-                                  end=body.end, n_trials=body.n_trials, scan_id=scan_id, priority=-1)
+                                  end=body.end, n_trials=body.n_trials, scan_id=scan_id, priority=-1,
+                                  search=search)
         conn.execute("INSERT INTO scan_rows (scan_id, symbol, timeframe, run_id) VALUES (?, ?, ?, ?)",
                      (scan_id, s, tf, run_id))
     conn.commit()

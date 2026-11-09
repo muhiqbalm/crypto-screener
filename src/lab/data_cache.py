@@ -63,6 +63,26 @@ def read_index(path: Optional[Path] = None) -> dict:
         return {}
 
 
+def cached_datasets(path: Optional[Path] = None) -> dict:
+    """Stdlib-only view of what is cached: _index.json merged with the parquet
+    files actually on disk (files missing from the index get rows/first/last None;
+    index entries whose file was deleted are dropped)."""
+    d = Path(path or get_lab_settings().data_dir)
+    idx = read_index(d / "_index.json")
+    out = {}
+    try:
+        files = list(d.glob("*_PERP_*.parquet"))
+    except OSError:
+        files = []
+    for f in files:
+        sym, _, tf = f.stem.partition("_PERP_")
+        if tf not in TF_SECONDS:
+            continue
+        key = f"{sym}_{tf}"
+        out[key] = idx.get(key) or {"symbol": sym, "timeframe": tf, "first": None, "last": None, "rows": None}
+    return out
+
+
 def _write_index_entry(symbol: str, tf: str, df) -> None:
     idx = read_index(index_path())
     key = f"{symbol.upper()}_{tf}"
@@ -124,15 +144,35 @@ def _save(df, path: Path) -> None:
 
 # ── data.binance.vision bulk ─────────────────────────────────────────────
 
-def _http_get(url: str, timeout: float = 60.0) -> Optional[bytes]:
-    req = urllib.request.Request(url, headers=_UA)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.read()
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
+HTTP_ATTEMPTS = 3
+HTTP_BACKOFF_S = 2.0  # 2 s, 4 s between attempts
+
+
+def _http_get(url: str, timeout: float = 60.0, attempts: int = HTTP_ATTEMPTS,
+              backoff_s: float = HTTP_BACKOFF_S) -> Optional[bytes]:
+    """GET with retries + exponential backoff. 404 -> None (file does not exist).
+    Other errors (connection reset, timeouts, 5xx, 429) are retried, then raised."""
+    last: Optional[BaseException] = None
+    for i in range(attempts):
+        req = urllib.request.Request(url, headers=_UA)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            last = e
+        except (urllib.error.URLError, OSError, TimeoutError) as e:  # incl. ConnectionResetError
+            last = e
+        if i < attempts - 1:
+            time.sleep(backoff_s * (2 ** i))
+    raise ConnectionError(f"GET {url} failed after {attempts} attempts: {last}")
+
+
+def _month_bounds_ms(y: int, m: int) -> tuple[int, int]:
+    a = datetime(y, m, 1, tzinfo=timezone.utc)
+    b = datetime(y + (m == 12), 1 if m == 12 else m + 1, 1, tzinfo=timezone.utc)
+    return int(a.timestamp() * 1000), int(b.timestamp() * 1000)
 
 
 def _read_zip_csv(blob: bytes, kind: str):
@@ -166,40 +206,85 @@ def _months(start: date, end: date):
             y, m = y + 1, 1
 
 
-def fetch_vision_klines(symbol: str, tf: str, start: date, progress: Optional[Callable] = None):
+def _vision_month_klines(symbol: str, tf: str, y: int, m: int, today: date):
+    """One month from data.binance.vision (monthly zip, or daily zips for the
+    current/just-finished month). Returns DataFrame | None (no data); raises on
+    network failure after retries."""
+    blob = _http_get(f"{VISION}/monthly/klines/{symbol}/{tf}/{symbol}-{tf}-{y}-{m:02d}.zip")
+    if blob:
+        return _read_zip_csv(blob, "klines")
+    if (today.year * 12 + today.month) - (y * 12 + m) > 1:
+        return None
+    import pandas as pd
+    frames, d = [], date(y, m, 1)
+    while d.month == m and d < today:
+        b = _http_get(f"{VISION}/daily/klines/{symbol}/{tf}/{symbol}-{tf}-{d.isoformat()}.zip")
+        if b:
+            frames.append(_read_zip_csv(b, "klines"))
+        d += timedelta(days=1)
+    return pd.concat(frames, ignore_index=True) if frames else None
+
+
+def fetch_vision_klines(symbol: str, tf: str, start: date, progress: Optional[Callable] = None,
+                        ccxt_fallback: Optional[Callable] = None):
+    """Monthly bulk download with retries; months that still fail are fetched via
+    ccxt public for exactly that month. Raises if a month cannot be obtained at all
+    (never returns silent holes)."""
     import pandas as pd
     today = datetime.now(timezone.utc).date()
-    frames = []
+    frames, failed = [], []
     months = list(_months(start, today))
     for n, (y, m) in enumerate(months):
-        url = f"{VISION}/monthly/klines/{symbol}/{tf}/{symbol}-{tf}-{y}-{m:02d}.zip"
-        blob = _http_get(url)
-        recent = (today.year * 12 + today.month) - (y * 12 + m) <= 1
-        if blob is None and recent:
-            # current / just-finished month: monthly zip may not exist yet -> daily zips
-            d = date(y, m, 1)
-            while d.month == m and d < today:
-                b = _http_get(f"{VISION}/daily/klines/{symbol}/{tf}/{symbol}-{tf}-{d.isoformat()}.zip")
-                if b:
-                    frames.append(_read_zip_csv(b, "klines"))
-                d += timedelta(days=1)
-        elif blob:
-            frames.append(_read_zip_csv(blob, "klines"))
+        try:
+            df = _vision_month_klines(symbol, tf, y, m, today)
+            if df is not None:
+                frames.append(df)
+        except ConnectionError:
+            failed.append((y, m))
         if progress:
             progress({"stage": f"download {symbol} {tf}", "done": n + 1, "total": len(months)})
+    fb = ccxt_fallback or (lambda a, b: fetch_ccxt_klines(symbol, tf, a, until_ms=b))
+    still = []
+    for y, m in failed:
+        a, b = _month_bounds_ms(y, m)
+        try:
+            df = fb(a, b)
+        except Exception:  # noqa: BLE001
+            df = None
+        if df is None or len(df) == 0:
+            still.append(f"{y}-{m:02d}")
+        else:
+            frames.append(df)
+    if still:
+        raise RuntimeError(f"{symbol} {tf}: could not download months {', '.join(still)} "
+                           "(data.binance.vision after retries and ccxt fallback)")
     if not frames:
         return None
     return _normalise(pd.concat(frames, ignore_index=True))
 
 
-def fetch_vision_funding(symbol: str, start: date):
+def fetch_vision_funding(symbol: str, start: date, ccxt_fallback: Optional[Callable] = None):
     import pandas as pd
     today = datetime.now(timezone.utc).date()
-    frames = []
+    frames, failed = [], []
     for y, m in _months(start, today):
-        blob = _http_get(f"{VISION}/monthly/fundingRate/{symbol}/{symbol}-fundingRate-{y}-{m:02d}.zip")
+        try:
+            blob = _http_get(f"{VISION}/monthly/fundingRate/{symbol}/{symbol}-fundingRate-{y}-{m:02d}.zip")
+        except ConnectionError:
+            failed.append((y, m))
+            continue
         if blob:
             frames.append(_read_zip_csv(blob, "funding"))
+    fb = ccxt_fallback or (lambda a, b: fetch_ccxt_funding(symbol, a, until_ms=b))
+    for y, m in failed:
+        a, b = _month_bounds_ms(y, m)
+        try:
+            df = fb(a, b)
+        except Exception:  # noqa: BLE001
+            df = None
+        if df is None or len(df) == 0:
+            raise RuntimeError(f"{symbol}: could not download funding for {y}-{m:02d}")
+        frames.append(df)
     if not frames:
         return None
     return _normalise(pd.concat(frames, ignore_index=True))
@@ -216,11 +301,11 @@ def _market(symbol: str) -> str:
     return f"{symbol.upper()[:-4]}/USDT:USDT"
 
 
-def fetch_ccxt_klines(symbol: str, tf: str, since_ms: int, ex=None):
+def fetch_ccxt_klines(symbol: str, tf: str, since_ms: int, ex=None, until_ms: Optional[int] = None):
     import pandas as pd
     ex = ex or _ccxt()
     tf_ms = TF_SECONDS[tf] * 1000
-    now_ms = int(time.time() * 1000)
+    now_ms = until_ms or int(time.time() * 1000)
     rows, cursor = [], since_ms
     while cursor < now_ms:
         batch = ex.fetch_ohlcv(_market(symbol), tf, since=cursor, limit=1500)
@@ -237,14 +322,16 @@ def fetch_ccxt_klines(symbol: str, tf: str, since_ms: int, ex=None):
     if not rows:
         return None
     df = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    if until_ms:
+        df = df[df["timestamp"] < until_ms]
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     return _normalise(df)
 
 
-def fetch_ccxt_funding(symbol: str, since_ms: int, ex=None):
+def fetch_ccxt_funding(symbol: str, since_ms: int, ex=None, until_ms: Optional[int] = None):
     import pandas as pd
     ex = ex or _ccxt()
-    now_ms = int(time.time() * 1000)
+    now_ms = until_ms or int(time.time() * 1000)
     rows, cursor = [], since_ms
     while cursor < now_ms:
         batch = ex.fetch_funding_rate_history(_market(symbol), since=cursor, limit=1000)
@@ -259,6 +346,8 @@ def fetch_ccxt_funding(symbol: str, since_ms: int, ex=None):
     if not rows:
         return None
     df = pd.DataFrame(rows)
+    if until_ms:
+        df = df[df["timestamp"] < until_ms]
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     return _normalise(df)
 

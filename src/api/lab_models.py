@@ -32,6 +32,21 @@ def _check_date(v: Optional[str]) -> Optional[str]:
     return v
 
 
+N_TRIALS_OPTIONS = (10, 30, 60)
+
+
+class SearchSpec(BaseModel):
+    """Optimize search space: which tunable params to search and optional ranges."""
+    params: list[str] = Field(default_factory=list, max_length=50)
+    ranges: dict[str, list[float]] = Field(default_factory=dict)
+
+
+def _check_trials(v: Optional[int]) -> Optional[int]:
+    if v is not None and v not in N_TRIALS_OPTIONS:
+        raise ValueError(f"n_trials must be one of {list(N_TRIALS_OPTIONS)}")
+    return v
+
+
 class RunCreate(BaseModel):
     template_id: str
     symbol: str
@@ -41,7 +56,14 @@ class RunCreate(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     costs: Costs = Field(default_factory=Costs)
     mode: Literal["backtest", "validate", "optimize"] = "backtest"
-    n_trials: Optional[int] = Field(None, ge=5, le=1000)  # additive; capped by LAB_OPTUNA_MAX_TRIALS
+    n_trials: Optional[int] = None  # 10 | 30 | 60 (optimize); also capped by LAB_OPTUNA_MAX_TRIALS
+    search: Optional[SearchSpec] = None  # optimize only
+
+    @field_validator("n_trials")
+    @classmethod
+    def _trials(cls, v: Optional[int]) -> Optional[int]:
+        return _check_trials(v)
+
 
     @field_validator("symbol")
     @classmethod
@@ -62,7 +84,13 @@ class ScanCreate(BaseModel):
     mode: Literal["validate", "optimize"] = "validate"
     start: Optional[str] = None
     end: Optional[str] = None
-    n_trials: Optional[int] = Field(None, ge=5, le=1000)
+    n_trials: Optional[int] = None
+    search: Optional[SearchSpec] = None
+
+    @field_validator("n_trials")
+    @classmethod
+    def _trials(cls, v: Optional[int]) -> Optional[int]:
+        return _check_trials(v)
 
     @field_validator("symbols")
     @classmethod

@@ -248,3 +248,59 @@ def test_paper_flow_and_journal(client_for, fake_market):
               "equity_curve", "by_symbol", "by_source"):
         assert k in s
     assert s["trades"] == 1 and 0 <= s["winrate"] <= 1
+
+
+OPT = {**RUN, "mode": "optimize"}
+
+
+def test_optimize_search_accepted_and_echoed(client_for):
+    c = client_for("u-admin")
+    r = c.post("/api/v1/lab/runs", json={**OPT, "n_trials": 30, "search": {
+        "params": ["long_sl_pct", "cooldown_bars"], "ranges": {"long_sl_pct": [5, 100]}}})
+    assert r.status_code == 200, r.text
+    d = c.get(f"/api/v1/lab/runs/{r.json()['run_id']}").json()
+    assert d["n_trials"] == 30
+    assert d["search"] == {"params": ["long_sl_pct", "cooldown_bars"],
+                           "ranges": {"long_sl_pct": [5.0, 30.0], "cooldown_bars": [0, 50]}}
+    for k in ("trials_done", "top_trials", "objective"):
+        assert k in d
+    # default search = all tunables (stored as null -> worker uses all 12)
+    r2 = c.post("/api/v1/lab/runs", json={**OPT, "n_trials": 10}).json()
+    assert c.get(f"/api/v1/lab/runs/{r2['run_id']}").json()["search"] is None
+
+
+@pytest.mark.parametrize("patch", [
+    {"search": {"params": ["leverage"]}},
+    {"search": {"params": ["nope"]}},
+    {"search": {"params": ["long_sl_pct"], "ranges": {"long_sl_pct": [40, 60]}}},
+    {"n_trials": 15},
+    {"mode": "validate", "search": {"params": ["long_sl_pct"]}},
+])
+def test_optimize_search_422(client_for, patch):
+    c = client_for("u-admin")
+    assert c.post("/api/v1/lab/runs", json={**OPT, **patch}).status_code == 422
+
+
+def test_scan_optimize_with_search(client_for):
+    c = client_for("u-admin")
+    body = {"template_id": "rosyade_family", "symbols": ["ETHUSDT"], "timeframes": ["4h"], "mode": "optimize",
+            "n_trials": 10, "search": {"params": ["short_sl_pct"], "ranges": {"short_sl_pct": [1, 6]}}}
+    r = c.post("/api/v1/lab/scans", json=body)
+    assert r.status_code == 200, r.text
+    row = c.get(f"/api/v1/lab/scans/{r.json()['scan_id']}").json()["rows"][0]
+    d = c.get(f"/api/v1/lab/runs/{row['run_id']}").json()
+    assert d["search"]["params"] == ["short_sl_pct"] and d["n_trials"] == 10
+    bad = {**body, "search": {"params": ["leverage"]}}
+    assert c.post("/api/v1/lab/scans", json=bad).status_code == 422
+
+
+def test_symbols_reports_cached_files(client_for, lab_env):
+    d = lab_env / "cache"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "ETHUSDT_PERP_4h.parquet").write_bytes(b"x")
+    (d / "ETHUSDT_PERP_1h.parquet").write_bytes(b"x")
+    c = client_for("u-admin")
+    eth = next(s for s in c.get("/api/v1/lab/symbols").json() if s["symbol"] == "ETHUSDT")
+    assert eth == {"symbol": "ETHUSDT", "has_data": True, "timeframes": ["1h", "4h"]}
+    btc = next(s for s in c.get("/api/v1/lab/symbols").json() if s["symbol"] == "BTCUSDT")
+    assert btc["has_data"] is False

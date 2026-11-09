@@ -38,10 +38,10 @@ class Progress:
     def __init__(self, conn, job_id: int):
         self.conn, self.job_id, self._last = conn, job_id, 0.0
 
-    def __call__(self, stage: str, done: int = 0, total: int = 0, force: bool = False):
+    def __call__(self, stage: str, done: int = 0, total: int = 0, force: bool = False, **extra):
         now = time.time()
         if force or now - self._last > 2.0:
-            q.set_progress(self.conn, self.job_id, {"stage": stage, "done": done, "total": total})
+            q.set_progress(self.conn, self.job_id, {"stage": stage, "done": done, "total": total, **extra})
             self._last = now
 
 
@@ -50,10 +50,8 @@ def _months_add(ts, months: int):
     return ts + pd.DateOffset(months=months)
 
 
-def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: dict,
-                       n_trials: int, holdout_start, progress: Progress) -> dict:
-    """Rolling walk-forward on the development segment; params are RE-OPTIMISED
-    on every train window and evaluated once on the following test window."""
+def wf_windows(dev_df, warmup: int):
+    """Rolling (train, test) windows inside the development segment (last 6)."""
     import pandas as pd
     ts = dev_df["timestamp"]
     first, last = ts.iloc[warmup], ts.iloc[-1]
@@ -64,16 +62,30 @@ def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: di
     while _months_add(t, test_m) <= last + pd.Timedelta(days=1):
         windows.append((_months_add(t, -train_m), t, _months_add(t, test_m)))
         t = _months_add(t, test_m)
-    windows = windows[-6:]
-    per_fold = max(8, n_trials // 3)
-    folds, growth, pfs = [], 1.0, []
+    return windows[-6:], train_m, test_m
+
+
+def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: dict, per_fold: int,
+                       holdout_start, specs: list[dict], on_trial=None) -> dict:
+    """Rolling walk-forward on the development segment; params are RE-OPTIMISED
+    (same search space + objective) on every train window and evaluated once on
+    the following test window. The holdout is never touched here."""
+    windows, train_m, test_m = wf_windows(dev_df, warmup)
+    n_dev = max(1, len(dev_df) - warmup)
+    folds, growth, pfs, trials = [], 1.0, [], 0
     for k, (a, b, c) in enumerate(windows):
-        progress(f"walk-forward fold {k + 1}/{len(windows)}", k, len(windows), force=True)
         train_df, tw = ea.window(dev_df, a, b, warmup)
         test_df, sw = ea.window(dev_df, b, c, warmup)
         if len(train_df) - tw < 50 or len(test_df) - sw < 20:
+            if on_trial:
+                on_trial(k, per_fold, per_fold)
+            trials += per_fold
             continue
-        opt = ea.optimize(train_df, tw, params, tf, costs, per_fold, holdout_start, seed=42 + k)
+        min_tr = max(10, int(round(30 * (len(train_df) - tw) / n_dev)))
+        opt = ea.optimize(train_df, tw, params, tf, costs, per_fold, holdout_start, seed=42 + k,
+                          specs=specs, min_trades=min_tr, top_n=1,
+                          progress=(lambda d, t, k=k: on_trial(k, d, t)) if on_trial else None)
+        trials += opt["trials"]
         cfg, ecfg = ea.build_configs(opt["best_params"], tf, costs)
         res_test, _ = ea.run(test_df, cfg, ecfg, warmup=sw)
         mt = ea.metrics(res_test)
@@ -82,14 +94,14 @@ def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: di
             pfs.append(mt["profit_factor"])
         folds.append({
             "fold": k, "train_start": honesty.iso(a), "train_end": honesty.iso(b), "test_start": honesty.iso(b),
-            "test_end": honesty.iso(c),
-            "train": opt["best_metrics"], "test": mt,
-            "best_params": {s: opt["best_params"][s] for s in (x["key"] for x in ea.T.tunable_params())},
+            "test_end": honesty.iso(c), "train": opt["best_metrics"], "train_score": opt["best_score"],
+            "test": mt, "best_params": {x["key"]: opt["best_params"][x["key"]] for x in specs},
         })
     prof = sum(1 for f in folds if (f["test"]["net_return_pct"] or 0) > 0)
     return {
         "scheme": f"rolling train {train_m}m / test {test_m}m, re-optimised per fold ({per_fold} trials)",
         "folds": folds,
+        "trials_done": trials,
         "oos_compounded_net_pct": (growth - 1.0) * 100.0 if folds else None,
         "oos_avg_pf": sum(pfs) / len(pfs) if pfs else None,
         "oos_trades": sum(f["test"]["trades"] for f in folds),
@@ -148,25 +160,52 @@ def execute_run(conn, job: dict) -> None:
     conn.commit()
 
     wf, best_info = None, None
+    sens_units = len(ea.sensitivity_names(cfg))
     if mode == "optimize":
-        n_trials = min(int(payload.get("n_trials") or s.optuna_max_trials), s.optuna_max_trials)
-        wf = walk_forward_reopt(ea, dev_df, warm, params, tf, costs, n_trials, hs, prog)
-        prog("optimise on development segment", 0, n_trials, force=True)
-        best_info = ea.optimize(dev_df, warm, params, tf, costs, n_trials, hs,
-                                progress=lambda d, t: prog("optimise on development segment", d, t))
+        specs = ea.T.resolve_search(labdb.loads(run.get("search_json")))
+        n_trials = int(run.get("n_trials") or payload.get("n_trials") or 30)
+        n_trials = max(1, min(n_trials, s.optuna_max_trials))
+        windows, _, _ = wf_windows(dev_df, warm)
+        per_fold = max(5, n_trials // 3)
+        wf_total = len(windows) * per_fold
+        trials_total = wf_total + n_trials
+        total = trials_total + sens_units + 3
+
+        def on_wf(k, d, t):
+            done = k * per_fold + d
+            prog(f"walk-forward fold {k + 1}/{len(windows)}", done, total, trials_done=done,
+                 trials_total=trials_total)
+
+        wf = walk_forward_reopt(ea, dev_df, warm, params, tf, costs, per_fold, hs, specs, on_trial=on_wf)
+
+        def on_final(d, t):
+            prog("optimise on development segment", wf_total + d, total, trials_done=wf_total + d,
+                 trials_total=trials_total)
+
+        on_final(0, n_trials)
+        best_info = ea.optimize(dev_df, warm, params, tf, costs, n_trials, hs, specs=specs, min_trades=30,
+                                progress=on_final)
         params = best_info["best_params"]
         cfg, ecfg = ea.build_configs(params, tf, costs)
+        trials_done = wf["trials_done"] + best_info["trials"]
+        conn.execute("UPDATE lab_runs SET trials_done=?, top_trials_json=? WHERE id=?",
+                     (trials_done, labdb.dumps(best_info["top_trials"]), run_id))
+        conn.commit()
+        base_units = trials_total
+    else:
+        total = sens_units + 3
+        base_units = 0
 
-    prog("in-sample backtest", force=True)
+    prog("in-sample backtest", base_units, total, force=True)
     res_is, ind_is = ea.run(dev_df, cfg, ecfg, warmup=warm)
     m_is = ea.metrics(res_is)
 
-    prog("sensitivity", force=True)
+    prog("sensitivity", base_units, total, force=True)
     sens = ea.sensitivity(ind_is, cfg, replace(ecfg, warmup_period=warm),
-                          progress=lambda d, t: prog("sensitivity", d, t))
+                          progress=lambda d, t: prog("sensitivity", base_units + d, total))
 
     # The holdout is evaluated exactly once per run, after all choices are made.
-    prog("holdout", force=True)
+    prog("holdout", base_units + sens_units + 1, total, force=True)
     hold_df, pre = ea.window(df, hs_ts, None, warm)
     res_oos, ind_oos = ea.run(hold_df, cfg, ecfg, warmup=pre)
     touches = honesty.touch_holdout(conn, run["template_id"], symbol, tf)
@@ -177,7 +216,7 @@ def execute_run(conn, job: dict) -> None:
     res_stress, _ = ea.run(hold_df, cfg, stress_ecfg, indicators=ind_oos)
     m_stress = ea.metrics(res_stress)
 
-    prog("full range + Monte Carlo", force=True)
+    prog("full range + Monte Carlo", base_units + sens_units + 2, total, force=True)
     res_full, _ = ea.run(df, cfg, ecfg)
     m_full = ea.metrics(res_full)
     mc = ea.monte_carlo(res_full)
@@ -204,6 +243,7 @@ def execute_run(conn, job: dict) -> None:
            "stress_multiplier": mult}
     extra = {"sensitivity": sens, "optimizer": best_info and {k: v for k, v in best_info.items()
                                                               if k != "best_params"}}
+    prog("saving", total, total, force=True)
     # verdict + checks written ONCE together (trigger makes them immutable afterwards)
     conn.execute(
         "UPDATE lab_runs SET verdict=?, checks_json=?, honesty_version=?, metrics_json=?, oos_metrics_json=?, "

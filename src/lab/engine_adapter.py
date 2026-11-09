@@ -237,6 +237,11 @@ def monte_carlo(res) -> dict:
 SENS_STEPS = (-0.2, -0.1, 0.1, 0.2)
 
 
+def sensitivity_names(cfg) -> list[str]:
+    rb = _engine()["robustness"]
+    return [g[0] for g in rb.build_sensitivity_grid(cfg, rel_steps=SENS_STEPS)]
+
+
 def sensitivity(ind, cfg, ecfg, progress: Optional[Callable] = None) -> dict:
     E = _engine()
     rb = E["robustness"]
@@ -259,15 +264,42 @@ def sensitivity(ind, cfg, ecfg, progress: Optional[Callable] = None) -> dict:
 
 # ── optimisation ─────────────────────────────────────────────────────────
 
-def objective_score(m: dict, min_trades: int) -> float:
-    """Scalar to maximise: log growth, scaled down for few trades and deep DD."""
-    net = m.get("net_return_pct")
-    if net is None or m["trades"] < min_trades or m.get("liquidations", 0) > 0 or m.get("account_blown"):
+OBJECTIVE = ("sharpe x share of profitable sub-periods (4 equal time slices) x min(1, trades/min_trades); "
+             "-1 if max DD deeper than -50%; liquidation/blown -> -1e9. Evaluated on the development "
+             "data only (never the holdout).")
+N_SEGMENTS = 4
+
+
+def segment_returns(res, n: int = N_SEGMENTS) -> list[float]:
+    """Return (%) of each of n equal time slices of the mark-to-market equity curve."""
+    eq = res.equity_curve
+    if len(eq) < n + 1:
+        return []
+    idx = [round(i * (len(eq) - 1) / n) for i in range(n + 1)]
+    out = []
+    for a, b in zip(idx[:-1], idx[1:]):
+        e0, e1 = float(eq[a][1]), float(eq[b][1])
+        out.append((e1 / e0 - 1.0) * 100.0 if e0 > 0 else -100.0)
+    return out
+
+
+def robust_score(m: dict, segs: list[float], min_trades: int) -> float:
+    if m.get("liquidations", 0) > 0 or m.get("account_blown") or m.get("net_return_pct") is None:
         return -1e9
-    g = math.log1p(max(net, -99.9) / 100.0)
-    dd = abs(m.get("max_dd_pct") or 0.0)
-    penalty = 1.0 + max(0.0, dd - 30.0) / 20.0
-    return g / penalty if g > 0 else g * penalty
+    sharpe = m.get("sharpe") or 0.0
+    trade_f = min(1.0, m["trades"] / max(1, min_trades))
+    pos_f = (sum(1 for x in segs if x > 0) / len(segs)) if segs else 0.0
+    if sharpe > 0:
+        score = sharpe * pos_f * trade_f
+    else:
+        score = sharpe - (1.0 - trade_f)
+    if (m.get("max_dd_pct") or 0.0) < -50.0:
+        score -= 1.0
+    return float(score)
+
+
+def objective_score(m: dict, min_trades: int) -> float:  # kept for callers without an equity curve
+    return robust_score(m, [], min_trades)
 
 
 def _suggest(trial, spec: dict, base):
@@ -280,21 +312,24 @@ def _suggest(trial, spec: dict, base):
     return trial.suggest_float(spec["key"], lo, hi)
 
 
+def _clamp_to_spec(v, spec):
+    v = min(max(v, spec["min"]), spec["max"])
+    return int(round(v)) if spec["type"] == "int" else float(v)
+
+
 def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials: int,
              holdout_start, seed: int = 42, progress: Optional[Callable] = None,
-             min_trades: int = 10) -> dict:
-    """Optuna TPE over the template's tunable params on `df` (dev data only)."""
+             min_trades: int = 10, specs: Optional[list[dict]] = None, top_n: int = 5) -> dict:
+    """Optuna TPE over `specs` (default: all tunables) on `df`, which must be
+    development data only (asserted against the locked holdout). Other params stay
+    at base_params. Objective: robust_score (see OBJECTIVE)."""
     import optuna
     from .honesty import assert_dev_only
     assert_dev_only([df["timestamp"].iloc[-1]], holdout_start)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    specs = T.tunable_params()
+    specs = specs or T.tunable_params()
     base = T.validate_params(base_params)
-
-    def evaluate(params):
-        cfg, ecfg = build_configs(params, tf, costs)
-        res, _ = run(df, cfg, ecfg, warmup=warmup)
-        return metrics(res)
+    keys = [s["key"] for s in specs]
 
     def obj(trial):
         p = dict(base)
@@ -302,20 +337,38 @@ def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials:
             p[s["key"]] = _suggest(trial, s, base[s["key"]])
         try:
             p = T.validate_params(p)
-            m = evaluate(p)
-        except Exception:
-            return -1e9
-        trial.set_user_attr("m", {k: m[k] for k in ("net_return_pct", "profit_factor", "max_dd_pct", "trades")})
+            cfg, ecfg = build_configs(p, tf, costs)
+            res, _ = run(df, cfg, ecfg, warmup=warmup)
+            m = metrics(res)
+            segs = segment_returns(res)
+            score = robust_score(m, segs, min_trades)
+            trial.set_user_attr("m", {**{k: m[k] for k in ("net_return_pct", "profit_factor", "max_dd_pct",
+                                                           "trades", "sharpe")},
+                                      "profitable_segments": sum(1 for x in segs if x > 0),
+                                      "segments": len(segs)})
+        except Exception as e:  # noqa: BLE001
+            trial.set_user_attr("error", f"{type(e).__name__}: {e}"[:200])
+            score = -1e9
         if progress:
             progress(trial.number + 1, n_trials)
-        return objective_score(m, min_trades)
+        return score
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed))
-    study.enqueue_trial({s["key"]: base[s["key"]] for s in specs})   # start from the given params
+    study.enqueue_trial({s["key"]: _clamp_to_spec(base[s["key"]], s) for s in specs})  # start near given params
     study.optimize(obj, n_trials=n_trials, show_progress_bar=False)
+
+    def _params(t):
+        return {k: (round(v, 8) if isinstance(v, float) else v) for k, v in t.params.items() if k in keys}
+
+    done = [t for t in study.trials if t.value is not None]
+    ranked = sorted(done, key=lambda t: t.value, reverse=True)
+    top = [{"rank": i + 1, "trial": t.number, "score": _f(t.value) if t.value > -1e8 else None,
+            "params": _params(t), "metrics": t.user_attrs.get("m"), "error": t.user_attrs.get("error")}
+           for i, t in enumerate(ranked[:top_n])]
     best = dict(base)
-    for k, v in study.best_params.items():
-        best[k] = round(v, 8) if isinstance(v, float) else v
+    best.update(_params(study.best_trial))
     best = T.validate_params(best)
-    return {"best_params": best, "best_score": _f(study.best_value),
-            "best_metrics": study.best_trial.user_attrs.get("m"), "trials": len(study.trials)}
+    return {"best_params": best, "best_score": _f(study.best_value) if study.best_value > -1e8 else None,
+            "best_metrics": study.best_trial.user_attrs.get("m"), "trials": len(done), "top_trials": top,
+            "searched": [{"key": s["key"], "min": s["min"], "max": s["max"]} for s in specs],
+            "objective": OBJECTIVE, "min_trades": min_trades}
