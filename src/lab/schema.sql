@@ -174,6 +174,12 @@ CREATE TABLE IF NOT EXISTS paper_positions (
     status        TEXT NOT NULL DEFAULT 'open',       -- open | closed
     last_checked_bar TEXT,
     last_funding_at  TEXT,
+    mark_price    REAL,
+    mark_time     TEXT,
+    exit_price    REAL,
+    exit_time     TEXT,
+    exit_reason   TEXT,
+    pnl           REAL,
     journal_id    INTEGER,
     created_at    TEXT NOT NULL
 );

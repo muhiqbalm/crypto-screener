@@ -172,3 +172,79 @@ def test_app_still_starts_with_lab_router(lab_env):
     paths = spec.json()["paths"]
     assert "/api/v1/lab/runs" in paths and "/api/v1/lab/runs/{run_id}" in paths
     assert any("webhook" in p for p in paths)  # live trading routes still registered
+
+
+# ── watches / paper / journal / klines ────────────────────────────────────
+
+@pytest.fixture
+def fake_market(monkeypatch):
+    from src.lab import market
+    monkeypatch.setattr(market, "last_price", lambda sym, ttl=5.0: 100.0)
+    monkeypatch.setattr(market, "fetch_klines", lambda sym, tf, limit=500, since_ms=None: [
+        {"t": "2026-01-01T00:00:00Z", "ts": 1767225600000, "o": 1.0, "h": 2.0, "l": 0.5, "c": 1.5, "v": 10.0}])
+    market._cache.clear()
+
+
+def test_new_endpoints_are_admin_only(client_for):
+    c = client_for("u-plain")
+    for m, path in (("get", "/api/v1/lab/watches"), ("get", "/api/v1/lab/paper/accounts"),
+                    ("get", "/api/v1/lab/journal"), ("get", "/api/v1/lab/journal/stats"),
+                    ("get", "/api/v1/lab/klines?symbol=ETHUSDT"), ("delete", "/api/v1/lab/watches/1"),
+                    ("post", "/api/v1/lab/paper/positions/1/close")):
+        assert getattr(c, m)(path).status_code == 403, path
+
+
+def test_klines(client_for, fake_market):
+    c = client_for("u-admin")
+    r = c.get("/api/v1/lab/klines?symbol=ETHUSDT&timeframe=4h&limit=500")
+    assert r.status_code == 200
+    assert r.json() == [{"t": "2026-01-01T00:00:00Z", "o": 1.0, "h": 2.0, "l": 0.5, "c": 1.5, "v": 10.0}]
+    assert c.get("/api/v1/lab/klines?symbol=ETHUSDT&timeframe=7m").status_code == 422
+
+
+def test_watch_lifecycle(client_for):
+    c = client_for("u-admin")
+    r = c.post("/api/v1/lab/watches", json={"template_id": "rosyade_family", "symbol": "ETHUSDT",
+                                            "timeframe": "4h", "params": {}})
+    assert r.status_code == 200, r.text
+    wid = r.json()["watch_id"]
+    lst = c.get("/api/v1/lab/watches").json()
+    assert lst[0]["id"] == wid and lst[0]["autopaper"] is None
+    assert set(lst[0]) >= {"id", "template_id", "symbol", "timeframe", "params", "created_at", "autopaper"}
+    st = c.get(f"/api/v1/lab/watches/{wid}/state").json()
+    assert st["computed_at"] is None and st["position"] is None and st["recent_trades"] == []
+    acct = c.post("/api/v1/lab/paper/accounts", json={"name": "auto"}).json()["id"]
+    ap = c.post(f"/api/v1/lab/watches/{wid}/autopaper", json={"account_id": acct, "enabled": True}).json()
+    assert ap["autopaper"] == {"account_id": acct, "enabled": True}
+    assert c.get("/api/v1/lab/watches").json()[0]["autopaper"] == {"account_id": acct, "enabled": True}
+    cmp_ = c.get(f"/api/v1/lab/watches/{wid}/compare").json()
+    assert "paper" in cmp_ and "backtest" in cmp_
+    assert c.delete(f"/api/v1/lab/watches/{wid}").json()["deleted"] is True
+    assert c.get(f"/api/v1/lab/watches/{wid}/state").status_code == 404
+
+
+def test_paper_flow_and_journal(client_for, fake_market):
+    c = client_for("u-admin")
+    acct = c.post("/api/v1/lab/paper/accounts", json={"name": "manual"}).json()["id"]
+    a = c.get("/api/v1/lab/paper/accounts").json()[0]
+    assert a["balance"] == 10000 and a["risk_pct"] == 0.5 and a["leverage_max"] == 5 and a["open_positions"] == []
+    assert c.post("/api/v1/lab/paper/orders", json={"account_id": acct, "symbol": "ETHUSDT", "side": "long",
+                                                    "sl": 101}).status_code == 422
+    r = c.post("/api/v1/lab/paper/orders", json={"account_id": acct, "symbol": "ETHUSDT", "side": "long",
+                                                 "sl": 95, "tp": 120, "note": "test"})
+    assert r.status_code == 200, r.text
+    pos = c.get("/api/v1/lab/paper/accounts").json()[0]["open_positions"]
+    assert len(pos) == 1
+    assert set(pos[0]) >= {"id", "symbol", "side", "entry_price", "qty", "sl", "tp", "entry_time", "watch_id"}
+    closed = c.post(f"/api/v1/lab/paper/positions/{pos[0]['id']}/close").json()
+    assert closed["journal_id"] and closed["r_multiple"] is not None
+    assert c.post(f"/api/v1/lab/paper/positions/{pos[0]['id']}/close").status_code == 409
+    j = c.get(f"/api/v1/lab/journal?account_id={acct}&source=paper_manual&symbol=ETHUSDT").json()
+    assert len(j) == 1 and j[0]["notes"] == "test"
+    p = c.patch(f"/api/v1/lab/journal/{j[0]['id']}", json={"notes": "late entry", "tags": ["fomo"]}).json()
+    assert p["notes"] == "late entry" and p["tags"] == ["fomo"]
+    s = c.get(f"/api/v1/lab/journal/stats?account_id={acct}").json()
+    for k in ("trades", "winrate", "avg_r", "expectancy_r", "profit_factor", "net_pnl", "max_dd_pct",
+              "equity_curve", "by_symbol", "by_source"):
+        assert k in s
+    assert s["trades"] == 1 and 0 <= s["winrate"] <= 1

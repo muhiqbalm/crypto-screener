@@ -195,7 +195,9 @@ def execute_run(conn, job: dict) -> None:
 
     _write_json(out_dir / "equity.json", ea.equity_out(res_full, holdout_start=hs))
     _write_json(out_dir / "trades.json", ea.trades_out(res_full))
-    metrics = {**m_full, "data": data_info, "in_sample": m_is, "monte_carlo": mc,
+    # metrics = IN-SAMPLE (development segment); oos_metrics = locked holdout.
+    metrics = {**m_is, "segment": "in_sample", "start": data_info["eval_start"], "end": hs,
+               "data": data_info, "full_range": m_full, "monte_carlo": mc,
                "sensitivity": {"unstable": sens["unstable"], "tested": len(sens["params"])},
                "walk_forward": wf}
     oos = {**m_oos, "start": hs, "end": honesty.iso(eval_end), "stress_net_return_pct": m_stress["net_return_pct"],
@@ -209,7 +211,7 @@ def execute_run(conn, job: dict) -> None:
         "trades=? WHERE id=?",
         (verdict, labdb.dumps(checks), honesty.HONESTY_VERSION, labdb.dumps(metrics), labdb.dumps(oos),
          labdb.dumps(params) if mode == "optimize" else None, labdb.dumps(extra), touches,
-         m_full["net_return_pct"], m_full["profit_factor"], m_full["max_dd_pct"], m_full["trades"], run_id))
+         m_is["net_return_pct"], m_is["profit_factor"], m_is["max_dd_pct"], m_is["trades"], run_id))
     conn.commit()
 
 

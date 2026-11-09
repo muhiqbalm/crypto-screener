@@ -314,7 +314,8 @@ def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials:
     study.enqueue_trial({s["key"]: base[s["key"]] for s in specs})   # start from the given params
     study.optimize(obj, n_trials=n_trials, show_progress_bar=False)
     best = dict(base)
-    best.update(study.best_params)
+    for k, v in study.best_params.items():
+        best[k] = round(v, 8) if isinstance(v, float) else v
     best = T.validate_params(best)
     return {"best_params": best, "best_score": _f(study.best_value),
             "best_metrics": study.best_trial.user_attrs.get("m"), "trials": len(study.trials)}

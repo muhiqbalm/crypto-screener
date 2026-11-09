@@ -13,6 +13,9 @@ from typing import Annotated, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.lab import db as labdb
+from src.lab import journal as jr
+from src.lab import market
+from src.lab import paper
 from src.lab import queue as q
 from src.lab.data_cache import read_index
 from src.lab.settings import get_lab_settings
@@ -20,7 +23,8 @@ from src.lab.templates import TEMPLATES, get_template
 from src.lab.templates.rosyade_family import ParamError
 
 from .lab_auth import lab_admin, lab_user
-from .lab_models import RunCreate, ScanCreate
+from .lab_models import AutoPaper, JournalPatch, PaperAccountCreate, PaperOrderCreate, RunCreate, ScanCreate, \
+    WatchCreate
 
 router = APIRouter(prefix="/api/v1/lab", tags=["lab"])
 Admin = Annotated[dict, Depends(lab_admin)]
@@ -300,3 +304,237 @@ def cancel_job(job_id: int, _: Admin, conn: Conn) -> dict:
     if status is None:
         raise HTTPException(404, "job not found")
     return {"id": job_id, "status": status}
+
+
+# ── chart data (light, cached public fetch; never src.trading) ───────────
+
+@router.get("/klines")
+def klines(_: Admin, symbol: str, timeframe: str = "4h", limit: int = Query(500, ge=10, le=1500)) -> list[dict]:
+    from .lab_models import norm_symbol
+    try:
+        sym = norm_symbol(symbol)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if timeframe not in market.TF_SECONDS:
+        raise HTTPException(422, f"timeframe must be one of {list(market.TF_SECONDS)}")
+    try:
+        return market.klines(sym, timeframe, limit, ttl=get_lab_settings().klines_cache_s)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"market data unavailable: {type(e).__name__}")
+
+
+# ── watches ──────────────────────────────────────────────────────────────
+
+def _get_watch(conn, watch_id: int):
+    w = conn.execute("SELECT * FROM watches WHERE id=?", (watch_id,)).fetchone()
+    if w is None:
+        raise HTTPException(404, "watch not found")
+    return w
+
+
+def _state_out(watch_id: int, st) -> dict:
+    if st is None:
+        return {"watch_id": watch_id, "computed_at": None, "last_bar": None, "position": None,
+                "recent_trades": [], "last_signal": None, "error": None}
+    return {"watch_id": watch_id, "computed_at": st["computed_at"], "last_bar": st["last_bar"],
+            "position": labdb.loads(st["position_json"]), "recent_trades": labdb.loads(st["recent_trades_json"], []),
+            "last_signal": labdb.loads(st["last_signal_json"]), "error": st["error"]}
+
+
+def _watch_out(conn, w) -> dict:
+    st = conn.execute("SELECT * FROM watch_state WHERE watch_id=?", (w["id"],)).fetchone()
+    state = _state_out(w["id"], st)
+    state.pop("recent_trades")
+    return {"id": w["id"], "template_id": w["template_id"], "symbol": w["symbol"], "timeframe": w["timeframe"],
+            "params": labdb.loads(w["params_json"], {}), "costs": labdb.loads(w["costs_json"], {}),
+            "created_at": w["created_at"],
+            "autopaper": ({"account_id": w["autopaper_account_id"], "enabled": bool(w["autopaper_enabled"])}
+                          if w["autopaper_account_id"] else None),
+            "state": state}
+
+
+@router.post("/watches")
+def create_watch(body: WatchCreate, _: Admin, conn: Conn) -> dict:
+    t = _template_or_422(body.template_id)
+    params = _validate(t, body.timeframe, body.params)
+    wid = conn.execute(
+        "INSERT INTO watches (template_id, symbol, timeframe, params_json, costs_json, active, created_at) "
+        "VALUES (?, ?, ?, ?, ?, 1, ?)",
+        (body.template_id, body.symbol, body.timeframe, labdb.dumps(params), labdb.dumps(body.costs.model_dump()),
+         labdb.utcnow())).lastrowid
+    q.enqueue(conn, "watch_eval", wid, {"initial": True}, priority=10)
+    conn.commit()
+    return {"watch_id": int(wid)}
+
+
+@router.get("/watches")
+def list_watches(_: Admin, conn: Conn) -> list[dict]:
+    return [_watch_out(conn, w) for w in conn.execute("SELECT * FROM watches WHERE active=1 ORDER BY id DESC")]
+
+
+@router.delete("/watches/{watch_id}")
+def delete_watch(watch_id: int, _: Admin, conn: Conn) -> dict:
+    _get_watch(conn, watch_id)
+    conn.execute("DELETE FROM watch_state WHERE watch_id=?", (watch_id,))
+    conn.execute("DELETE FROM watches WHERE id=?", (watch_id,))
+    conn.execute("UPDATE lab_jobs SET status='cancelled', finished_at=? WHERE kind='watch_eval' AND ref_id=? "
+                 "AND status='queued'", (labdb.utcnow(), watch_id))
+    conn.commit()
+    return {"id": watch_id, "deleted": True}
+
+
+@router.get("/watches/{watch_id}/state")
+def watch_state(watch_id: int, _: Admin, conn: Conn) -> dict:
+    _get_watch(conn, watch_id)
+    st = conn.execute("SELECT * FROM watch_state WHERE watch_id=?", (watch_id,)).fetchone()
+    return _state_out(watch_id, st)
+
+
+@router.post("/watches/{watch_id}/autopaper")
+def watch_autopaper(watch_id: int, body: AutoPaper, _: Admin, conn: Conn) -> dict:
+    w = _get_watch(conn, watch_id)
+    acct = body.account_id or w["autopaper_account_id"]
+    if body.enabled:
+        if not acct:
+            raise HTTPException(422, "account_id is required to enable autopaper")
+        try:
+            paper.get_account(conn, acct)
+        except paper.PaperError as e:
+            raise HTTPException(404, str(e))
+    conn.execute("UPDATE watches SET autopaper_account_id=?, autopaper_enabled=? WHERE id=?",
+                 (acct, 1 if body.enabled else 0, watch_id))
+    conn.commit()
+    return {"watch_id": watch_id, "autopaper": {"account_id": acct, "enabled": bool(body.enabled)}}
+
+
+@router.get("/watches/{watch_id}/compare")
+def watch_compare(watch_id: int, _: Admin, conn: Conn) -> dict:
+    """Paper results of this watch vs the watch's own backtest trades over the same period."""
+    w = _get_watch(conn, watch_id)
+    entries = jr.query(conn, watch_id=watch_id)
+    open_pos = [dict(r) for r in conn.execute(
+        "SELECT * FROM paper_positions WHERE watch_id=? AND status='open'", (watch_id,))]
+    starts = [e["entry_time"] for e in entries if e.get("entry_time")] + [p["entry_time"] for p in open_pos]
+    period_from = min(starts) if starts else w["created_at"]
+    st = conn.execute("SELECT * FROM watch_state WHERE watch_id=?", (watch_id,)).fetchone()
+    bt = [t for t in (labdb.loads(st["recent_trades_json"], []) if st else [])
+          if (t.get("entry_time") or "") >= period_from[:19]]
+    p_stats = jr.stats(entries)
+    roe = [t.get("return_on_equity_pct") or 0.0 for t in bt]
+    growth = 1.0
+    for r in roe:
+        growth *= 1 + r / 100.0
+    b_sum = jr.summarize_trades([t.get("pnl_pct") or 0.0 for t in bt])
+    return {
+        "watch_id": watch_id,
+        "period": {"from": period_from, "to": labdb.utcnow()},
+        "paper": {"trades": p_stats["trades"], "open_positions": len(open_pos), "winrate": p_stats["winrate"],
+                  "profit_factor": p_stats["profit_factor"], "net_pnl": p_stats["net_pnl"],
+                  "avg_r": p_stats["avg_r"], "entries": entries},
+        "backtest": {"trades": len(bt), "winrate": b_sum["winrate"],
+                     "net_return_pct": (growth - 1.0) * 100.0 if bt else 0.0,
+                     "profit_factor": jr.summarize_trades(roe)["profit_factor"],
+                     "position": labdb.loads(st["position_json"]) if st else None, "trades_list": bt},
+    }
+
+
+# ── paper trading (simulated only) ───────────────────────────────────────
+
+@router.post("/paper/accounts")
+def create_paper_account(body: PaperAccountCreate, _: Admin, conn: Conn) -> dict:
+    return {"id": paper.create_account(conn, body.name, body.starting_balance, body.risk_pct, body.leverage_max)}
+
+
+@router.get("/paper/accounts")
+def list_paper_accounts(_: Admin, conn: Conn) -> list[dict]:
+    return [paper.account_summary(conn, r["id"]) for r in conn.execute("SELECT id FROM paper_accounts ORDER BY id")]
+
+
+@router.get("/paper/positions")
+def list_paper_positions(_: Admin, conn: Conn, account_id: Optional[int] = None,
+                         status: str = Query("open", pattern="^(open|closed|all)$")) -> list[dict]:
+    sql, args = "SELECT * FROM paper_positions WHERE 1=1", []
+    if account_id is not None:
+        sql += " AND account_id=?"
+        args.append(account_id)
+    if status != "all":
+        sql += " AND status=?"
+        args.append(status)
+    return [paper.position_out(dict(r)) for r in conn.execute(sql + " ORDER BY id DESC LIMIT 500", args)]
+
+
+def _price(symbol: str) -> float:
+    try:
+        return market.last_price(symbol)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"price unavailable for {symbol}: {type(e).__name__}")
+
+
+@router.post("/paper/orders")
+def paper_order(body: PaperOrderCreate, _: Admin, conn: Conn) -> dict:
+    try:
+        paper.get_account(conn, body.account_id)
+    except paper.PaperError as e:
+        raise HTTPException(404, str(e))
+    if body.watch_id is not None:
+        _get_watch(conn, body.watch_id)
+    px = _price(body.symbol)
+    try:
+        pos = paper.open_position(conn, account_id=body.account_id, symbol=body.symbol, side=body.side, price=px,
+                                  sl=body.sl, tp=body.tp, qty=body.qty, note=body.note, watch_id=body.watch_id,
+                                  source="paper_manual")
+    except paper.PaperError as e:
+        raise HTTPException(422, str(e))
+    return {"position_id": pos["id"], "position": paper.position_out(pos), "market_price": px}
+
+
+@router.post("/paper/positions/{position_id}/close")
+def paper_close(position_id: int, _: Admin, conn: Conn) -> dict:
+    p = conn.execute("SELECT * FROM paper_positions WHERE id=?", (position_id,)).fetchone()
+    if p is None:
+        raise HTTPException(404, "position not found")
+    if p["status"] != "open":
+        raise HTTPException(409, "position already closed")
+    px = _price(p["symbol"])
+    try:
+        out = paper.close_position(conn, position_id, px, "manual_close")
+    except paper.PaperError as e:
+        raise HTTPException(409, str(e))
+    j = conn.execute("SELECT * FROM journal_entries WHERE id=?", (out["journal_id"],)).fetchone()
+    return {"id": position_id, "exit_price": out["exit_price"], "pnl": out["pnl"],
+            "r_multiple": j["r_multiple"] if j else None, "journal_id": out["journal_id"]}
+
+
+# ── journal ──────────────────────────────────────────────────────────────
+
+@router.get("/journal")
+def journal_list(_: Admin, conn: Conn, account_id: Optional[int] = None, source: Optional[str] = None,
+                 symbol: Optional[str] = None, from_: Optional[str] = Query(None, alias="from"),
+                 to: Optional[str] = None, limit: int = Query(1000, ge=1, le=5000)) -> list[dict]:
+    return jr.query(conn, account_id=account_id, source=source, symbol=symbol.upper() if symbol else None,
+                    date_from=from_, date_to=to, limit=limit)
+
+
+@router.get("/journal/stats")
+def journal_stats(_: Admin, conn: Conn, account_id: Optional[int] = None, source: Optional[str] = None) -> dict:
+    entries = jr.query(conn, account_id=account_id, source=source, limit=100000)
+    start = None
+    if account_id is not None:
+        try:
+            start = paper.get_account(conn, account_id)["starting_balance"]
+        except paper.PaperError as e:
+            raise HTTPException(404, str(e))
+    return jr.stats(entries, start)
+
+
+@router.patch("/journal/{entry_id}")
+def journal_patch(entry_id: int, body: JournalPatch, _: Admin, conn: Conn) -> dict:
+    r = conn.execute("SELECT * FROM journal_entries WHERE id=?", (entry_id,)).fetchone()
+    if r is None:
+        raise HTTPException(404, "journal entry not found")
+    if body.notes is not None:
+        conn.execute("UPDATE journal_entries SET notes=? WHERE id=?", (body.notes, entry_id))
+    if body.tags is not None:
+        conn.execute("UPDATE journal_entries SET tags=? WHERE id=?", (labdb.dumps(body.tags), entry_id))
+    conn.commit()
+    return jr.entry_out(conn.execute("SELECT * FROM journal_entries WHERE id=?", (entry_id,)).fetchone())

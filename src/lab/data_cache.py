@@ -263,6 +263,31 @@ def fetch_ccxt_funding(symbol: str, since_ms: int, ex=None):
     return _normalise(df)
 
 
+def fetch_vision_daily_klines(symbol: str, tf: str, since: date):
+    import pandas as pd
+    today = datetime.now(timezone.utc).date()
+    frames, d = [], since
+    while d < today:
+        b = _http_get(f"{VISION}/daily/klines/{symbol}/{tf}/{symbol}-{tf}-{d.isoformat()}.zip")
+        if b:
+            frames.append(_read_zip_csv(b, "klines"))
+        d += timedelta(days=1)
+    return _normalise(pd.concat(frames, ignore_index=True)) if frames else None
+
+
+def fetch_tail(symbol: str, tf: str, since_ms: int):
+    """Best effort: ccxt public first, then data.binance.vision daily zips."""
+    try:
+        return fetch_ccxt_klines(symbol, tf, since_ms)
+    except Exception:  # noqa: BLE001 - network/geo errors
+        pass
+    try:
+        since = datetime.fromtimestamp(since_ms / 1000, tz=timezone.utc).date()
+        return fetch_vision_daily_klines(symbol, tf, since)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _drop_forming(df, tf: str):
     import pandas as pd
     if df is None or len(df) == 0:
@@ -292,15 +317,12 @@ def ensure(symbol: str, tf: str, start: str = DEFAULT_START, funding: bool = Tru
             tail_since = (int(df["timestamp"].iloc[-1].value // 10**6) + TF_SECONDS[tf] * 1000
                           if df is not None and len(df) else
                           int(pd.Timestamp(start, tz="UTC").value // 10**6))
-            try:
-                tail = fetch_ccxt_klines(symbol, tf, tail_since)
-            except Exception:
-                tail = None
+            tail = fetch_tail(symbol, tf, tail_since)
             if tail is not None:
                 df = tail if df is None else _normalise(pd.concat([df, tail]))
         elif df["timestamp"].iloc[-1] < fresh_cut:
             since = int(df["timestamp"].iloc[-1].value // 10**6) + TF_SECONDS[tf] * 1000
-            tail = fetch_ccxt_klines(symbol, tf, since)
+            tail = fetch_tail(symbol, tf, since)
             if tail is not None:
                 df = _normalise(pd.concat([df, tail]))
         if df is None or len(df) == 0:
