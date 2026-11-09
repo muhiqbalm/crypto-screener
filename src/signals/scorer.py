@@ -229,8 +229,10 @@ class MultiFactorScorer:
         """
         Calculate trading signal confidence rate using a Hybrid method.
         
-        Combines Magnitude Probability (derived from z-score CDF) and
-        Confluence Probability (agreement across 5 factors).
+        Combines Magnitude Probability (normal CDF of the cross-sectional
+        z-score of risk_adjusted_score, range 0.5-1.0) and Confluence
+        Probability (share of the 5 factors agreeing with the score's sign).
+        confidence = 60% magnitude + 40% confluence; HIGH >= 80, MEDIUM >= 60.
         
         Args:
             df: DataFrame containing 'risk_adjusted_score' and individual signal columns.
@@ -251,13 +253,18 @@ class MultiFactorScorer:
             return df
             
         # 1. Magnitude Probability
-        # Using math.erf to approximate normal CDF based on the absolute z-score
-        def calc_magnitude_prob(score):
-            if pd.isna(score):
+        # The normal CDF expects a z-score, but risk_adjusted_score is a raw
+        # weighted score divided by ATR% (typically |x| < 0.1), so feeding it
+        # directly gave Phi(~0) = 0.5 for every asset and confidence could
+        # never reach HIGH. Standardize cross-sectionally first.
+        z_scores = self._cross_sectional_z(df['risk_adjusted_score'])
+
+        def calc_magnitude_prob(z):
+            if pd.isna(z):
                 return np.nan
-            return (1.0 + math.erf(abs(score) / math.sqrt(2.0))) / 2.0
-            
-        magnitude_prob = df['risk_adjusted_score'].apply(calc_magnitude_prob)
+            return (1.0 + math.erf(abs(z) / math.sqrt(2.0))) / 2.0
+
+        magnitude_prob = z_scores.apply(calc_magnitude_prob)
         
         # 2. Confluence Probability
         signal_factors = [
@@ -305,6 +312,17 @@ class MultiFactorScorer:
         
         logger.info(f"Calculated confidence rates for {n} assets")
         return df
+
+    @staticmethod
+    def _cross_sectional_z(scores: pd.Series) -> pd.Series:
+        """Z-score a series across assets; zeros when it cannot be standardized."""
+        valid = scores.dropna()
+        if len(valid) < 2:
+            return scores.where(scores.isna(), 0.0)
+        std = valid.std()
+        if std == 0 or pd.isna(std):
+            return scores.where(scores.isna(), 0.0)
+        return (scores - valid.mean()) / std
 
     def classify_tiers(self, scores: pd.Series) -> pd.Series:
         """

@@ -226,8 +226,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 if entry is None or entry.age_seconds >= threshold:
                     logger.info("Background cache warmer: pre-fetching fresh screener data...")
                     result = await app.state.data_processor.process_all()
-                    app.state.cache_manager.set(result)
-                    logger.info("Background cache warmer: fresh screener data cached successfully!")
+                    if app.state.cache_manager.set(result):
+                        logger.info("Background cache warmer: fresh screener data cached successfully!")
+                    else:
+                        logger.warning(
+                            "Background cache warmer: fetch returned no data (%d errors); keeping previous cache",
+                            len(result.errors),
+                        )
             except Exception as e:
                 logger.error(f"Background cache warmer error: {e}")
             await asyncio.sleep(10)
@@ -281,6 +286,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         pass
 
     app.state.shutting_down = True
+    try:
+        app.state.data_processor.close()
+    except Exception as e:
+        logger.debug(f"Data processor close failed: {e}")
     logger.info("Application shutting down, waiting for active requests to complete")
 
     shutdown_timeout = settings.shutdown_timeout

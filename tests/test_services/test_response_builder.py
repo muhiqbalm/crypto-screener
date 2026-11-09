@@ -183,11 +183,12 @@ class TestBuildMarketOverview:
         assert overview.avg_funding_rate == pytest.approx(0.0001, abs=0.0001)
         # total_volume: sum of all volumes
         assert overview.total_volume == pytest.approx(2750000000.0, abs=1.0)
-        # Signal counts derived from multi_factor_score:
-        # [0.85, 0.72, 0.05, -0.65] -> [BULLISH, BULLISH, NEUTRAL, BEARISH]
-        assert overview.bullish_count == 2
+        # Signal counts derived from multi_factor_score with the calibrated
+        # +/-0.02 thresholds:
+        # [0.85, 0.72, 0.05, -0.65] -> [BULLISH, BULLISH, BULLISH, BEARISH]
+        assert overview.bullish_count == 3
         assert overview.bearish_count == 1
-        assert overview.neutral_count == 1
+        assert overview.neutral_count == 0
 
     def test_all_nan_columns(self, builder):
         df = pd.DataFrame(
@@ -329,7 +330,7 @@ class TestBuildFullResponse:
         response = builder.build_full_response(sample_df, cache_hit=False, data_age_seconds=0.0)
 
         assert response.summary.market_overview is not None
-        assert response.summary.market_overview.bullish_count == 2
+        assert response.summary.market_overview.bullish_count == 3
 
 
 class TestBuildSummaryOnly:

@@ -24,8 +24,8 @@ def test_ic_weight_calculator_initialization():
     assert 'momentum_30d' in calculator.weights
     
     # Verify weight values match specification
-    assert calculator.weights['reversal_1d'] == 0.3
-    assert calculator.weights['momentum_30d'] == 0.7
+    assert calculator.weights['reversal_1d'] == 0.10
+    assert calculator.weights['momentum_30d'] == 0.30
 
 
 def test_get_weight_reversal_signal():
@@ -34,7 +34,7 @@ def test_get_weight_reversal_signal():
     
     weight = calculator.get_weight('reversal_1d')
     
-    assert weight == 0.3
+    assert weight == 0.10
     assert isinstance(weight, float)
 
 
@@ -44,7 +44,7 @@ def test_get_weight_momentum_signal():
     
     weight = calculator.get_weight('momentum_30d')
     
-    assert weight == 0.7
+    assert weight == 0.30
     assert isinstance(weight, float)
 
 
@@ -70,7 +70,7 @@ def test_get_weight_case_sensitive():
     
     # Should work with correct case
     weight = calculator.get_weight('reversal_1d')
-    assert weight == 0.3
+    assert weight == 0.10
     
     # Should fail with incorrect case
     with pytest.raises(KeyError):
@@ -111,7 +111,7 @@ def test_multiple_instances_independent():
     calculator1.weights['reversal_1d'] = 0.5
     
     assert calculator1.weights['reversal_1d'] == 0.5
-    assert calculator2.weights['reversal_1d'] == 0.3
+    assert calculator2.weights['reversal_1d'] == 0.10
 
 
 def test_get_weight_all_signals():

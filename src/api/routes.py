@@ -76,13 +76,8 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
             cache_hit = False
             logger.info("Cache miss for screener summary, fetching fresh data")
 
-            result = await data_processor.process_all()
-            cache_manager.set(result)
-            data_age_seconds = 0.0
-
-            logger.info(
-                "Fresh data fetched and cached",
-                extra={"symbols_count": len(result.data), "errors_count": len(result.errors)},
+            result, cache_hit, data_age_seconds = await _fetch_fresh_or_stale(
+                data_processor, cache_manager
             )
 
         # Build response
@@ -206,9 +201,9 @@ async def get_asset_detail(request: Request, symbol: str):
                 extra={"symbol": normalized},
             )
 
-            result = await data_processor.process_all()
-            cache_manager.set(result)
-            data_age_seconds = 0.0
+            result, cache_hit, data_age_seconds = await _fetch_fresh_or_stale(
+                data_processor, cache_manager
+            )
 
         df = result.data
 
@@ -324,6 +319,38 @@ async def health_check(request: Request):
         uptime_seconds=round(uptime_seconds, 2),
         cache_status=cache_status,
     )
+
+
+async def _fetch_fresh_or_stale(data_processor, cache_manager):
+    """Fetch fresh data; if it came back empty, fall back to the last good entry.
+
+    Returns (result, cache_hit, data_age_seconds). Empty results are never
+    cached (see CacheManager.set), so the next request retries the exchange.
+    """
+    result = await data_processor.process_all()
+    if cache_manager.set(result):
+        logger.info(
+            "Fresh data fetched and cached",
+            extra={"symbols_count": len(result.data), "errors_count": len(result.errors)},
+        )
+        return result, False, 0.0
+
+    stale = cache_manager.get_last_good()
+    if stale is not None:
+        logger.warning(
+            "Fresh fetch returned no data; serving last good (stale) screener data",
+            extra={"data_age_seconds": round(stale.age_seconds, 2), "errors_count": len(result.errors)},
+        )
+        # Keep this attempt's errors visible to the client.
+        stale_result = type(stale.result)(
+            data=stale.result.data,
+            errors=list(result.errors),
+            processed_at=stale.result.processed_at,
+        )
+        return stale_result, True, stale.age_seconds
+
+    logger.warning("Fresh fetch returned no data and no previous data is available; not caching")
+    return result, False, 0.0
 
 
 def _is_exchange_error(exc: Exception) -> bool:

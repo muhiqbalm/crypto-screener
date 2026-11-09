@@ -114,6 +114,7 @@ class TestProperty6PartialFailureIsolation:
             MockScorer.return_value = mock_scorer
             mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
             mock_scorer.calculate_position_sizing.side_effect = lambda df: df
+            mock_scorer.calculate_confidence_rate.side_effect = lambda df: df
             
             # Setup mock ranker
             mock_ranker = MagicMock()
@@ -215,6 +216,7 @@ class TestProperty6PartialFailureIsolation:
             MockScorer.return_value = mock_scorer
             mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
             mock_scorer.calculate_position_sizing.side_effect = lambda df: df
+            mock_scorer.calculate_confidence_rate.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
             def mock_rank(df, sort_by=None):
@@ -300,6 +302,7 @@ class TestProperty6PartialFailureIsolation:
             MockScorer.return_value = mock_scorer
             mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
             mock_scorer.calculate_position_sizing.side_effect = lambda df: df
+            mock_scorer.calculate_confidence_rate.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
             def mock_rank(df, sort_by=None):
@@ -384,6 +387,7 @@ class TestProperty6PartialFailureIsolation:
             MockScorer.return_value = mock_scorer
             mock_scorer.calculate_risk_adjusted_score.side_effect = lambda df: df
             mock_scorer.calculate_position_sizing.side_effect = lambda df: df
+            mock_scorer.calculate_confidence_rate.side_effect = lambda df: df
             
             mock_ranker = MagicMock()
             def mock_rank(df, sort_by=None):

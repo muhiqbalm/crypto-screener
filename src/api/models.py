@@ -50,7 +50,7 @@ class MarketOverview(BaseModel):
     )
     avg_funding_rate: Optional[float] = Field(
         default=None,
-        description="Average perpetual swap funding rate across all assets",
+        description="Average perpetual swap funding rate across all assets, in percent (e.g. 0.01 = 0.01%)",
     )
     total_volume: Optional[float] = Field(
         default=None,
@@ -147,7 +147,7 @@ class AssetDetail(BaseModel):
     )
     price: Optional[float] = Field(
         default=None,
-        description="Current price in USD",
+        description="Current price in USD (rounded to 8 significant digits, so sub-cent prices are preserved)",
     )
     change_24h: Optional[float] = Field(
         default=None,
@@ -159,11 +159,15 @@ class AssetDetail(BaseModel):
     )
     funding_rate: Optional[float] = Field(
         default=None,
-        description="Current perpetual swap funding rate (e.g. 0.01 = 1%)",
+        description="Current perpetual swap funding rate per funding interval, already expressed in percent (e.g. 0.01 = 0.01%), 8 significant digits",
     )
     open_interest: Optional[float] = Field(
         default=None,
-        description="Total open interest in USD",
+        description="Open interest as USD notional (open_interest_coins x price)",
+    )
+    open_interest_coins: Optional[float] = Field(
+        default=None,
+        description="Open interest in contracts / base-asset units as reported by Binance (e.g. BTC for BTC/USDT)",
     )
     long_short_ratio: Optional[float] = Field(
         default=None,
@@ -173,9 +177,13 @@ class AssetDetail(BaseModel):
         default=None,
         description="Reversal score (0-100 scale). Derived from normalized reversal z-score: 50 = neutral, < 30 = strong reversal potential upward, > 70 = strong reversal potential downward. NOT a standard RSI calculation.",
     )
+    momentum_signal: Optional[str] = Field(
+        default=None,
+        description="30-day momentum signal (cross-sectional z-score, not a MACD): BUY (z > 0.5), SELL (z < -0.5), or HOLD",
+    )
     macd_signal: Optional[str] = Field(
         default=None,
-        description="MACD-derived signal: BUY (momentum z > 0.5), SELL (< -0.5), or HOLD",
+        description="DEPRECATED alias of momentum_signal kept for older clients. Despite the name this is NOT a MACD; it is the 30-day momentum z-score label.",
     )
     volatility: Optional[float] = Field(
         default=None,
@@ -195,7 +203,7 @@ class AssetDetail(BaseModel):
     )
     tier: Optional[str] = Field(
         default=None,
-        description="Classification tier: A (top 33% — buy), B (middle 34% — hold), C (bottom 33% — avoid)",
+        description="Classification tier by percentile of risk_adjusted_score (the same score used for rank): A (top 33%), B (middle 34%), C (bottom 33%)",
     )
     funding_rate_signal: Optional[str] = Field(
         default=None,

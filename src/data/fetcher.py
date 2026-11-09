@@ -5,6 +5,7 @@ Fetches market data for perpetual futures contracts from exchanges.
 """
 
 import logging
+import threading
 import ccxt
 import pandas as pd
 import numpy as np
@@ -20,16 +21,27 @@ class MarketDataFetcher:
     funding rate, and long/short ratio for specified cryptocurrency symbols.
     """
     
-    def __init__(self, exchange: ccxt.Exchange, symbols: list):
+    # When memoizing, daily candles are fetched once with this many bars and
+    # sliced for momentum (31), ATR (15) and MA50 (50).
+    DAILY_OHLCV_LIMIT = 50
+
+    def __init__(self, exchange: ccxt.Exchange, symbols: list, memoize: bool = False):
         """
         Initialize MarketDataFetcher with exchange and symbol list.
         
         Args:
             exchange: CCXT exchange instance (e.g., Binance USDT-M Futures)
             symbols: List of perpetual futures symbols (e.g., ['ZEC/USDT:USDT', 'TAO/USDT:USDT'])
+            memoize: If True, ticker / daily OHLCV / current OI results are
+                cached on this instance so the several derived metrics for a
+                symbol share one request each. Use one instance per refresh
+                cycle (the cache never expires).
         """
         self.exchange = exchange
         self.symbols = symbols
+        self.memoize = memoize
+        self._memo: dict = {}
+        self._memo_lock = threading.Lock()
         logger.info(f"MarketDataFetcher initialized with {len(symbols)} symbols")
     
     def fetch_ticker_data(self, symbol: str) -> dict:
@@ -51,6 +63,10 @@ class MarketDataFetcher:
         Raises:
             Exception: If ticker data cannot be fetched
         """
+        if self.memoize:
+            cached = self._memo_get(('ticker', symbol))
+            if cached is not None:
+                return dict(cached)
         try:
             # Fetch ticker data from CCXT
             # CCXT endpoint: exchange.fetch_ticker() returns ticker dictionary
@@ -73,11 +89,14 @@ class MarketDataFetcher:
             
             logger.debug(f"Fetched ticker for {symbol}: price={price}, change_24h={change_24h}%, volume_24h={volume_24h}")
             
-            return {
+            result = {
                 'price': price,
                 'change_24h': change_24h,
                 'volume_24h': volume_24h
             }
+            if self.memoize:
+                self._memo_set(('ticker', symbol), dict(result))
+            return result
             
         except Exception as e:
             logger.error(f"Failed to fetch ticker data for {symbol}: {e}")
@@ -122,6 +141,8 @@ class MarketDataFetcher:
                         return None
                     
                     logger.debug(f"Fetched open interest for {symbol}: {open_interest_value}")
+                    if self.memoize:
+                        self._memo_set(('oi', symbol), open_interest_value)
                     return open_interest_value
                     
                 except (ValueError, TypeError) as e:
@@ -237,6 +258,8 @@ class MarketDataFetcher:
         Raises:
             Exception: If OHLCV data cannot be fetched
         """
+        if self.memoize:
+            return self._fetch_ohlcv_memoized(symbol, timeframe, limit)
         try:
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
             logger.debug(f"Fetched {len(ohlcv)} OHLCV candles for {symbol}")
@@ -245,6 +268,31 @@ class MarketDataFetcher:
             logger.error(f"Failed to fetch OHLCV data for {symbol}: {e}")
             raise
     
+    def _memo_get(self, key):
+        with self._memo_lock:
+            return self._memo.get(key)
+
+    def _memo_set(self, key, value) -> None:
+        with self._memo_lock:
+            self._memo[key] = value
+
+    def _fetch_ohlcv_memoized(self, symbol: str, timeframe: str, limit: int) -> list:
+        """One request per (symbol, timeframe); daily bars fetched once and sliced."""
+        fetch_limit = max(limit, self.DAILY_OHLCV_LIMIT) if timeframe == '1d' else limit
+        key = ('ohlcv', symbol, timeframe)
+        cached = self._memo_get(key)  # (limit_fetched, candles)
+        if cached is None or cached[0] < fetch_limit:
+            try:
+                ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=fetch_limit)
+            except Exception as e:
+                logger.error(f"Failed to fetch OHLCV data for {symbol}: {e}")
+                raise
+            logger.debug(f"Fetched {len(ohlcv)} {timeframe} OHLCV candles for {symbol}")
+            cached = (fetch_limit, ohlcv)
+            self._memo_set(key, cached)
+        ohlcv = cached[1]
+        return ohlcv[-limit:] if limit else ohlcv
+
     def calculate_momentum_30d(self, symbol: str) -> float:
         """
         Calculate 30-day price momentum from OHLCV data.
@@ -624,6 +672,10 @@ class MarketDataFetcher:
         Returns:
             float: Current open interest value, or None if fetch fails
         """
+        if self.memoize:
+            cached = self._memo_get(('oi', symbol))
+            if cached is not None:
+                return cached
         try:
             import requests
             

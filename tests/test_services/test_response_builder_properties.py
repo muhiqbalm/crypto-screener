@@ -312,8 +312,8 @@ class TestProperty3ValueSanitization:
         if response.assets:
             for asset in response.assets:
                 # Fields with 4 decimals
-                for field in [asset.composite_score, asset.change_24h, 
-                             asset.funding_rate, asset.long_short_ratio,
+                for field in [asset.composite_score, asset.change_24h,
+                             asset.long_short_ratio,
                              asset.volatility, asset.ic_weight]:
                     if field is not None:
                         # Should be rounded to at most 4 decimals
@@ -321,9 +321,16 @@ class TestProperty3ValueSanitization:
                             f"Field {field} should be rounded to 4 decimals"
                 
                 # Fields with 2 decimals
-                for field in [asset.price, asset.volume_24h, 
+                for field in [asset.volume_24h,
                              asset.open_interest, asset.reversal_score]:
                     if field is not None:
                         # Should be rounded to at most 2 decimals
                         assert field == round(field, 2), \
                             f"Field {field} should be rounded to 2 decimals"
+
+                # price / funding_rate keep 8 significant digits so sub-cent
+                # values (SHIB, PEPE) are not rounded to 0.0
+                for field in [asset.price, asset.funding_rate]:
+                    if field is not None and field != 0:
+                        assert field == builder._sanitize_sig(field), \
+                            f"Field {field} should be rounded to 8 significant digits"

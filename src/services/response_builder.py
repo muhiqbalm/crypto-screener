@@ -219,7 +219,7 @@ class ResponseBuilder:
         if "funding_rate" in df.columns:
             valid_funding = df["funding_rate"].dropna()
             if len(valid_funding) > 0:
-                avg_funding = self._sanitize_value(valid_funding.mean(), decimals=4)
+                avg_funding = self._sanitize_sig(valid_funding.mean())
 
         # Calculate total_volume according to requirement 2.3:
         # - If assets array is empty: return 0.0
@@ -311,8 +311,10 @@ class ResponseBuilder:
         # Reversal score: map z-score to 0-100 scale (not standard RSI)
         reversal_score = self._calculate_reversal_score(row.get("reversal_signal"))
         
-        # Derive MACD signal from momentum_signal
-        macd_signal = self._derive_macd_signal(row.get("momentum_signal"))
+        # BUY/SELL/HOLD from the normalized 30d momentum z-score. This is NOT
+        # a MACD; it is exposed as momentum_signal (macd_signal kept as a
+        # deprecated alias for older frontends).
+        momentum_label = self._derive_momentum_label(row.get("momentum_signal"))
         
         # Map atr_percent to volatility
         volatility = self._sanitize_value(row.get("atr_percent"), decimals=4)
@@ -335,14 +337,20 @@ class ResponseBuilder:
                 row.get("risk_adjusted_score", row.get("multi_factor_score")), decimals=4
             ),
             signal=signal,
-            price=self._sanitize_value(row.get("price"), decimals=2),
+            # Significant-digit rounding: fixed 2-decimal rounding turned
+            # sub-cent prices (SHIB, PEPE, GALA) into 0.0.
+            price=self._sanitize_sig(row.get("price")),
             change_24h=self._sanitize_value(row.get("change_24h"), decimals=4),
             volume_24h=self._sanitize_value(row.get("volume_24h"), decimals=2),
-            funding_rate=self._sanitize_value(row.get("funding_rate"), decimals=4),
-            open_interest=self._sanitize_value(row.get("open_interest"), decimals=2),
+            funding_rate=self._sanitize_sig(row.get("funding_rate")),
+            # open_interest is USD notional (contracts x price); the raw
+            # contract/coin amount is exposed separately as open_interest_coins.
+            open_interest=self._open_interest_usd(row),
+            open_interest_coins=self._sanitize_sig(row.get("open_interest")),
             long_short_ratio=self._sanitize_value(row.get("long_short_ratio"), decimals=4),
             reversal_score=reversal_score,
-            macd_signal=macd_signal,
+            momentum_signal=momentum_label,
+            macd_signal=momentum_label,
             volatility=volatility,
             ic_weight=ic_weight,
             risk_adjusted_score=self._sanitize_value(row.get("risk_adjusted_score"), decimals=4),
@@ -373,6 +381,41 @@ class ResponseBuilder:
             return round(float_val, decimals)
         except (TypeError, ValueError):
             return None
+
+    def _open_interest_usd(self, row: pd.Series) -> Optional[float]:
+        """USD notional open interest.
+
+        Binance reports open interest in contracts (= coins for USDT-M linear
+        perps). Uses an explicit ``open_interest_usd`` column when present,
+        otherwise coins x last price.
+        """
+        explicit = self._sanitize_value(row.get("open_interest_usd"), decimals=2)
+        if explicit is not None:
+            return explicit
+        coins = self._sanitize_value(row.get("open_interest"), decimals=12)
+        price = self._sanitize_value(row.get("price"), decimals=12)
+        if coins is None or price is None:
+            return None
+        return self._sanitize_value(coins * price, decimals=2)
+
+    def _sanitize_sig(self, value, sig_digits: int = 8) -> Optional[float]:
+        """Convert NaN/None to null and round to significant digits.
+
+        Unlike fixed-decimal rounding this keeps tiny values meaningful,
+        e.g. 0.00001234 stays 0.00001234 instead of becoming 0.0.
+        """
+        if value is None:
+            return None
+        try:
+            float_val = float(value)
+        except (TypeError, ValueError):
+            return None
+        if math.isnan(float_val) or math.isinf(float_val):
+            return None
+        if float_val == 0:
+            return 0.0
+        magnitude = math.floor(math.log10(abs(float_val)))
+        return round(float_val, sig_digits - 1 - magnitude)
 
     def _sanitize_int(self, value) -> Optional[int]:
         """Convert value to int, returning None for NaN/None.
@@ -456,8 +499,10 @@ class ResponseBuilder:
         except (TypeError, ValueError):
             return None
 
-    def _derive_macd_signal(self, momentum_signal) -> Optional[str]:
-        """Derive MACD signal from momentum signal (normalized z-score).
+    def _derive_momentum_label(self, momentum_signal) -> Optional[str]:
+        """Derive BUY/SELL/HOLD from the 30d momentum signal (normalized z-score).
+
+        Not a MACD: there is no EMA crossover involved.
 
         Args:
             momentum_signal: Normalized momentum signal (z-score).

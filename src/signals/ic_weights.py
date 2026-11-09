@@ -18,15 +18,21 @@ class ICWeightCalculator:
     and future returns. These weights are used to combine multiple signals into
     a multi-factor score.
     
-    Current Implementation:
-    - Uses calibrated IC weights for 5 signal factors
-    - Real implementation would calculate IC weights from historical backtesting
-    - IC weights would be updated periodically based on rolling performance analysis
+    Current Implementation (honest labelling):
+    - The weights below are STATIC, hand-picked heuristics. They are not
+      measured Information Coefficients and are not re-estimated from any
+      backtest or rolling window. Treat the "IC" name as historical.
+    - A real implementation would estimate IC per factor from historical
+      forward returns and refresh them periodically.
     """
+
+    #: Where the weights come from; surfaced so callers do not mistake them
+    #: for measured ICs.
+    WEIGHTS_SOURCE = "static_heuristic"
     
     def __init__(self):
         """
-        Initialize with calibrated IC weights for all signal factors.
+        Initialize with static heuristic factor weights (not measured ICs).
         
         IC Weights (sum to 1.0):
         - momentum_30d: 0.30 (trend-following, strongest alpha in crypto)

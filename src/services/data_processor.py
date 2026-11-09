@@ -7,6 +7,7 @@ async interface suitable for the FastAPI backend.
 
 import asyncio
 import logging
+import time
 from typing import Optional
 
 import numpy as np
@@ -16,6 +17,9 @@ from src.config.settings import Settings
 from src.services.models import ProcessedResult
 
 logger = logging.getLogger(__name__)
+
+# How often the shared exchange instance reloads its market metadata.
+MARKETS_RELOAD_SECONDS = 3600
 
 
 class DataProcessor:
@@ -34,6 +38,12 @@ class DataProcessor:
         """
         self.settings = settings
         self._symbols = settings.symbols_list
+        # One ccxt (sync) exchange instance is reused across refresh cycles.
+        # Previously a new instance + load_markets() was created every cycle
+        # and then ``exchange.close()`` was called, which does not exist on
+        # sync ccxt exchanges -> a warning on every cycle.
+        self._connector = None
+        self._markets_loaded_at = 0.0
         logger.info(
             f"DataProcessor initialized with {len(self._symbols)} symbols"
         )
@@ -59,23 +69,19 @@ class DataProcessor:
             logger.info("Mock mode enabled - returning synthetic data")
             return self._generate_mock_data()
 
-        from src.exchange.connector import ExchangeConnector
-
-        connector = ExchangeConnector(exchange_id="binanceusdm")
         errors: list[dict] = []
 
         try:
-            # Stage 1: Connect to exchange
-            logger.info("Connecting to exchange...")
-            await asyncio.to_thread(connector.connect)
-            exchange = connector.get_exchange()
-            logger.info("Exchange connection established")
+            # Stage 1: Get (or lazily create) the shared exchange instance
+            exchange = await self._get_exchange()
 
             # Stage 2: Fetch data with per-symbol error isolation
             logger.info(f"Fetching data for {len(self._symbols)} symbols...")
             from src.data.fetcher import MarketDataFetcher
 
-            fetcher = MarketDataFetcher(exchange, self._symbols)
+            # memoize=True: within one cycle each symbol's ticker, daily OHLCV
+            # and current OI are fetched once and shared by all derived metrics.
+            fetcher = MarketDataFetcher(exchange, self._symbols, memoize=True)
 
             records: list[dict] = []
             sem = asyncio.Semaphore(6)
@@ -151,13 +157,19 @@ class DataProcessor:
             market_data["multi_factor_score"] = await asyncio.to_thread(
                 scorer.calculate_score, market_data
             )
-            market_data["tier"] = await asyncio.to_thread(
-                scorer.classify_tiers, market_data["multi_factor_score"]
-            )
-
             # Calculate risk-adjusted score and position sizing
             market_data = await asyncio.to_thread(
                 scorer.calculate_risk_adjusted_score, market_data
+            )
+            # Tier uses the same score as rank (risk_adjusted_score) so a
+            # rank-1 asset can never be shown as tier B/C.
+            tier_basis = (
+                market_data["risk_adjusted_score"]
+                if "risk_adjusted_score" in market_data.columns
+                else market_data["multi_factor_score"]
+            )
+            market_data["tier"] = await asyncio.to_thread(
+                scorer.classify_tiers, tier_basis
             )
             market_data = await asyncio.to_thread(
                 scorer.calculate_position_sizing, market_data
@@ -186,15 +198,41 @@ class DataProcessor:
             errors.append({"symbol": "pipeline", "error": str(e)})
             return ProcessedResult(data=pd.DataFrame(), errors=errors)
 
-        finally:
-            # Always close the exchange connector
+    async def _get_exchange(self):
+        """Return the shared exchange, connecting / reloading markets as needed."""
+        from src.exchange.connector import ExchangeConnector
+
+        if self._connector is None or self._connector.exchange is None:
+            connector = ExchangeConnector(exchange_id="binanceusdm")
+            logger.info("Connecting to exchange...")
             try:
-                if connector.exchange is not None:
-                    logger.info("Closing exchange connection...")
-                    await asyncio.to_thread(connector.exchange.close)
-                    logger.info("Exchange connection closed")
+                await asyncio.to_thread(connector.connect)
+            except Exception:
+                self._connector = None
+                raise
+            self._connector = connector
+            self._markets_loaded_at = time.monotonic()
+            logger.info("Exchange connection established")
+        elif time.monotonic() - self._markets_loaded_at > MARKETS_RELOAD_SECONDS:
+            try:
+                await asyncio.to_thread(self._connector.exchange.load_markets, True)
+                self._markets_loaded_at = time.monotonic()
             except Exception as e:
-                logger.warning(f"Error closing exchange connection: {e}")
+                # Stale market metadata is still usable; retry next cycle.
+                logger.warning(f"Market reload failed, keeping cached markets: {e}")
+        return self._connector.get_exchange()
+
+    def close(self) -> None:
+        """Release the shared exchange's HTTP session (call on shutdown)."""
+        connector = self._connector
+        self._connector = None
+        exchange = getattr(connector, "exchange", None) if connector else None
+        session = getattr(exchange, "session", None)
+        if session is not None and hasattr(session, "close"):
+            try:
+                session.close()
+            except Exception as e:
+                logger.debug(f"Error closing exchange HTTP session: {e}")
 
     async def _fetch_with_error_isolation(
         self, fetcher, symbol: str
@@ -407,10 +445,9 @@ class DataProcessor:
         ic_calc = ICWeightCalculator()
         scorer = MultiFactorScorer(ic_calc)
         df["multi_factor_score"] = scorer.calculate_score(df)
-        df["tier"] = scorer.classify_tiers(df["multi_factor_score"])
-
         # Risk-adjusted score and position sizing
         df = scorer.calculate_risk_adjusted_score(df)
+        df["tier"] = scorer.classify_tiers(df["risk_adjusted_score"])
         df = scorer.calculate_position_sizing(df)
         df = scorer.calculate_confidence_rate(df)
 

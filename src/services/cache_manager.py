@@ -41,18 +41,34 @@ class CacheManager:
                 return None
             return self._entry
 
-    def set(self, result: ProcessedResult) -> None:
+    def set(self, result: ProcessedResult) -> bool:
         """Store a processed result in the cache with the current timestamp.
+
+        Empty results (every exchange fetch failed) are NOT cached: caching
+        them used to blank the screener for a whole TTL after a single
+        Binance hiccup. The previous good entry is kept instead.
 
         Args:
             result: The ProcessedResult to cache.
+
+        Returns:
+            True if the result was stored, False if it was rejected as empty.
         """
+        data = getattr(result, "data", None)
+        if data is None or len(data) == 0:
+            return False
         with self._lock:
             self._entry = CacheEntry(
                 result=result,
                 cached_at=datetime.utcnow(),
                 ttl=self._ttl,
             )
+        return True
+
+    def get_last_good(self) -> Optional[CacheEntry]:
+        """Return the most recent stored entry even if expired (stale fallback)."""
+        with self._lock:
+            return self._entry
 
     @property
     def data_age_seconds(self) -> Optional[float]:
