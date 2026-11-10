@@ -19,7 +19,9 @@ python-json-logger==4.2.0
 # Authentication & Security
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
-python-jose[cryptography]==3.3.0
+# 3.3.0 had PYSEC-2024-232/233 (not reachable with our fixed HS256 use, but patched)
+python-jose[cryptography]==3.5.0
+pyasn1==0.6.5
 
 # Encryption (Fernet for exchange credentials)
 cryptography==42.0.5

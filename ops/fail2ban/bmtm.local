@@ -1,0 +1,39 @@
+# /etc/fail2ban/jail.d/bmtm.local  (installed by ops/vps-hardening.sh fail2ban)
+[DEFAULT]
+# Never ban localhost, the VPS itself, or TradingView's published webhook
+# source IPs (https://www.tradingview.com/support/solutions/43000529348/).
+ignoreip = 127.0.0.1/8 ::1 72.60.201.108 52.89.214.238 34.212.75.30 54.218.53.128 52.32.178.7
+bantime  = 1h
+findtime = 10m
+backend  = auto
+
+[sshd]
+enabled  = true
+maxretry = 5
+bantime  = 6h
+
+[bmtm-auth]
+enabled  = true
+port     = http,https
+filter   = bmtm-auth
+logpath  = /var/log/nginx/access.log
+maxretry = 10
+findtime = 10m
+bantime  = 1h
+
+[nginx-botsearch]
+enabled  = true
+port     = http,https
+logpath  = /var/log/nginx/access.log
+maxretry = 5
+
+[nginx-limit-req]
+enabled  = true
+port     = http,https
+logpath  = /var/log/nginx/error.log
+maxretry = 20
+
+[recidive]
+enabled  = true
+bantime  = 1w
+findtime = 1d
