@@ -82,3 +82,13 @@ def test_concurrent_requests_share_one_refresh():
     svc2._client.get = slow_fail
     asyncio.run(svc2.get_whales_data())
     assert single == calls["n"]  # 10 concurrent callers cost one refresh
+
+
+def test_rss_links_limited_to_http_schemes():
+    rss = """<?xml version="1.0"?><rss><channel>
+<item><title>A</title><link>javascript:alert(1)</link></item>
+<item><title>B</title><link> https://example.com/b </link></item>
+<item><title>C</title><link>data:text/html,x</link></item>
+</channel></rss>"""
+    items = IntelService.parse_rss(rss, 0)
+    assert [i["linkUrl"] for i in items] == [None, "https://example.com/b", None]

@@ -213,6 +213,16 @@ def extract_large_trades(
     return out
 
 
+def _safe_http_url(url: Optional[str]) -> Optional[str]:
+    """Only http(s) links from the third-party feed reach the FE as hrefs."""
+    if not url:
+        return None
+    lowered = url.strip().lower()
+    if lowered.startswith("https://") or lowered.startswith("http://"):
+        return url.strip()
+    return None
+
+
 class IntelService:
     def __init__(self) -> None:
         self._whales_cache: Optional[Dict[str, Any]] = None
@@ -428,6 +438,7 @@ class IntelService:
                 continue
             link_el = item.find("link")
             link = (link_el.text or "").strip() if link_el is not None and link_el.text else None
+            link = _safe_http_url(link)
             desc_el = item.find("description")
             summary = desc_el.text if desc_el is not None and desc_el.text else title
             if "<" in summary and ">" in summary:
