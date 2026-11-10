@@ -9,8 +9,11 @@ Pulls live data from:
 Zero static mocking: nothing here is ever a hardcoded number. When a source
 cannot be reached the corresponding fields are ``None`` and listed in
 ``unavailableFields``; ``status`` is ``"live"``, ``"partial"`` or
-``"unavailable"``. Fully failed snapshots are not cached, so the next request
-retries immediately.
+``"unavailable"``. Fully failed snapshots are not served from cache, but a
+failed refresh is not retried for ``FAILURE_RETRY_SECONDS``; refreshes are
+single-flight. Both endpoints are public and every refresh spends Binance
+request weight on the same IP that places live orders, so concurrent or
+repeated requests must never fan out into repeated upstream calls.
 
 FE conventions kept: ratio rows from the live API carry ``updated: "Live FAPI"``,
 trade ids start with ``tx-fapi-``, news ids start with ``live-news-``.
@@ -31,6 +34,8 @@ import httpx
 logger = logging.getLogger(__name__)
 
 CACHE_TTL_SECONDS = 60
+# After a fully failed refresh, wait this long before hitting upstream again.
+FAILURE_RETRY_SECONDS = 15
 
 FAPI = "https://fapi.binance.com"
 RATIO_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"]
@@ -216,6 +221,13 @@ class IntelService:
         self._news_cache: Optional[Dict[str, Any]] = None
         self._news_cache_time: float = 0.0
 
+        # Single-flight refresh + failure backoff (see module docstring).
+        self._locks: Dict[str, Any] = {}
+        self._whales_failed: Optional[Dict[str, Any]] = None
+        self._whales_failed_time: float = 0.0
+        self._news_failed: Optional[Dict[str, Any]] = None
+        self._news_failed_time: float = 0.0
+
         self._client = httpx.AsyncClient(
             headers={"User-Agent": "BMTM-MoonTrade/1.0"},
             timeout=8.0,
@@ -264,11 +276,34 @@ class IntelService:
             logger.warning(f"Failed to fetch aggTrades for {sym}: {e}")
             return None
 
-    async def get_whales_data(self) -> Dict[str, Any]:
-        """Top-trader positioning and recent large Binance Futures prints."""
-        now = time.time()
+    def _lock(self, name: str) -> asyncio.Lock:
+        """Per-event-loop lock (the service is a module-level singleton)."""
+        loop = asyncio.get_running_loop()
+        entry = self._locks.get(name)
+        if entry is None or entry[0] is not loop:
+            entry = (loop, asyncio.Lock())
+            self._locks[name] = entry
+        return entry[1]
+
+    def _whales_cached(self, now: float) -> Optional[Dict[str, Any]]:
         if self._whales_cache and (now - self._whales_cache_time) < CACHE_TTL_SECONDS:
             return self._whales_cache
+        if self._whales_failed and (now - self._whales_failed_time) < FAILURE_RETRY_SECONDS:
+            return self._whales_failed
+        return None
+
+    async def get_whales_data(self) -> Dict[str, Any]:
+        """Top-trader positioning and recent large Binance Futures prints."""
+        cached = self._whales_cached(time.time())
+        if cached is not None:
+            return cached
+        async with self._lock("whales"):
+            cached = self._whales_cached(time.time())
+            if cached is not None:
+                return cached
+            return await self._refresh_whales()
+
+    async def _refresh_whales(self) -> Dict[str, Any]:
 
         ratio_results, trade_results = await asyncio.gather(
             asyncio.gather(*[self._fetch_ratio(s) for s in RATIO_SYMBOLS]),
@@ -348,6 +383,10 @@ class IntelService:
         if status != "unavailable":
             self._whales_cache = result
             self._whales_cache_time = now
+            self._whales_failed = None
+        else:
+            self._whales_failed = result
+            self._whales_failed_time = now
         return result
 
     # -------------------------------------------------------------------- news
@@ -426,11 +465,25 @@ class IntelService:
         bear = sum(1 for n in news if n["sentiment"] == "BEARISH")
         return f"{round((bull - bear) / len(news) * 100):+d}%"
 
-    async def get_news_data(self) -> Dict[str, Any]:
-        """Fear & Greed index and recent headlines with real publish times."""
-        now = time.time()
+    def _news_cached(self, now: float) -> Optional[Dict[str, Any]]:
         if self._news_cache and (now - self._news_cache_time) < CACHE_TTL_SECONDS:
             return self._news_cache
+        if self._news_failed and (now - self._news_failed_time) < FAILURE_RETRY_SECONDS:
+            return self._news_failed
+        return None
+
+    async def get_news_data(self) -> Dict[str, Any]:
+        """Fear & Greed index and recent headlines with real publish times."""
+        cached = self._news_cached(time.time())
+        if cached is not None:
+            return cached
+        async with self._lock("news"):
+            cached = self._news_cached(time.time())
+            if cached is not None:
+                return cached
+            return await self._refresh_news()
+
+    async def _refresh_news(self) -> Dict[str, Any]:
 
         fng, rss_text = await asyncio.gather(self._fetch_fear_greed(), self._fetch_rss())
         now = time.time()
@@ -471,6 +524,10 @@ class IntelService:
         if status != "unavailable":
             self._news_cache = result
             self._news_cache_time = now
+            self._news_failed = None
+        else:
+            self._news_failed = result
+            self._news_failed_time = now
         return result
 
 
