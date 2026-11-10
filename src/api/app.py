@@ -26,6 +26,13 @@ from src.services.cache_manager import CacheManager
 from src.services.data_processor import DataProcessor
 from src.services.response_builder import ResponseBuilder
 
+# Public auth endpoints that get per-IP brute-force limiting.
+AUTH_RATE_LIMITED_PATHS = (
+    "/trading/auth/login",
+    "/trading/auth/refresh",
+    "/trading/auth/register",
+)
+
 # 1 MB limit for all request bodies (Requirement 20.3)
 _MAX_CONTENT_SIZE = 1_048_576
 
@@ -403,7 +410,7 @@ Configure via environment variables:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
-        allow_credentials=True,
+        allow_credentials=settings.cors_allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -427,6 +434,19 @@ Configure via environment variables:
             f"Rate limiting enabled for debug endpoints: "
             f"{settings.debug_rate_limit_requests} requests per "
             f"{settings.debug_rate_limit_window} seconds"
+        )
+
+    # Brute-force protection for the public auth endpoints.  Path-scoped:
+    # never touches /webhook/tradingview or any other route.
+    if settings.auth_rate_limit_enabled:
+        from src.api.rate_limit_middleware import AuthRateLimitMiddleware
+
+        app.add_middleware(
+            AuthRateLimitMiddleware,
+            max_requests=settings.auth_rate_limit_requests,
+            window_seconds=settings.auth_rate_limit_window,
+            path_prefixes=AUTH_RATE_LIMITED_PATHS,
+            methods=("POST",),
         )
 
     # Register API routes

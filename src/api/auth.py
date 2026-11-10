@@ -75,3 +75,34 @@ async def verify_api_key(
         )
 
     logger.debug("API key verified successfully")
+
+
+async def verify_debug_api_key(
+    request: Request,
+    api_key: Optional[str] = Security(api_key_header),
+) -> None:
+    """Gate for /api/v1/debug/*.
+
+    The regular ``api_key`` is embedded in the frontend bundle
+    (NEXT_PUBLIC_API_KEY) and is therefore public.  Debug endpoints proxy
+    uncached requests to Binance from the server's IP — the same IP that
+    places live orders — so they require a separate ``debug_api_key`` that is
+    never shipped to browsers.  When auth is enabled and no debug key is
+    configured, the debug API is closed (fail closed).
+    """
+    settings = request.app.state.settings
+    if not settings.require_api_key:
+        return
+
+    debug_key = getattr(settings, "debug_api_key", "") or ""
+    if api_key is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Provide a valid X-API-Key header.",
+        )
+    if not debug_key or not secrets.compare_digest(api_key, debug_key):
+        logger.warning(
+            "Debug request rejected: invalid or unconfigured debug API key",
+            extra={"endpoint": request.url.path},
+        )
+        raise HTTPException(status_code=403, detail="Invalid API key.")

@@ -154,7 +154,7 @@ class TestOIDeltaCalculation:
         assert result['interpretation'] is None
 
     def test_malformed_historical_oi_response(self, fetcher):
-        # Missing sumOpenInterest -> treated as 0 -> division guard -> nulls.
+        # Missing sumOpenInterest -> unknown (None), never a fake 0 -> nulls.
         get = _fake_get(current={'openInterest': '120000'}, history=[{'timestamp': 1_000_000}])
         result = self._run(fetcher, get)
         assert result['oi_delta_percent'] is None
@@ -175,3 +175,27 @@ class TestOIDeltaCalculation:
         assert calls[HIST_OI_URL]['symbol'] == 'BTCUSDT'
         assert calls[HIST_OI_URL]['period'] == '1h'
         assert calls[HIST_OI_URL]['limit'] == 25
+
+    def test_missing_current_oi_is_unknown_not_zero(self, fetcher):
+        # A response without openInterest used to become 0.0 -> a fake -100%
+        # OI delta ("Longs closing"). It must now be reported as unknown.
+        get = _fake_get(current={'symbol': 'BTCUSDT'}, history=_history(100000))
+        result = self._run(fetcher, get)
+        assert result['current_oi'] is None
+        assert result['oi_delta_percent'] is None
+        assert result['interpretation'] is None
+
+    @pytest.mark.parametrize('bad', [None, '', 'abc', {'code': -1121}])
+    def test_non_numeric_current_oi_is_unknown(self, fetcher, bad):
+        payload = bad if isinstance(bad, dict) else {'openInterest': bad}
+        get = _fake_get(current=payload, history=_history(100000))
+        result = self._run(fetcher, get)
+        assert result['oi_delta_percent'] is None
+
+    def test_current_oi_is_memoized_when_enabled(self, mock_exchange):
+        f = MarketDataFetcher(exchange=mock_exchange, symbols=['BTC/USDT:USDT'], memoize=True)
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        with patch('requests.get', get):
+            assert f._fetch_current_oi('BTC/USDT:USDT') == 120000.0
+            assert f._fetch_current_oi('BTC/USDT:USDT') == 120000.0
+        assert sum(1 for c in get.call_args_list if c.args[0] == CURRENT_OI_URL) == 1

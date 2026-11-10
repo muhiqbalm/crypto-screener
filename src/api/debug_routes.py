@@ -20,14 +20,14 @@ from src.api.debug_models import (
     HealthCheckResponse,
 )
 from src.services.debug_exchange_service import DebugExchangeService
-from src.api.auth import verify_api_key
+from src.api.auth import verify_debug_api_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/v1/debug",
     tags=["Debug API"],
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(verify_debug_api_key)],
     responses={
         400: {"description": "Invalid input parameters"},
         401: {"description": "Authentication required (when API key is enabled)"},

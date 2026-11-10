@@ -35,10 +35,21 @@ class Settings(BaseSettings):
     require_api_key: bool = False
     api_key: str = ""
 
-    # Rate limiting configuration for debug endpoints
-    debug_rate_limit_enabled: bool = False
+    # Separate key for the /api/v1/debug/* endpoints.  ``api_key`` is shipped
+    # to browsers (NEXT_PUBLIC_API_KEY), so it must not unlock the debug API.
+    # When require_api_key is on and this is empty, the debug API is closed.
+    debug_api_key: str = ""
+
+    # Rate limiting configuration for debug endpoints (on by default: every
+    # debug call spends Binance request weight on the same IP that trades live)
+    debug_rate_limit_enabled: bool = True
     debug_rate_limit_requests: int = 10  # Number of requests allowed
     debug_rate_limit_window: int = 60  # Time window in seconds
+
+    # Brute-force protection for POST /trading/auth/{login,refresh,register}
+    auth_rate_limit_enabled: bool = True
+    auth_rate_limit_requests: int = 10
+    auth_rate_limit_window: int = 300
 
     @property
     def symbols_list(self) -> list[str]:
@@ -49,6 +60,11 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Get CORS origins as a parsed list."""
         return [s.strip() for s in self.cors_origins.split(",") if s.strip()]
+
+    @property
+    def cors_allow_credentials(self) -> bool:
+        """Credentials are never combined with a wildcard origin."""
+        return "*" not in self.cors_origins_list
 
 
 def get_settings() -> Settings:

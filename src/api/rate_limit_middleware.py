@@ -7,16 +7,16 @@ Uses a sliding window algorithm with in-memory storage of request timestamps.
 import logging
 import time
 from collections import defaultdict, deque
-from typing import Deque, Dict
+from typing import Deque, Dict, Iterable, Optional
 
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from fastapi import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 from starlette.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimitMiddleware:
     """Middleware that enforces rate limits on debug API endpoints.
     
     Uses a sliding window algorithm to track requests per client IP address.
@@ -33,6 +33,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         app,
         max_requests: int = 10,
         window_seconds: int = 60,
+        path_prefixes: Iterable[str] = ("/api/v1/debug",),
+        methods: Optional[Iterable[str]] = None,
     ):
         """Initialize rate limiting middleware.
         
@@ -41,9 +43,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             max_requests: Maximum number of requests allowed in the time window
             window_seconds: Time window in seconds for rate limiting
         """
-        super().__init__(app)
+        self.app = app
         self.max_requests = max_requests
         self.window_seconds = window_seconds
+        self.path_prefixes = tuple(path_prefixes)
+        self.methods = frozenset(m.upper() for m in methods) if methods else None
         # Dictionary mapping client IP to deque of request timestamps
         self.request_history: Dict[str, Deque[float]] = defaultdict(deque)
         
@@ -80,28 +84,27 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.debug(f"Cleaned up {len(to_remove)} inactive rate limit entries")
 
     def _get_client_identifier(self, request: Request) -> str:
-        """Get unique identifier for the client.
-        
-        Uses X-Forwarded-For header if available (for proxied requests),
-        otherwise falls back to client IP address.
-        
-        Args:
-            request: FastAPI request object
-            
-        Returns:
-            Client identifier (IP address)
+        """Get the client IP as observed by the reverse proxy.
+
+        The app only listens on 127.0.0.1 behind nginx, which *overwrites*
+        ``X-Real-IP`` with ``$remote_addr`` and *appends* ``$remote_addr`` to
+        ``X-Forwarded-For``.  The first XFF hop is client-controlled (anyone
+        can send ``X-Forwarded-For: 1.2.3.4`` to get a fresh bucket), so we
+        use X-Real-IP, then the last XFF hop, then the socket peer.
         """
-        # Check for X-Forwarded-For header (for proxied requests)
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip and real_ip.strip():
+            return real_ip.strip()
+
         forwarded_for = request.headers.get("X-Forwarded-For")
         if forwarded_for:
-            # X-Forwarded-For can contain multiple IPs, use the first one
-            return forwarded_for.split(",")[0].strip()
-        
-        # Fall back to direct client IP
+            hops = [h.strip() for h in forwarded_for.split(",") if h.strip()]
+            if hops:
+                return hops[-1]
+
         if request.client:
             return request.client.host
-        
-        # Fallback if client info is not available
+
         return "unknown"
 
     def _is_rate_limited(self, client_id: str) -> bool:
@@ -137,7 +140,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _should_apply_rate_limit(self, request: Request) -> bool:
         """Determine if rate limiting should be applied to this request.
         
-        Rate limiting is only applied to debug API endpoints (paths starting with /api/v1/debug).
+        Applied only to paths under ``path_prefixes`` (default: /api/v1/debug)
+        and, when ``methods`` is set, only to those HTTP methods.
         
         Args:
             request: FastAPI request object
@@ -145,28 +149,28 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             True if rate limiting should be applied, False otherwise
         """
-        return request.url.path.startswith("/api/v1/debug")
+        if self.methods is not None and request.method.upper() not in self.methods:
+            return False
+        return request.url.path.startswith(self.path_prefixes)
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        """Process request and enforce rate limiting.
-        
-        Args:
-            request: FastAPI request object
-            call_next: Next middleware or route handler
-            
-        Returns:
-            Response from next handler, or 429 error if rate limited
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Pure ASGI entry point: non-matching requests pass straight through.
+
+        Implemented as plain ASGI (not BaseHTTPMiddleware) so unrelated routes
+        — notably the latency-sensitive TradingView webhook — pay no extra
+        request/response wrapping cost.
         """
-        # Only apply rate limiting to debug endpoints
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
         if not self._should_apply_rate_limit(request):
-            return await call_next(request)
-        
-        # Get client identifier
+            await self.app(scope, receive, send)
+            return
+
         client_id = self._get_client_identifier(request)
-        
-        # Check if client is rate limited
+
         if self._is_rate_limited(client_id):
             logger.warning(
                 f"Rate limit exceeded for client {client_id}",
@@ -176,7 +180,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "method": request.method,
                 },
             )
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={
                     "success": False,
@@ -185,13 +189,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         "code": "RATE_LIMIT_EXCEEDED",
                     },
                 },
+                headers={"Retry-After": str(self.window_seconds)},
             )
-        
-        # Increment request counter and cleanup if necessary
+            await response(scope, receive, send)
+            return
+
         self._request_count += 1
         if self._request_count >= self._cleanup_threshold:
             self._cleanup_inactive_clients()
             self._request_count = 0
-        
-        # Process request normally
-        return await call_next(request)
+
+        await self.app(scope, receive, send)
+
+
+class AuthRateLimitMiddleware(RateLimitMiddleware):
+    """Per-IP limiter for the public auth endpoints (login/refresh/register).
+
+    Separate class so it can be registered alongside the debug limiter and
+    identified independently in ``app.user_middleware``.
+    """

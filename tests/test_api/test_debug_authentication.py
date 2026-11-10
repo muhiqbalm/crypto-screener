@@ -1,11 +1,12 @@
 """
 Authentication tests for the debug API (/api/v1/debug/*).
 
-The debug router is protected by the global X-API-Key dependency
-(src.api.auth.verify_api_key), controlled by SCREENER_REQUIRE_API_KEY and
-SCREENER_API_KEY:
+The debug router is protected by src.api.auth.verify_debug_api_key, controlled
+by SCREENER_REQUIRE_API_KEY and SCREENER_DEBUG_API_KEY:
 - disabled  -> every request passes
-- enabled   -> missing key = 401, wrong key = 403, correct key = 200
+- enabled   -> missing key = 401, wrong key = 403, correct debug key = 200
+- the regular (browser-shipped) SCREENER_API_KEY does NOT unlock debug
+- no debug key configured -> debug API closed (403 for any key)
 """
 
 from unittest.mock import AsyncMock, Mock
@@ -17,6 +18,7 @@ from src.api.app import create_app
 from src.config.settings import Settings
 
 API_KEY = "test-secret-key"
+PUBLIC_KEY = "public-frontend-key"
 
 ENDPOINTS = [
     "/api/v1/debug/exchange/ticker/BTCUSDT",
@@ -50,12 +52,13 @@ def _mock_debug_service():
     return service
 
 
-def _client(require_api_key: bool) -> TestClient:
+def _client(require_api_key: bool, debug_api_key: str | None = None) -> TestClient:
     app = create_app()
     app.state.settings = Settings(
         symbols="BTC/USDT:USDT",
         require_api_key=require_api_key,
-        api_key=API_KEY if require_api_key else "",
+        api_key=PUBLIC_KEY if require_api_key else "",
+        debug_api_key=(API_KEY if require_api_key else "") if debug_api_key is None else debug_api_key,
     )
     app.state.debug_service = _mock_debug_service()
     # No `with` block: the lifespan (exchange/trading startup) is not run.
@@ -104,3 +107,27 @@ class TestDebugAPIAuthentication:
             ENDPOINTS[0], headers={"Authorization": f"Bearer {API_KEY}"}
         )
         assert response.status_code == 401
+
+
+class TestDebugKeySeparation:
+
+    @pytest.mark.parametrize("endpoint", ENDPOINTS)
+    def test_public_frontend_key_does_not_unlock_debug(self, client_auth_enabled, endpoint):
+        response = client_auth_enabled.get(endpoint, headers={"X-API-Key": PUBLIC_KEY})
+        assert response.status_code == 403
+
+    def test_debug_closed_when_no_debug_key_configured(self):
+        client = _client(require_api_key=True, debug_api_key="")
+        for key in (PUBLIC_KEY, API_KEY):
+            response = client.get(ENDPOINTS[-1], headers={"X-API-Key": key})
+            assert response.status_code == 403
+        # An empty header must not match an empty (unset) debug key.
+        response = client.get(ENDPOINTS[-1], headers={"X-API-Key": ""})
+        assert response.status_code in (401, 403)
+
+    def test_public_key_still_unlocks_screener(self):
+        client = TestClient(_client(require_api_key=True).app, raise_server_exceptions=False)
+        # Screener auth is unchanged: it accepts the regular key (the request
+        # itself may fail without a warmed cache, but must pass auth).
+        response = client.get("/api/v1/screener/summary", headers={"X-API-Key": PUBLIC_KEY})
+        assert response.status_code not in (401, 403)

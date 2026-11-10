@@ -112,7 +112,7 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
             )
             error_response = ErrorResponse(
                 error="Service Unavailable",
-                message=f"Service temporarily unavailable: {str(e)}",
+                message="Service temporarily unavailable. Upstream exchange data could not be fetched.",
                 timestamp=datetime.now(timezone.utc),
             )
             return JSONResponse(
@@ -127,7 +127,7 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
             )
             error_response = ErrorResponse(
                 error="Internal Server Error",
-                message=f"An unexpected error occurred: {str(e)}",
+                message="An unexpected error occurred.",
                 timestamp=datetime.now(timezone.utc),
             )
             return JSONResponse(
@@ -244,7 +244,7 @@ async def get_asset_detail(request: Request, symbol: str):
             )
             error_response = ErrorResponse(
                 error="Service Unavailable",
-                message=f"Service temporarily unavailable: {str(e)}",
+                message="Service temporarily unavailable. Upstream exchange data could not be fetched.",
                 timestamp=datetime.now(timezone.utc),
             )
             return JSONResponse(
@@ -259,7 +259,7 @@ async def get_asset_detail(request: Request, symbol: str):
             )
             error_response = ErrorResponse(
                 error="Internal Server Error",
-                message=f"An unexpected error occurred: {str(e)}",
+                message="An unexpected error occurred.",
                 timestamp=datetime.now(timezone.utc),
             )
             return JSONResponse(

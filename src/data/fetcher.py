@@ -11,6 +11,19 @@ import ccxt
 logger = logging.getLogger(__name__)
 
 
+def _as_float_or_none(value):
+    """Parse an exchange numeric field; missing/blank/non-numeric -> None."""
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if result != result:  # NaN
+        return None
+    return result
+
+
 class MarketDataFetcher:
     """
     Fetches market data for perpetual futures contracts from the exchange.
@@ -229,8 +242,10 @@ class MarketDataFetcher:
                 response = requests.get(url, params=params, timeout=10)
                 data = response.json()
                 
-                if data and len(data) > 0:
-                    ratio = float(data[0].get('longShortRatio', 0))
+                ratio = None
+                if isinstance(data, list) and data and isinstance(data[0], dict):
+                    ratio = _as_float_or_none(data[0].get('longShortRatio'))
+                if ratio is not None:
                     logger.debug(f"Fetched long/short ratio for {symbol}: {ratio}")
                     return ratio
             
@@ -689,10 +704,16 @@ class MarketDataFetcher:
             response.raise_for_status()
             data = response.json()
             
-            # Extract OI value
-            oi_value = float(data.get('openInterest', 0))
+            # Extract OI value.  A missing/empty field means "unknown", not
+            # zero: a fake 0 would turn into a -100% OI delta downstream.
+            oi_value = _as_float_or_none(data.get('openInterest') if isinstance(data, dict) else None)
+            if oi_value is None:
+                logger.warning(f"Current OI missing in Binance response for {symbol}")
+                return None
             logger.debug(f"Current OI for {symbol}: {oi_value}")
-            
+
+            if self.memoize:
+                self._memo_set(('oi', symbol), oi_value)
             return oi_value
             
         except Exception as e:
@@ -744,7 +765,10 @@ class MarketDataFetcher:
             # Find the data point closest to target_time
             # Data is sorted by timestamp ascending
             closest_point = min(data, key=lambda x: abs(x['timestamp'] - target_time))
-            oi_value = float(closest_point.get('sumOpenInterest', 0))
+            oi_value = _as_float_or_none(closest_point.get('sumOpenInterest'))
+            if oi_value is None:
+                logger.warning(f"Historical OI missing in Binance response for {symbol}")
+                return None
             
             logger.debug(f"Historical OI for {symbol} ({hours_ago}h ago): {oi_value}")
             
