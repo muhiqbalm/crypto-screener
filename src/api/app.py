@@ -464,5 +464,6 @@ Configure via environment variables:
     app.include_router(trading_users_router)
     app.include_router(intel_router)
     from src.api.lab_routes import router as lab_router; app.include_router(lab_router)
+    from src.api.universal_routes import router as universal_router; app.include_router(universal_router)
 
     return app

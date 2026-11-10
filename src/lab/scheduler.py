@@ -3,6 +3,8 @@
   * watches: enqueue a watch_eval job ~LAB_WATCH_DELAY_S after every candle close
   * paper:   every minute, check open paper positions against closed 1m candles
              (SL/TP, engine intrabar rule), charge funding settlements, refresh marks
+  * universe: one universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)
+  * alerts:  every 30 s, deliver pending Telegram alerts (rate-limited, see universal/alerts.py)
   * bot:     every LAB_BOT_IMPORT_INTERVAL_S, import the live bot's CLOSED trades from
              bmtm_trading.db (opened read-only, mode=ro, short queries) into the journal
 """
@@ -127,15 +129,48 @@ def import_bot_trades(conn, s: LabSettings) -> int:
     return n
 
 
+def schedule_universe(conn, s: LabSettings, now: Optional[float] = None) -> Optional[int]:
+    """One universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)."""
+    now = now or time.time()
+    has_watch = conn.execute("SELECT 1 FROM universal_watches WHERE active=1 LIMIT 1").fetchone()
+    if not (s.strength_refresh or has_watch):
+        return None
+    bar = last_closed_bar_open("4h", now, s.watch_delay_s)
+    row = conn.execute("SELECT value FROM lab_kv WHERE key='universe_refresh_bar'").fetchone()
+    if row and row["value"] == bar:
+        return None
+    busy = conn.execute("SELECT 1 FROM lab_jobs WHERE kind='universe_refresh' AND status IN ('queued','running')"
+                        ).fetchone()
+    if busy:
+        return None
+    jid = q.enqueue(conn, "universe_refresh", None, {"bar": bar}, priority=10)
+    conn.execute("INSERT INTO lab_kv (key, value) VALUES ('universe_refresh_bar', ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (bar,))
+    conn.commit()
+    return jid
+
+
 class Scheduler:
     def __init__(self, settings: LabSettings):
         self.s = settings
         self._last_paper = 0.0
         self._last_bot = 0.0
+        self._last_alerts = 0.0
 
     def tick(self, conn) -> None:
         now = time.time()
         schedule_watches(conn, self.s, now)
+        try:
+            schedule_universe(conn, self.s, now)
+        except Exception:  # noqa: BLE001
+            log.exception("universe refresh scheduling failed")
+        if now - self._last_alerts >= 30:
+            self._last_alerts = now
+            try:
+                from .universal.alerts import send_pending
+                send_pending(conn, self.s)
+            except Exception:  # noqa: BLE001
+                log.exception("alert delivery failed")
         if now - self._last_paper >= 60:
             self._last_paper = now
             try:

@@ -24,6 +24,7 @@ from . import queue as q
 from .settings import REPO_ROOT, LabSettings, get_lab_settings
 
 log = logging.getLogger("lab.worker")
+FAST_KINDS = ("watch_eval", "universe_refresh")
 
 
 def _child_preexec(nice: int, mem_mb: int) -> Callable[[], None]:
@@ -160,10 +161,19 @@ class Worker:
             job = q.claim(conn, self.worker_id)
             if job is None:
                 break
-            try:
-                self.running[job["id"]] = self._spawn(job)
-            except Exception as e:  # noqa: BLE001
-                q.finish(conn, job["id"], "error", f"spawn failed: {e}")
+            self._start(conn, job)
+        # Fast lane: one extra slot so a long optimise run cannot delay the
+        # post-candle watch / universe refresh jobs by hours.
+        if self.settings.fast_lane and not any(r.job["kind"] in FAST_KINDS for r in self.running.values()):
+            job = q.claim(conn, self.worker_id, kinds=FAST_KINDS)
+            if job is not None:
+                self._start(conn, job)
+
+    def _start(self, conn, job: dict) -> None:
+        try:
+            self.running[job["id"]] = self._spawn(job)
+        except Exception as e:  # noqa: BLE001
+            q.finish(conn, job["id"], "error", f"spawn failed: {e}")
 
     def run_forever(self, hooks: Optional[list[Callable]] = None) -> None:
         conn = labdb.connect(self.settings.db_path)

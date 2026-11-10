@@ -16,6 +16,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+# Non-LAB keys the lab may read from .env (Telegram creds are used only by the
+# worker's alert sender and are never logged or written to lab.db).
+_EXTRA_KEYS = {"TRADING_LOCAL_DB_PATH", "TRADING_TELEGRAM_BOT_TOKEN", "TRADING_TELEGRAM_DEFAULT_CHAT_ID"}
+
+
 def _read_dotenv(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     try:
@@ -27,7 +32,7 @@ def _read_dotenv(path: Path) -> dict[str, str]:
             k = k.strip()
             if k.startswith("export "):
                 k = k[7:].strip()
-            if k.startswith("LAB_") or k == "TRADING_LOCAL_DB_PATH":
+            if k.startswith("LAB_") or k in _EXTRA_KEYS:
                 out[k] = v.strip().strip('"').strip("'")
     except OSError:
         pass
@@ -58,6 +63,14 @@ class LabSettings:
     bot_import_interval_s: int = 300
     watch_delay_s: int = 30
     klines_cache_s: int = 30
+    fast_lane: bool = True                 # one extra slot for watch_eval/universe_refresh jobs
+    strength_refresh: bool = True          # universe_refresh job after every 4H close
+    telegram_enabled: bool = True
+    telegram_chat_id: str = field(default="", repr=False)
+    telegram_bot_token: str = field(default="", repr=False)
+    telegram_min_interval_s: int = 300
+    telegram_max_per_hour: int = 12
+    telegram_max_age_s: int = 6 * 3600
 
     @property
     def admin_set(self) -> set[str]:
@@ -95,4 +108,12 @@ def get_lab_settings() -> LabSettings:
         bot_import_interval_s=int(_get(env, "LAB_BOT_IMPORT_INTERVAL_S", "300")),
         watch_delay_s=int(_get(env, "LAB_WATCH_DELAY_S", "30")),
         klines_cache_s=max(30, int(_get(env, "LAB_KLINES_CACHE_S", "30"))),
+        fast_lane=_get(env, "LAB_FAST_LANE", "1") != "0",
+        strength_refresh=_get(env, "LAB_STRENGTH_REFRESH", "1") != "0",
+        telegram_enabled=_get(env, "LAB_TELEGRAM_ENABLED", "1") != "0",
+        telegram_chat_id=_get(env, "LAB_TELEGRAM_CHAT_ID", "") or _get(env, "TRADING_TELEGRAM_DEFAULT_CHAT_ID", ""),
+        telegram_bot_token=_get(env, "TRADING_TELEGRAM_BOT_TOKEN", ""),
+        telegram_min_interval_s=int(_get(env, "LAB_TELEGRAM_MIN_INTERVAL_S", "300")),
+        telegram_max_per_hour=int(_get(env, "LAB_TELEGRAM_MAX_PER_HOUR", "12")),
+        telegram_max_age_s=int(_get(env, "LAB_TELEGRAM_MAX_AGE_S", str(6 * 3600))),
     )
