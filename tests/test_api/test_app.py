@@ -15,7 +15,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from src.api.app import ContentSizeLimitMiddleware, create_app, RequestLoggingMiddleware
+from src.api.app import create_app
 
 
 @pytest.fixture
@@ -79,7 +79,6 @@ class TestLifespan:
     @pytest_asyncio.fixture
     async def lifespan_app(self):
         """Create app and run lifespan manually for state inspection."""
-        from contextlib import asynccontextmanager
 
         app = create_app()
 

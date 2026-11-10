@@ -9,8 +9,7 @@ Tests cover:
 """
 
 import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 from src.data.fetcher import MarketDataFetcher
 
 

@@ -8,7 +8,7 @@ from the Binance Futures exchange API.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, Any, Union, List
+from typing import Dict, Any
 import ccxt
 import requests
 from src.exchange.connector import ExchangeConnector

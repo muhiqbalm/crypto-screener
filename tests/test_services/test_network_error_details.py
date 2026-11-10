@@ -8,7 +8,7 @@ about the type of error (DNS resolution failed, connection refused, etc.).
 import pytest
 import ccxt
 import requests
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock
 from src.services.debug_exchange_service import DebugExchangeService, _extract_network_error_details
 from src.exchange.connector import ExchangeConnector
 

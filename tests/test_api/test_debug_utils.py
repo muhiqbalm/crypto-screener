@@ -10,7 +10,6 @@ Validates:
 - Requirements 11.1, 11.2, 11.3, 11.4, 11.5
 """
 
-import pytest
 
 from src.api.debug_utils import (
     convert_to_binance_format,

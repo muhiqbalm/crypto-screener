@@ -7,12 +7,11 @@ when authentication is enabled and credentials are invalid or missing.
 
 import pytest
 from unittest.mock import AsyncMock, Mock
-from datetime import datetime
 import ccxt
 import requests
 
 from src.services.debug_exchange_service import DebugExchangeService
-from src.api.debug_models import DebugResponse, HealthCheckResponse
+from src.api.debug_models import DebugResponse
 
 
 class TestAuthenticationErrorHandling:

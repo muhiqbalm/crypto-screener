@@ -2,10 +2,8 @@
 
 import time
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
 import pandas as pd
-import pytest
 
 from src.services.cache_manager import CacheManager
 from src.services.models import ProcessedResult

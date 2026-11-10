@@ -5,7 +5,6 @@ Tests that sensitive fields (API keys, secrets, tokens) are properly
 filtered from all debug API responses.
 """
 
-import pytest
 from src.services.debug_exchange_service import sanitize_response_data, SENSITIVE_FIELDS
 
 

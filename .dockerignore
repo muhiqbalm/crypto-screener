@@ -25,13 +25,10 @@ tests/
 .coverage
 htmlcov/
 pytest.ini
-scratch/
 
 # Documentation (not needed at runtime)
 *.md
 docs/
-demos/
-archive/
 
 # Output artifacts (will be mounted as volume)
 output/

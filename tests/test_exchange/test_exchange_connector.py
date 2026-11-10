@@ -3,7 +3,6 @@
 Basic tests for ExchangeConnector class
 """
 
-import sys
 import pytest
 from src.exchange.connector import ExchangeConnector
 
@@ -56,11 +55,9 @@ def test_connect_success():
 
 
 def test_invalid_exchange():
-    """Test that invalid exchange ID raises appropriate error"""
-    connector = ExchangeConnector(exchange_id='invalid_exchange_xyz')
-    
-    with pytest.raises(ConnectionError, match="not supported by CCXT"):
-        connector.connect()
+    """Unsupported exchange IDs are rejected at construction time"""
+    with pytest.raises(ValueError, match="not supported"):
+        ExchangeConnector(exchange_id='invalid_exchange_xyz')
 
 
 if __name__ == "__main__":

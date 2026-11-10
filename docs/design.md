@@ -6,14 +6,14 @@ Dokumen ini merangkum gambaran arsitektur, alur data, modul, dan panduan pengemb
 
 ## 1. Ringkasan Proyek
 
-**Crypto Screener** adalah sistem screening kuantitatif untuk pasar perpetual futures (Binance USDT-M Futures) yang menghasilkan composite score multi-faktor, risk-adjusted ranking, dan rekomendasi sizing posisi. Sistem dapat dijalankan dalam dua mode:
+**Crypto Screener** adalah sistem screening kuantitatif untuk pasar perpetual futures (Binance USDT-M Futures) yang menghasilkan composite score multi-faktor, risk-adjusted ranking, dan rekomendasi sizing posisi.
 
-| Mode | Entry Point | Output Utama |
-|------|-------------|--------------|
-| Batch / CLI | `main.py` | Dashboard PNG 7 panel + log file |
-| REST API | `main_api.py` | FastAPI server (Screener + Debug API) |
+| Proses | Entry Point | Output Utama |
+|--------|-------------|--------------|
+| REST API | `main_api.py` | FastAPI server (Screener, Intel, Debug, Trading webhook, Strategy Lab API) |
+| Lab worker | `main_lab_worker.py` | Worker antrian job Strategy Lab (PM2 `bmtm-lab-worker`) |
 
-Stack teknologi inti: **Python 3.11+**, `ccxt` (exchange), `pandas`/`numpy` (analitik), `FastAPI`/`uvicorn` (API), `pydantic`/`pydantic-settings` (config & schema), `matplotlib`/`seaborn` (visualisasi), `cachetools` (cache), `python-json-logger` (structured logging), Docker (deploy).
+Stack teknologi inti: **Python 3.11+**, `ccxt` (exchange), `pandas`/`numpy` (analitik), `FastAPI`/`uvicorn` (API), `pydantic`/`pydantic-settings` (config & schema), `cachetools` (cache), `python-json-logger` (structured logging), PM2 di VPS (deploy).
 
 Status: production-ready, struktur modular per Phase 2, dengan beberapa spec aktif untuk perbaikan dan ekstensi (lihat bagian 9).
 
@@ -24,7 +24,7 @@ Status: production-ready, struktur modular per Phase 2, dengan beberapa spec akt
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                            Entry Points                                 │
-│   main.py (CLI batch + dashboard)        main_api.py (FastAPI server)  │
+│   main_api.py (FastAPI server)        main_lab_worker.py (Lab worker)  │
 └──────────────────┬───────────────────────────────────┬──────────────────┘
                    │                                   │
                    ▼                                   ▼
@@ -54,20 +54,13 @@ Status: production-ready, struktur modular per Phase 2, dengan beberapa spec akt
 │ (ccxt wrapper) │  │ (market data)  │  │  ic_weights  │  │              │
 │                │  │                │  │  scorer      │  │              │
 └────────────────┘  └────────────────┘  └──────────────┘  └──────────────┘
-                                                │
-                                                ▼
-                                        ┌────────────────────┐
-                                        │ src/visualization/ │
-                                        │   dashboard.py     │
-                                        │   panels.py        │
-                                        └────────────────────┘
 
 Cross-cutting: src/config/ (settings.py, logging_config.py)
 ```
 
 Prinsip arsitektur:
 - **Separation of concerns**: setiap modul punya satu tanggung jawab. API tidak menyentuh exchange langsung; selalu via `services/`.
-- **Reuse pipeline**: `main.py` (CLI) dan `data_processor.py` (API) memakai modul yang sama (`exchange`, `data`, `signals`, `ranking`).
+- **Pipeline tunggal**: `data_processor.py` (API) mengorkestrasi modul `exchange`, `data`, `signals`, `ranking`.
 - **Async di tepi, sync di inti**: API endpoint bersifat async; modul sintetis pipeline di-wrap dengan `asyncio.to_thread()` untuk non-blocking.
 - **Per-symbol error isolation**: kegagalan satu simbol tidak menggagalkan seluruh batch.
 
@@ -75,7 +68,7 @@ Prinsip arsitektur:
 
 ## 3. Pipeline Data (End-to-End)
 
-Pipeline yang sama digunakan oleh CLI dan API, dengan urutan:
+Pipeline yang dijalankan `DataProcessor` (API), dengan urutan:
 
 ```
 ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  ┌─────────────────┐
@@ -91,7 +84,6 @@ Pipeline yang sama digunakan oleh CLI dan API, dengan urutan:
        ▼
 ┌──────────────┐
 │ 9. Output:   │
-│  • Dashboard │
 │  • API JSON  │
 │  • Cache     │
 └──────────────┘
@@ -212,8 +204,8 @@ Logging selalu structured JSON (file rotating max 10×10MB di `output/logs/api_s
 
 ```
 crypto-screener/
-├── main.py                 # CLI batch entry
 ├── main_api.py             # FastAPI server entry
+├── main_lab_worker.py      # Strategy Lab worker entry
 ├── requirements.txt        # Pinned production deps
 ├── requirements-dev.txt    # Dev/test deps
 ├── pytest.ini              # asyncio_mode = auto
@@ -230,17 +222,13 @@ crypto-screener/
 │   ├── signals/            # SignalGenerator, ICWeightCalculator, MultiFactorScorer
 │   ├── ranking/            # RankingEngine
 │   ├── services/           # DataProcessor (async pipeline), CacheManager, ResponseBuilder, DebugExchangeService, symbol_utils
-│   ├── visualization/      # DashboardBuilder + 7 panel classes
-│   └── utils/              # (placeholder)
+│   ├── trading/            # TradingView webhook -> order (LIVE, jangan diubah)
+│   └── lab/                # Strategy Lab (db, queue, worker, paper, journal)
 │
 ├── tests/                  # Pytest, mengikuti struktur src/
-├── demos/                  # Script demo per modul (manual run)
-├── docs/                   # Catatan task, error handling, restructure plans
-├── archive/                # File legacy / monolitik (tidak dipakai)
+├── docs/                   # Panduan (design, debug API, quick test)
 ├── output/
-│   ├── dashboards/         # PNG dashboard (timestamped)
-│   └── logs/               # Log JSON (timestamped + rotating)
-├── scratch/                # Eksperimen sementara
+│   └── logs/               # Log JSON rotating (tidak di-track git)
 └── .kiro/specs/            # Spec aktif & history (lihat §9)
 ```
 
@@ -254,9 +242,6 @@ crypto-screener/
 # Setup
 pip install -r requirements.txt
 copy .env.example .env  # lalu edit sesuai kebutuhan (Windows: copy, Linux: cp)
-
-# Mode CLI (sekali jalan, hasilkan dashboard PNG)
-python main.py
 
 # Mode API server
 python main_api.py            # production
@@ -296,7 +281,7 @@ Folder `.kiro/specs/` berisi spec terstruktur (requirements → design → tasks
 | Spec | Status | Cakupan |
 |------|--------|---------|
 | `crypto-screener` | Selesai (baseline) | Pipeline awal, 2 sinyal |
-| `dashboard-enhancement-phase2` | Selesai | Tambah 4 panel (ATR, MA50, sparkline, OI delta) → total 7 panel |
+| `dashboard-enhancement-phase2` | Selesai (panel PNG sudah dihapus) | Metrik ATR, MA50, sparkline, OI delta (kini hanya via API) |
 | `api-backend-transformation` | Selesai | FastAPI + cache + 5 sinyal + risk-adjusted + tier |
 | `exchange-debug-api` | Selesai | Debug endpoints + sanitisasi response |
 | `null-volume-open-interest-fix` | Selesai | Bugfix nilai null untuk volume/OI |
@@ -331,7 +316,6 @@ Setiap spec punya `requirements.md`, `design.md`, dan `tasks.md` sendiri. Patuhi
 1. Method baru di `MarketDataFetcher` (`src/data/fetcher.py`).
 2. Daftarkan di `_fetch_symbol_data()` di `DataProcessor`.
 3. Tambah kolom default `np.nan` agar pipeline tidak break saat fetch gagal.
-4. (Opsional) Tambah panel di `src/visualization/panels.py` + register di `DashboardBuilder.create_dashboard()`.
 
 ### 10.4 Menambah Endpoint API
 
@@ -350,10 +334,8 @@ Setiap spec punya `requirements.md`, `design.md`, dan `tasks.md` sendiri. Patuhi
 ### 10.6 Hal yang Perlu Diperhatikan
 
 - **Exchange yang didukung hanya `binanceusdm`** (Binance USDT-M Futures). OKX di-block secara eksplisit di `ExchangeConnector` karena masalah kompatibilitas.
-- **`main.py` punya copy logic main()** di `dashboard.py` (legacy). Sumber kebenaran tetap `main.py` di root; jangan modifikasi `dashboard.py.main` untuk pipeline.
 - **Symbol di mock vs real**: `mock_mode=true` mem-bypass exchange; gunakan untuk dev/test tanpa internet.
 - **Cache shared global**: satu `CacheManager` per app instance; tidak ada cache per-symbol. Kalau butuh granular caching, refactor `CacheManager` (saat ini single entry).
-- **Output PNG resolusi tinggi** (300 dpi) → file ~1 MB. Bersihkan `output/dashboards/` periodik.
 
 ---
 
@@ -375,9 +357,9 @@ curl -H "X-API-Key: <secret>" http://localhost:8000/api/v1/screener/summary
 SCREENER_MOCK_MODE=true python main_api.py --reload
 ```
 
-### Re-run pipeline dengan symbol custom
+### API dengan symbol custom
 ```bash
-SCREENER_SYMBOLS="BTC/USDT:USDT,ETH/USDT:USDT" python main.py
+SCREENER_SYMBOLS="BTC/USDT:USDT,ETH/USDT:USDT" python main_api.py
 ```
 
 ---

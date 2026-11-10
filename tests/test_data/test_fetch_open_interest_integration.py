@@ -7,7 +7,7 @@ with the MarketDataFetcher class and handles real-world scenarios.
 """
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from src.data.fetcher import MarketDataFetcher
 
 

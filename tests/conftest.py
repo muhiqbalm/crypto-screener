@@ -11,10 +11,9 @@ Provides:
 Requirements: 11.4
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
-import numpy as np
 import pandas as pd
 import pytest
 import pytest_asyncio

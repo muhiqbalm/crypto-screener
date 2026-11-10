@@ -1,6 +1,5 @@
 """Unit tests for symbol normalization utilities."""
 
-import pytest
 
 from src.services.symbol_utils import normalize_symbol, get_base_symbol
 

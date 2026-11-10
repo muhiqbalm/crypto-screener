@@ -3,9 +3,8 @@
 Basic tests for MarketDataFetcher class
 """
 
-import sys
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, patch
 from src.data.fetcher import MarketDataFetcher
 
 
@@ -114,16 +113,37 @@ def test_fetch_funding_rate_missing():
 
 
 def test_fetch_long_short_ratio():
-    """Test fetching long/short ratio returns simulated value"""
+    """Long/short ratio is read from Binance topLongShortAccountRatio for the market id"""
     mock_exchange = Mock()
-    
+    mock_exchange.id = 'binanceusdm'
+    mock_exchange.market.return_value = {'id': 'ZECUSDT'}
+    response = Mock()
+    response.json.return_value = [{'longShortRatio': '1.5'}]
+
     fetcher = MarketDataFetcher(mock_exchange, ['ZEC/USDT:USDT'])
-    result = fetcher.fetch_long_short_ratio('ZEC/USDT:USDT')
-    
-    # Should return a simulated value between 0.5 and 2.0
-    assert result is not None
-    assert 0.5 <= result <= 2.0
+    with patch('requests.get', return_value=response) as mock_get:
+        result = fetcher.fetch_long_short_ratio('ZEC/USDT:USDT')
+
+    assert result == 1.5
     assert isinstance(result, float)
+    args, kwargs = mock_get.call_args
+    assert args[0] == 'https://fapi.binance.com/futures/data/topLongShortAccountRatio'
+    assert kwargs['params'] == {'symbol': 'ZECUSDT', 'period': '5m', 'limit': 1}
+
+
+def test_fetch_long_short_ratio_unavailable():
+    """Empty API payload or a request error yields None instead of a made-up value"""
+    mock_exchange = Mock()
+    mock_exchange.id = 'binanceusdm'
+    mock_exchange.market.return_value = {'id': 'ZECUSDT'}
+    empty = Mock()
+    empty.json.return_value = []
+
+    fetcher = MarketDataFetcher(mock_exchange, ['ZEC/USDT:USDT'])
+    with patch('requests.get', return_value=empty):
+        assert fetcher.fetch_long_short_ratio('ZEC/USDT:USDT') is None
+    with patch('requests.get', side_effect=Exception('timeout')):
+        assert fetcher.fetch_long_short_ratio('ZEC/USDT:USDT') is None
 
 
 def test_fetch_ticker_data_exception():

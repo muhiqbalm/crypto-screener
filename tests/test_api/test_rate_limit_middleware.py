@@ -12,7 +12,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from src.api.app import create_app

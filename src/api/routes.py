@@ -56,7 +56,6 @@ async def get_screener_summary(request: Request, summary_only: bool = False):
     cache_manager = request.app.state.cache_manager
     data_processor = request.app.state.data_processor
     response_builder = request.app.state.response_builder
-    settings = request.app.state.settings
 
     try:
         # Check cache first

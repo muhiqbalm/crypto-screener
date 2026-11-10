@@ -5,8 +5,6 @@
 ccxt==4.2.25
 pandas==2.2.0
 numpy==1.26.3
-matplotlib==3.8.2
-seaborn==0.13.1
 
 # API Framework
 fastapi>=0.104.0
@@ -15,8 +13,7 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 pydantic[email]>=2.5.0
 
-# Caching & Logging
-cachetools>=5.3.0
+# Logging
 python-json-logger>=2.0.0
 
 # Authentication & Security

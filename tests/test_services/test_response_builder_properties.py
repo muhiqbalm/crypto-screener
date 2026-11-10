@@ -8,11 +8,9 @@ Feature: api-backend-transformation
 
 import json
 import math
-from typing import Any
 
 import numpy as np
 import pandas as pd
-import pytest
 from hypothesis import given, strategies as st
 
 from src.services.response_builder import ResponseBuilder

@@ -14,7 +14,7 @@ import logging
 import secrets
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, Security
+from fastapi import HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 
 logger = logging.getLogger(__name__)

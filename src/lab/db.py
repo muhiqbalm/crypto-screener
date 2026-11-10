@@ -112,6 +112,3 @@ def session(db_path: Optional[str] = None, readonly: bool = False) -> Iterator[s
     finally:
         conn.close()
 
-
-def row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict]:
-    return dict(row) if row is not None else None

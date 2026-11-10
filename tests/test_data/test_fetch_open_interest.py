@@ -12,7 +12,7 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from src.data.fetcher import MarketDataFetcher
 
 

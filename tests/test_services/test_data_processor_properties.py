@@ -6,8 +6,7 @@ randomly generated inputs.
 Feature: api-backend-transformation
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd

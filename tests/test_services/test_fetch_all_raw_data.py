@@ -5,12 +5,11 @@ Tests the aggregated data fetching with concurrent execution.
 """
 
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
+from unittest.mock import Mock, patch
 import ccxt
 
 from src.services.debug_exchange_service import DebugExchangeService
-from src.api.debug_models import DebugResponse, ErrorInfo, AggregatedDebugResponse, DataTypeResult
+from src.api.debug_models import AggregatedDebugResponse
 
 
 class TestFetchAllRawData:

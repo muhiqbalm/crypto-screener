@@ -5,7 +5,7 @@ Tests that sensitive fields are properly filtered from actual debug API response
 """
 
 import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 from src.services.debug_exchange_service import DebugExchangeService
 
 
@@ -120,7 +120,6 @@ class TestDebugSanitizationIntegration:
         debug_service.exchange.market = Mock(return_value={"id": "BTCUSDT"})
         
         # Mock the requests.get call
-        import requests
         from unittest.mock import patch
         
         mock_response_data = [

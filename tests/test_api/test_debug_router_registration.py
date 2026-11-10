@@ -1,49 +1,37 @@
 """Tests for debug router registration in the main application.
 
-Validates:
-- Debug router is properly registered
-- Debug routes are available in the application
+Uses the generated OpenAPI schema so the check does not depend on FastAPI's
+internal route classes (which changed in newer FastAPI releases).
 """
 
 import pytest
+
 from src.api.app import create_app
+
+DEBUG_PATHS = {
+    "/api/v1/debug/health",
+    "/api/v1/debug/exchange/ticker/{symbol}",
+    "/api/v1/debug/exchange/open-interest/{symbol}",
+    "/api/v1/debug/exchange/funding-rate/{symbol}",
+    "/api/v1/debug/exchange/long-short-ratio/{symbol}",
+    "/api/v1/debug/exchange/all/{symbol}",
+}
+
+
+@pytest.fixture(scope="module")
+def openapi_paths():
+    return create_app().openapi()["paths"]
 
 
 class TestDebugRouterRegistration:
-    """Tests for debug router registration."""
 
-    @pytest.fixture
-    def app(self):
-        """Create a fresh FastAPI app instance for testing."""
-        return create_app()
+    def test_debug_router_registered(self, openapi_paths):
+        assert DEBUG_PATHS <= set(openapi_paths)
 
-    def test_debug_router_registered(self, app):
-        """Debug router is registered in the application."""
-        # Get all routes from the app
-        routes = [route.path for route in app.routes]
-        
-        # Check that debug routes are present
-        assert "/api/v1/debug/health" in routes
-        assert "/api/v1/debug/exchange/ticker/{symbol}" in routes
-        assert "/api/v1/debug/exchange/open-interest/{symbol}" in routes
-        assert "/api/v1/debug/exchange/funding-rate/{symbol}" in routes
-        assert "/api/v1/debug/exchange/long-short-ratio/{symbol}" in routes
-        assert "/api/v1/debug/exchange/all/{symbol}" in routes
+    def test_debug_routes_count(self, openapi_paths):
+        debug = {p for p in openapi_paths if p.startswith("/api/v1/debug")}
+        assert debug == DEBUG_PATHS
 
-    def test_debug_routes_count(self, app):
-        """All 6 debug endpoints are registered."""
-        debug_routes = [
-            route for route in app.routes 
-            if route.path.startswith("/api/v1/debug")
-        ]
-        assert len(debug_routes) == 6
-
-    def test_debug_routes_methods(self, app):
-        """All debug routes use GET method."""
-        debug_routes = [
-            route for route in app.routes 
-            if route.path.startswith("/api/v1/debug")
-        ]
-        
-        for route in debug_routes:
-            assert "GET" in route.methods
+    def test_debug_routes_methods(self, openapi_paths):
+        for path in DEBUG_PATHS:
+            assert set(openapi_paths[path]) == {"get"}, path

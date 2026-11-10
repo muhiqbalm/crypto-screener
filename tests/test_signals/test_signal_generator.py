@@ -5,7 +5,6 @@ Test script for SignalGenerator class to verify task 3.1 implementation.
 
 import sys
 import pandas as pd
-import numpy as np
 
 # Import the SignalGenerator class from crypto_screener
 from src.signals.generator import SignalGenerator

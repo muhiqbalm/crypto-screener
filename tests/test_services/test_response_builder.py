@@ -10,7 +10,6 @@ Tests cover:
 - Stale data warning threshold
 """
 
-import math
 
 import numpy as np
 import pandas as pd
@@ -23,7 +22,6 @@ from src.api.models import (
     MarketOverview,
     ResponseMetadata,
     ScreenerResponse,
-    SummaryData,
 )
 from src.services.response_builder import ResponseBuilder
 

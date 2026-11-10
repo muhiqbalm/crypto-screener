@@ -7,11 +7,9 @@ with proper error handling, timing, and field mapping.
 
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
 import ccxt
 
 from src.services.debug_exchange_service import DebugExchangeService
-from src.api.debug_models import DebugResponse, ErrorInfo
 
 
 class TestFetchRawTicker:
@@ -433,7 +431,7 @@ class TestFetchRawOpenInterest:
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_timing_precision(self, debug_service):
-        """Test that response time has at least 2 decimal places precision."""
+        """Test that response time is reported rounded to 2 decimal places."""
         # Arrange
         symbol = "BTCUSDT"
         mock_open_interest_data = {"symbol": "BTC/USDT:USDT", "openInterestAmount": 1000000.0}
@@ -444,14 +442,11 @@ class TestFetchRawOpenInterest:
         
         # Assert
         assert result.success is True
-        # Check that response_time_ms is a float with at least 2 decimal places
+        # Check that response_time_ms is a non-negative float
         assert isinstance(result.metadata.response_time_ms, float)
         assert result.metadata.response_time_ms >= 0
-        # Verify precision by checking string representation
-        time_str = str(result.metadata.response_time_ms)
-        if '.' in time_str:
-            decimal_places = len(time_str.split('.')[1])
-            assert decimal_places >= 2 or result.metadata.response_time_ms == int(result.metadata.response_time_ms)
+        # Service reports the duration rounded to 2 decimal places (e.g. 0.1, 12.34)
+        assert result.metadata.response_time_ms == round(result.metadata.response_time_ms, 2)
     
     @pytest.mark.asyncio
     async def test_fetch_raw_open_interest_timestamps_order(self, debug_service):
@@ -696,7 +691,7 @@ class TestFetchRawFundingRate:
     
     @pytest.mark.asyncio
     async def test_fetch_raw_funding_rate_timing_precision(self, debug_service):
-        """Test that response time has at least 2 decimal places precision."""
+        """Test that response time is reported rounded to 2 decimal places."""
         # Arrange
         symbol = "BTCUSDT"
         mock_funding_rate_data = {"symbol": "BTC/USDT:USDT", "fundingRate": 0.0001}
@@ -707,14 +702,11 @@ class TestFetchRawFundingRate:
         
         # Assert
         assert result.success is True
-        # Check that response_time_ms is a float with at least 2 decimal places
+        # Check that response_time_ms is a non-negative float
         assert isinstance(result.metadata.response_time_ms, float)
         assert result.metadata.response_time_ms >= 0
-        # Verify precision by checking string representation
-        time_str = str(result.metadata.response_time_ms)
-        if '.' in time_str:
-            decimal_places = len(time_str.split('.')[1])
-            assert decimal_places >= 2 or result.metadata.response_time_ms == int(result.metadata.response_time_ms)
+        # Service reports the duration rounded to 2 decimal places (e.g. 0.1, 12.34)
+        assert result.metadata.response_time_ms == round(result.metadata.response_time_ms, 2)
     
     @pytest.mark.asyncio
     async def test_fetch_raw_funding_rate_timestamps_order(self, debug_service):
@@ -1058,7 +1050,7 @@ class TestFetchRawLongShortRatio:
     
     @pytest.mark.asyncio
     async def test_fetch_raw_long_short_ratio_timing_precision(self, debug_service):
-        """Test that response time has at least 2 decimal places precision."""
+        """Test that response time is reported rounded to 2 decimal places."""
         # Arrange
         symbol = "BTCUSDT"
         mock_long_short_data = [{"symbol": "BTCUSDT", "longShortRatio": 1.5}]
@@ -1076,7 +1068,7 @@ class TestFetchRawLongShortRatio:
             
             # Assert
             assert result.success is True
-            # Check that response_time_ms is a float with at least 2 decimal places precision
+            # Check that response_time_ms is a non-negative float
             assert isinstance(result.metadata.response_time_ms, float)
             assert result.metadata.response_time_ms >= 0
             # Verify precision by checking that the value is rounded to 2 decimal places
@@ -1303,7 +1295,7 @@ class TestCheckExchangeHealth:
     
     @pytest.mark.asyncio
     async def test_check_exchange_health_timing_precision(self, debug_service):
-        """Test that response time has at least 2 decimal places precision."""
+        """Test that response time is reported rounded to 2 decimal places."""
         # Arrange
         mock_server_timestamp = 1234567890000
         debug_service.exchange.fetch_time = AsyncMock(return_value=mock_server_timestamp)
@@ -1314,14 +1306,11 @@ class TestCheckExchangeHealth:
         
         # Assert
         assert result.success is True
-        # Check that response_time_ms is a float with at least 2 decimal places
+        # Check that response_time_ms is a non-negative float
         assert isinstance(result.metadata.response_time_ms, float)
         assert result.metadata.response_time_ms >= 0
-        # Verify precision by checking string representation
-        time_str = str(result.metadata.response_time_ms)
-        if '.' in time_str:
-            decimal_places = len(time_str.split('.')[1])
-            assert decimal_places >= 2 or result.metadata.response_time_ms == int(result.metadata.response_time_ms)
+        # Service reports the duration rounded to 2 decimal places (e.g. 0.1, 12.34)
+        assert result.metadata.response_time_ms == round(result.metadata.response_time_ms, 2)
     
     @pytest.mark.asyncio
     async def test_check_exchange_health_timestamps_order(self, debug_service):

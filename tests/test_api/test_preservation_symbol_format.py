@@ -15,10 +15,7 @@ Spec: d:\\WORK\\CRYPTO-SCREENER\\crypto-screener\\.kiro\\specs\\debug-api-symbol
 
 import pytest
 import pytest_asyncio
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
-from unittest.mock import AsyncMock, MagicMock, patch
-import ccxt
-from datetime import datetime
+from hypothesis import given, strategies as st, settings, HealthCheck
 
 
 # ---------------------------------------------------------------------------
@@ -359,7 +356,6 @@ def preservation_test_app():
         api_host="127.0.0.1",
         api_port=8000,
         mock_mode=True,
-        debug_api_auth_enabled=False,
     )
 
     # Create mock exchange connector

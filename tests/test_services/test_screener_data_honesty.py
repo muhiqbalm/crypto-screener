@@ -1,7 +1,6 @@
 """Regression tests for the screener data-honesty fixes (B2-B16, Nov 2026)."""
 
 import asyncio
-import re
 from unittest.mock import MagicMock, patch
 
 import numpy as np

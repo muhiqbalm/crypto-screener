@@ -6,12 +6,10 @@ randomly generated inputs.
 Feature: api-backend-transformation
 """
 
-import time
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pandas as pd
-import pytest
 from hypothesis import given, strategies as st, settings
 
 from src.services.cache_manager import CacheManager

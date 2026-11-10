@@ -1,280 +1,177 @@
 """
-Unit tests for Open Interest Delta calculation functionality.
+Unit tests for Open Interest Delta calculation (MarketDataFetcher.calculate_oi_delta).
+
+calculate_oi_delta() reads current OI from Binance ``/fapi/v1/openInterest`` and
+historical OI from ``/futures/data/openInterestHist`` via ``requests.get``, so the
+tests mock ``requests.get`` and ``fetch_ticker_data`` (used for the price leg of
+the interpretation matrix).
 
 Tests cover:
 - OI delta calculation with known values
 - Interpretation matrix (all 4 combinations + neutral)
-- Zero OI handling (division by zero)
+- Zero / missing OI handling
 - API error handling
+- Symbol conversion to the Binance id for both requests
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
+
 from src.data.fetcher import MarketDataFetcher
+
+CURRENT_OI_URL = 'https://fapi.binance.com/fapi/v1/openInterest'
+HIST_OI_URL = 'https://fapi.binance.com/futures/data/openInterestHist'
+
+
+def _response(payload):
+    resp = Mock()
+    resp.json.return_value = payload
+    resp.raise_for_status.return_value = None
+    return resp
+
+
+def _fake_get(current=None, history=None, current_exc=None, history_exc=None):
+    """Build a requests.get replacement that answers both OI endpoints."""
+
+    def fake_get(url, params=None, timeout=None):
+        if url == CURRENT_OI_URL:
+            if current_exc:
+                raise current_exc
+            return _response(current)
+        if url == HIST_OI_URL:
+            if history_exc:
+                raise history_exc
+            return _response(history)
+        raise AssertionError(f"unexpected URL {url}")
+
+    return Mock(side_effect=fake_get)
+
+
+def _history(value):
+    # One data point; calculate_oi_delta picks the point closest to now-24h.
+    return [{'sumOpenInterest': str(value), 'timestamp': 1_000_000}]
 
 
 class TestOIDeltaCalculation:
     """Test suite for calculate_oi_delta() method."""
-    
+
     @pytest.fixture
     def mock_exchange(self):
-        """Create mock exchange object."""
         exchange = Mock()
-        exchange.fetch = Mock()
+        exchange.market.return_value = {'id': 'BTCUSDT'}
         return exchange
-    
+
     @pytest.fixture
     def fetcher(self, mock_exchange):
-        """Create MarketDataFetcher instance with mock exchange."""
-        return MarketDataFetcher(
-            exchange=mock_exchange,
-            symbols=['BTC/USDT:USDT']
-        )
-    
-    def test_oi_delta_calculation_positive(self, fetcher, mock_exchange):
-        """Test OI delta calculation with increasing OI."""
-        # Mock current OI
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},  # Current OI
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]  # Historical OI (24h ago)
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Verify result structure
-        assert result is not None
-        assert 'current_oi' in result
-        assert 'oi_24h_ago' in result
-        assert 'oi_delta_percent' in result
-        assert 'interpretation' in result
-        
-        # Verify OI values
+        f = MarketDataFetcher(exchange=mock_exchange, symbols=['BTC/USDT:USDT'])
+        return f
+
+    def _run(self, fetcher, get_mock, change_24h=0.0):
+        with patch('requests.get', get_mock), \
+             patch.object(fetcher, 'fetch_ticker_data',
+                          return_value={'price': 50000, 'change_24h': change_24h}):
+            return fetcher.calculate_oi_delta('BTC/USDT:USDT')
+
+    def test_oi_delta_calculation_positive(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        result = self._run(fetcher, get)
+
+        assert set(result) == {'current_oi', 'oi_24h_ago', 'oi_delta_percent', 'interpretation'}
         assert result['current_oi'] == 120000
         assert result['oi_24h_ago'] == 100000
-        
-        # Verify delta calculation: ((120000 - 100000) / 100000) * 100 = 20%
-        expected_delta = 20.0
-        assert abs(result['oi_delta_percent'] - expected_delta) < 0.01
-    
-    def test_oi_delta_calculation_negative(self, fetcher, mock_exchange):
-        """Test OI delta calculation with decreasing OI."""
-        # Mock current OI lower than historical
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 80000, 'symbol': 'BTCUSDT'},  # Current OI
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]  # Historical OI (24h ago)
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Verify delta calculation: ((80000 - 100000) / 100000) * 100 = -20%
-        expected_delta = -20.0
-        assert abs(result['oi_delta_percent'] - expected_delta) < 0.01
-    
-    def test_interpretation_bullish_accumulation(self, fetcher, mock_exchange):
-        """Test interpretation: OI increasing + price increasing = bullish accumulation."""
-        # Mock OI increase
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        # Mock price increase (via ticker)
-        with patch.object(fetcher, 'fetch_ticker_data', return_value={'price': 55000, 'change_24h': 10.0}):
+        # ((120000 - 100000) / 100000) * 100 = 20%
+        assert result['oi_delta_percent'] == pytest.approx(20.0)
+
+    def test_oi_delta_calculation_negative(self, fetcher):
+        get = _fake_get(current={'openInterest': '80000'}, history=_history(100000))
+        result = self._run(fetcher, get)
+        assert result['oi_delta_percent'] == pytest.approx(-20.0)
+
+    def test_interpretation_oi_up_price_up(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        result = self._run(fetcher, get, change_24h=10.0)
+        assert result['interpretation'] == 'New longs opening (bullish)'
+
+    def test_interpretation_oi_up_price_down(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        result = self._run(fetcher, get, change_24h=-10.0)
+        assert result['interpretation'] == 'New shorts opening (bearish)'
+
+    def test_interpretation_oi_down_price_down(self, fetcher):
+        get = _fake_get(current={'openInterest': '80000'}, history=_history(100000))
+        result = self._run(fetcher, get, change_24h=-10.0)
+        assert result['interpretation'] == 'Longs closing (liquidation)'
+
+    def test_interpretation_oi_down_price_up(self, fetcher):
+        get = _fake_get(current={'openInterest': '80000'}, history=_history(100000))
+        result = self._run(fetcher, get, change_24h=10.0)
+        assert result['interpretation'] == 'Shorts closing (squeeze)'
+
+    def test_interpretation_neutral(self, fetcher):
+        # |delta| <= 1% is treated as stable OI regardless of price.
+        get = _fake_get(current={'openInterest': '100500'}, history=_history(100000))
+        result = self._run(fetcher, get, change_24h=0.3)
+        assert result['oi_delta_percent'] == pytest.approx(0.5)
+        assert result['interpretation'] == 'Neutral (OI stable)'
+
+    def test_ticker_failure_treats_price_change_as_zero(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        with patch('requests.get', get), \
+             patch.object(fetcher, 'fetch_ticker_data', side_effect=Exception('boom')):
             result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # OI up + Price up = Bullish accumulation
-        assert result['interpretation'] == 'bullish_accumulation'
-    
-    def test_interpretation_bearish_distribution(self, fetcher, mock_exchange):
-        """Test interpretation: OI increasing + price decreasing = bearish distribution."""
-        # Mock OI increase
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        # Mock price decrease (via ticker)
-        with patch.object(fetcher, 'fetch_ticker_data', return_value={'price': 45000, 'change_24h': -10.0}):
-            result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # OI up + Price down = Bearish distribution
-        assert result['interpretation'] == 'bearish_distribution'
-    
-    def test_interpretation_long_liquidation(self, fetcher, mock_exchange):
-        """Test interpretation: OI decreasing + price decreasing = long liquidation."""
-        # Mock OI decrease
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 80000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        # Mock price decrease (via ticker)
-        with patch.object(fetcher, 'fetch_ticker_data', return_value={'price': 45000, 'change_24h': -10.0}):
-            result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # OI down + Price down = Long liquidation
-        assert result['interpretation'] == 'long_liquidation'
-    
-    def test_interpretation_short_covering(self, fetcher, mock_exchange):
-        """Test interpretation: OI decreasing + price increasing = short covering."""
-        # Mock OI decrease
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 80000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        # Mock price increase (via ticker)
-        with patch.object(fetcher, 'fetch_ticker_data', return_value={'price': 55000, 'change_24h': 10.0}):
-            result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # OI down + Price up = Short covering
-        assert result['interpretation'] == 'short_covering'
-    
-    def test_interpretation_neutral(self, fetcher, mock_exchange):
-        """Test interpretation: minimal OI change = neutral."""
-        # Mock minimal OI change (< 1%)
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 100500, 'symbol': 'BTCUSDT'},  # 0.5% increase
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        # Mock minimal price change
-        with patch.object(fetcher, 'fetch_ticker_data', return_value={'price': 50000, 'change_24h': 0.3}):
-            result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Small changes = Neutral
-        assert result['interpretation'] == 'neutral'
-    
-    def test_zero_oi_24h_ago_handling(self, fetcher, mock_exchange):
-        """Test handling of zero OI 24h ago (division by zero)."""
-        # Mock zero historical OI
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 0, 'timestamp': 1000000}]  # Zero OI 24h ago
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should return null values to avoid division by zero
-        assert result['oi_delta_percent'] is None
-        assert result['interpretation'] == 'neutral'
-    
-    def test_current_oi_api_error(self, fetcher, mock_exchange):
-        """Test handling of current OI API error."""
-        # Mock API error for current OI
-        mock_exchange.fetch.side_effect = Exception("API error: rate limit exceeded")
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should return null values
-        assert result['current_oi'] is None
+        assert result['interpretation'] == 'New shorts opening (bearish)'
+
+    def test_zero_oi_24h_ago_handling(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(0))
+        result = self._run(fetcher, get)
+        assert result == {
+            'current_oi': None, 'oi_24h_ago': None,
+            'oi_delta_percent': None, 'interpretation': None,
+        }
+
+    def test_current_oi_api_error(self, fetcher):
+        get = _fake_get(current_exc=Exception('rate limit exceeded'), history=_history(100000))
+        result = self._run(fetcher, get)
+        assert result == {
+            'current_oi': None, 'oi_24h_ago': None,
+            'oi_delta_percent': None, 'interpretation': None,
+        }
+
+    def test_historical_oi_api_error(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'},
+                        history_exc=Exception('historical data not available'))
+        result = self._run(fetcher, get)
         assert result['oi_24h_ago'] is None
         assert result['oi_delta_percent'] is None
-        assert result['interpretation'] == 'neutral'
-    
-    def test_historical_oi_api_error(self, fetcher, mock_exchange):
-        """Test handling of historical OI API error."""
-        # Mock current OI success, historical OI failure
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            Exception("API error: historical data not available")
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should return null values
-        assert result['current_oi'] == 120000  # Current OI was fetched
+        assert result['interpretation'] is None
+
+    def test_empty_historical_oi_response(self, fetcher):
+        get = _fake_get(current={'openInterest': '120000'}, history=[])
+        result = self._run(fetcher, get)
         assert result['oi_24h_ago'] is None
         assert result['oi_delta_percent'] is None
-        assert result['interpretation'] == 'neutral'
-    
-    def test_empty_historical_oi_response(self, fetcher, mock_exchange):
-        """Test handling of empty historical OI response."""
-        # Mock empty historical data
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            []  # Empty historical data
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should return null values
-        assert result['oi_24h_ago'] is None
+        assert result['interpretation'] is None
+
+    def test_malformed_historical_oi_response(self, fetcher):
+        # Missing sumOpenInterest -> treated as 0 -> division guard -> nulls.
+        get = _fake_get(current={'openInterest': '120000'}, history=[{'timestamp': 1_000_000}])
+        result = self._run(fetcher, get)
         assert result['oi_delta_percent'] is None
-        assert result['interpretation'] == 'neutral'
-    
-    def test_malformed_current_oi_response(self, fetcher, mock_exchange):
-        """Test handling of malformed current OI response."""
-        # Mock response missing 'openInterest' field
-        mock_exchange.fetch.side_effect = [
-            {'symbol': 'BTCUSDT'},  # Missing openInterest field
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should handle gracefully
-        assert result['current_oi'] is None
-        assert result['oi_delta_percent'] is None
-    
-    def test_malformed_historical_oi_response(self, fetcher, mock_exchange):
-        """Test handling of malformed historical OI response."""
-        # Mock response missing 'sumOpenInterest' field
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            [{'timestamp': 1000000}]  # Missing sumOpenInterest field
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should handle gracefully
-        assert result['oi_24h_ago'] is None
-        assert result['oi_delta_percent'] is None
-    
-    def test_negative_oi_values(self, fetcher, mock_exchange):
-        """Test handling of negative OI values (data error)."""
-        # Mock negative OI (should not happen in real data)
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': -120000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Should handle gracefully (implementation may vary)
-        # At minimum, should not crash
-        assert result is not None
-    
-    def test_very_large_oi_delta(self, fetcher, mock_exchange):
-        """Test handling of very large OI delta (> 100%)."""
-        # Mock OI doubling
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 200000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Verify delta calculation: ((200000 - 100000) / 100000) * 100 = 100%
-        expected_delta = 100.0
-        assert abs(result['oi_delta_percent'] - expected_delta) < 0.01
-    
+        assert result['interpretation'] is None
+
+    def test_very_large_oi_delta(self, fetcher):
+        get = _fake_get(current={'openInterest': '200000'}, history=_history(100000))
+        result = self._run(fetcher, get)
+        assert result['oi_delta_percent'] == pytest.approx(100.0)
+
     def test_symbol_format_conversion(self, fetcher, mock_exchange):
-        """Test symbol format conversion for API calls."""
-        # Mock successful fetch
-        mock_exchange.fetch.side_effect = [
-            {'openInterest': 120000, 'symbol': 'BTCUSDT'},
-            [{'sumOpenInterest': 100000, 'timestamp': 1000000}]
-        ]
-        
-        result = fetcher.calculate_oi_delta('BTC/USDT:USDT')
-        
-        # Verify API was called with correct symbol format
-        # First call should be for current OI
-        first_call = mock_exchange.fetch.call_args_list[0]
-        assert 'BTCUSDT' in str(first_call) or 'BTC/USDT' in str(first_call)
+        get = _fake_get(current={'openInterest': '120000'}, history=_history(100000))
+        self._run(fetcher, get)
 
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+        mock_exchange.market.assert_called_with('BTC/USDT:USDT')
+        calls = {c.args[0]: c.kwargs['params'] for c in get.call_args_list}
+        assert calls[CURRENT_OI_URL] == {'symbol': 'BTCUSDT'}
+        assert calls[HIST_OI_URL]['symbol'] == 'BTCUSDT'
+        assert calls[HIST_OI_URL]['period'] == '1h'
+        assert calls[HIST_OI_URL]['limit'] == 25

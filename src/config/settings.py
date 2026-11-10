@@ -39,8 +39,6 @@ class Settings(BaseSettings):
     debug_rate_limit_enabled: bool = False
     debug_rate_limit_requests: int = 10  # Number of requests allowed
     debug_rate_limit_window: int = 60  # Time window in seconds
-    debug_api_auth_enabled: bool = False
-    debug_api_auth_token: str = ""
 
     @property
     def symbols_list(self) -> list[str]:

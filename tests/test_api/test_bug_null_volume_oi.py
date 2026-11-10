@@ -1,17 +1,10 @@
-"""Bug Condition Exploration Test for Null Volume and Open Interest Bug.
+"""Regression test for the (fixed) null volume / open interest bug.
 
-This test is designed to FAIL on unfixed code to confirm the bug exists.
-It tests that volume_24h and open_interest fields return null values
-in both /api/v1/screener/summary and /api/v1/screener/assets/{symbol} endpoints.
-
-**CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists.
-**DO NOT attempt to fix the test or the code when it fails.**
-
-The test assertions encode the EXPECTED BEHAVIOR (non-null values when data is available).
-When the test fails, it proves the bug exists and provides counterexamples.
+Asserts that volume_24h and open_interest are populated (non-null, numeric,
+non-negative) in both /api/v1/screener/summary and
+/api/v1/screener/assets/{symbol} when the underlying data is available.
 
 Feature: null-volume-open-interest-fix
-Spec: d:\WORK\CRYPTO-SCREENER\crypto-screener\.kiro\specs\null-volume-open-interest-fix
 """
 
 import pytest
@@ -180,111 +173,3 @@ async def test_property_bug_condition_volume_oi_null(async_client, mock_settings
         assert detail_oi >= 0, (
             f"open_interest should be non-negative, got {detail_oi} for {symbol}"
         )
-
-
-@pytest.mark.asyncio
-async def test_verify_root_cause_hardcoded_none():
-    """Verify the root cause by inspecting the source code.
-
-    This test reads the response_builder.py file to confirm that
-    volume_24h and open_interest are hardcoded to None.
-
-    This is a code inspection test that documents the root cause.
-    """
-    import os
-
-    # Read the response_builder.py file
-    response_builder_path = os.path.join(
-        os.path.dirname(__file__),
-        "..", "..",
-        "src", "services", "response_builder.py"
-    )
-
-    with open(response_builder_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Verify that volume_24h=None is hardcoded (around line 296)
-    assert "volume_24h=None" in content, (
-        "Expected to find 'volume_24h=None' hardcoded in response_builder.py. "
-        "This confirms the root cause of the bug."
-    )
-
-    # Verify that open_interest=None is hardcoded (around line 298)
-    assert "open_interest=None" in content, (
-        "Expected to find 'open_interest=None' hardcoded in response_builder.py. "
-        "This confirms the root cause of the bug."
-    )
-
-    # Verify the comment indicating these fields are not fetched
-    assert "Not fetched in current implementation" in content, (
-        "Expected to find comment 'Not fetched in current implementation' in response_builder.py. "
-        "This confirms the root cause is intentional hardcoding, not an oversight."
-    )
-
-    print("\n" + "="*80)
-    print("ROOT CAUSE VERIFICATION COMPLETE")
-    print("="*80)
-    print("✓ Confirmed: volume_24h=None is hardcoded in response_builder.py")
-    print("✓ Confirmed: open_interest=None is hardcoded in response_builder.py")
-    print("✓ Confirmed: Comment indicates 'Not fetched in current implementation'")
-    print("\nRoot cause analysis is correct:")
-    print("1. ResponseBuilder._build_asset() hardcodes these fields to None")
-    print("2. MarketDataFetcher does not extract volume from CCXT ticker response")
-    print("3. MarketDataFetcher does not fetch open interest data")
-    print("="*80 + "\n")
-
-
-@pytest.mark.asyncio
-async def test_verify_fetcher_missing_volume_extraction():
-    """Verify that the fetcher does not extract volume from ticker response.
-
-    This test reads the fetcher.py file to confirm that the fetch_ticker_data()
-    method does not extract volume from the CCXT ticker response.
-    """
-    import os
-
-    # Read the fetcher.py file
-    fetcher_path = os.path.join(
-        os.path.dirname(__file__),
-        "..", "..",
-        "src", "data", "fetcher.py"
-    )
-
-    with open(fetcher_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Find the fetch_ticker_data method
-    assert "def fetch_ticker_data(self, symbol: str)" in content, (
-        "Expected to find fetch_ticker_data method in fetcher.py"
-    )
-
-    # Verify that the method does NOT extract volume
-    # Look for the method and check if it extracts 'quoteVolume' or 'baseVolume'
-    method_start = content.find("def fetch_ticker_data(self, symbol: str)")
-    method_end = content.find("\n    def ", method_start + 1)
-    if method_end == -1:
-        method_end = len(content)
-
-    method_content = content[method_start:method_end]
-
-    # Check if volume extraction is missing
-    has_volume_extraction = (
-        "quoteVolume" in method_content or
-        "baseVolume" in method_content or
-        "'volume'" in method_content
-    )
-
-    assert not has_volume_extraction, (
-        "Expected fetch_ticker_data to NOT extract volume from ticker response. "
-        "If volume extraction is present, the root cause analysis may be incorrect."
-    )
-
-    print("\n" + "="*80)
-    print("FETCHER VERIFICATION COMPLETE")
-    print("="*80)
-    print("✓ Confirmed: fetch_ticker_data() does NOT extract volume from ticker")
-    print("✓ Confirmed: No 'quoteVolume' or 'baseVolume' extraction in method")
-    print("\nThis confirms the root cause:")
-    print("- The fetcher only extracts 'price' and 'change_24h' from ticker")
-    print("- Volume data is available in CCXT ticker but not extracted")
-    print("="*80 + "\n")

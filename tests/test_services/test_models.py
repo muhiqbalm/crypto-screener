@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
-import pytest
 
 from src.services.models import CacheEntry, ProcessedResult
 

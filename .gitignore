@@ -47,9 +47,8 @@ htmlcov/
 .hypothesis/
 
 # Output directories
-output/logs/*.log
-output/dashboards/*.png
-!output/dashboards/sample_dashboard.png
+output/logs/
+output/dashboards/
 output/test_artifacts/
 
 # Stray test artifact images that may be generated at the repo root
@@ -65,6 +64,12 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# Local SQLite databases (e.g. bmtm_trading.db)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Temporary files
 *.tmp

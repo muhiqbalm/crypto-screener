@@ -10,11 +10,9 @@ Defines endpoints:
 """
 
 import logging
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from src.api.debug_models import (
     AggregatedDebugResponse,
