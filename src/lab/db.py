@@ -20,6 +20,8 @@ _COLUMN_MIGRATIONS = [
     ("lab_runs", "n_trials", "INTEGER"),
     ("lab_runs", "trials_done", "INTEGER"),
     ("lab_runs", "top_trials_json", "TEXT"),
+    ("paper_positions", "strategy_ref", "TEXT"),   # e.g. universal:3 (Universal v0 watch)
+    ("journal_entries", "strategy_ref", "TEXT"),
 ]
 _initialised: set[str] = set()
 

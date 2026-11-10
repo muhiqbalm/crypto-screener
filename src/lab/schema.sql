@@ -218,3 +218,53 @@ CREATE TABLE IF NOT EXISTS lab_kv (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- ── Universal v0 (multi-coin portfolio, paper only) ───────────────────────
+CREATE TABLE IF NOT EXISTS universal_watches (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    name               TEXT,
+    params_json        TEXT NOT NULL,
+    costs_json         TEXT NOT NULL,
+    account_id         INTEGER,                       -- paper_accounts.id
+    autopaper_enabled  INTEGER NOT NULL DEFAULT 1,
+    telegram_enabled   INTEGER NOT NULL DEFAULT 1,
+    active             INTEGER NOT NULL DEFAULT 1,
+    run_id             INTEGER,                       -- lab_runs.id it was created from (optional)
+    last_rebalance_bar TEXT,                          -- open time of the last rebalance boundary bar
+    created_at         TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS universal_state (
+    watch_id        INTEGER PRIMARY KEY,
+    computed_at     TEXT NOT NULL,
+    last_bar        TEXT,
+    targets_json    TEXT,
+    ranks_json      TEXT,
+    next_rebalance  TEXT,
+    error           TEXT
+);
+
+CREATE TABLE IF NOT EXISTS universal_rebalances (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    watch_id      INTEGER NOT NULL,
+    bar           TEXT NOT NULL,                      -- close time of the decision bar
+    targets_json  TEXT,
+    orders_json   TEXT,
+    equity        REAL,
+    note          TEXT,
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_universal_rebalances_watch ON universal_rebalances (watch_id, id DESC);
+
+-- Outbox for Telegram alerts (sent by the worker scheduler, rate-limited).
+CREATE TABLE IF NOT EXISTS lab_alerts (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel     TEXT NOT NULL,                        -- telegram
+    ref         TEXT NOT NULL,                        -- e.g. universal:3
+    text        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',      -- pending|sent|superseded|expired|skipped|error
+    error       TEXT,
+    created_at  TEXT NOT NULL,
+    sent_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_lab_alerts_status ON lab_alerts (status, id);

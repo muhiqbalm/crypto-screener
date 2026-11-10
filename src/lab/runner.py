@@ -18,6 +18,7 @@ from . import db as labdb
 from . import honesty
 from . import queue as q
 from .settings import get_lab_settings
+from .universal import TEMPLATE_ID as UNIVERSAL_TEMPLATE_ID
 
 
 def artifacts_dir(run_id: int) -> Path:
@@ -118,6 +119,9 @@ def execute_run(conn, job: dict) -> None:
     costs = labdb.loads(run["costs_json"], {})
     payload = labdb.loads(job.get("payload_json"), {}) or {}
     prog = Progress(conn, job["id"])
+    if run["template_id"] == UNIVERSAL_TEMPLATE_ID:
+        from .universal.runner import execute_universal_run
+        return execute_universal_run(conn, job, run, prog)
     conn.execute("UPDATE lab_runs SET engine_commit=? WHERE id=?", (ea.engine_commit(), run_id))
     conn.commit()
 
@@ -268,6 +272,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "watch_eval":
             from .watch_eval import execute_watch
             execute_watch(conn, job)
+        elif job["kind"] == "universe_refresh":
+            from .universal.live import execute_refresh
+            execute_refresh(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")
