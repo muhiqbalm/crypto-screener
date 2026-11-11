@@ -2,6 +2,11 @@
 
 SQL against lab.db only. Recording and scoring happen in the lab worker
 (src/lab/ledger); these endpoints never call an exchange.
+
+Plus GET /api/v1/screener/signal-track-record: the compact per-signal track record
+shown on the /screener page. Any logged-in, active user (trading JWT), not only
+admins: it holds aggregate statistics, no symbols-level rows and no secrets. Cached
+in-process for 10 minutes and read from a read-only lab.db connection.
 """
 from __future__ import annotations
 
@@ -10,16 +15,26 @@ from typing import Annotated, Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+import logging
+import threading
+
+from src.lab import db as labdb
 from src.lab.db import loads
+from src.lab.settings import get_lab_settings
 from src.lab.ledger import HORIZONS, SOURCES
 from src.lab.ledger.scoring import outcome_rows
 from src.lab.ledger.stats import MIN_N_ANY, MIN_N_OK, horizon_stats
 from src.lab.ledger.store import ensure_schema, kv_get
+from src.lab.ledger import track_record as tr
+from src.trading.active_user_guard import active_user_guard
 
 from .lab_auth import lab_admin
 from .lab_routes import _conn
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/lab/ledger", tags=["lab-ledger"])
+screener_router = APIRouter(prefix="/api/v1/screener", tags=["Screener API"])
 Admin = Annotated[dict, Depends(lab_admin)]
 Conn = Annotated[Any, Depends(_conn)]
 
@@ -140,3 +155,39 @@ def signals(_: Admin, conn: Conn, source: Optional[str] = None, symbol: Optional
         r["meta"] = loads(r.pop("meta_json"), {}) or {}
         r["outcomes"] = outs.get(r["id"], {})
     return {"items": rows, "total": total, "limit": limit, "offset": offset}
+
+
+# ── screener track record (any logged-in user) ───────────────────────────────
+
+_tr_caches: dict[str, tr.TTLCache] = {}
+_tr_lock = threading.Lock()
+
+
+def _track_record_cache(path: str) -> tr.TTLCache:
+    with _tr_lock:
+        return _tr_caches.setdefault(path, tr.TTLCache())
+
+
+def _compute_track_record(path: str) -> dict:
+    conn = labdb.connect(path, readonly=True)
+    try:
+        return {**tr.compute(conn), "available": True, "live_since": kv_get(conn, "ledger_live_since")}
+    finally:
+        conn.close()
+
+
+def _track_record_error(e: Exception) -> dict:
+    log.warning("screener track record unavailable: %s", e.__class__.__name__)
+    return {"available": False, "items": [], "headline_horizon": tr.HEADLINE, "secondary_horizon": tr.SECONDARY,
+            "sources": list(tr.SOURCES), "thresholds": {"min_n": MIN_N_ANY, "min_days": tr.MIN_DAYS},
+            "period": None, "live_since": None, "generated_at": None}
+
+
+@screener_router.get("/signal-track-record")
+def signal_track_record(_: Annotated[dict, Depends(active_user_guard)]) -> dict:
+    """Per screener signal type + direction: 1d headline stats (+3d), sample size, verdicts.
+
+    Pooled over the live screener and its reconstruction; before costs. Cached 10 min.
+    """
+    path = get_lab_settings().db_path
+    return _track_record_cache(path).get(lambda: _compute_track_record(path), _track_record_error)
