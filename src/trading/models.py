@@ -125,6 +125,19 @@ class TradeSuccessResponse(BaseModel):
     balance_info: Optional[BalanceInfo] = None
 
 
+class TradeAcceptedResponse(BaseModel):
+    """Response for an alert that passed validation and is being executed.
+
+    The trade outcome is reported in trade_logs and on Telegram.
+    """
+
+    status: Literal["accepted"] = "accepted"
+    symbol: str
+    action: str
+    side: str
+    detail: str = "Alert accepted; the order is being executed"
+
+
 class TradeErrorResponse(BaseModel):
     """Response model for a failed or rejected trade."""
 

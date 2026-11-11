@@ -197,20 +197,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Register signal handlers for graceful shutdown
     loop = asyncio.get_running_loop()
 
-    def _handle_shutdown_signal() -> None:
+    # The server's own handlers (uvicorn's graceful exit). Registering ours
+    # replaces them, so ours hands the signal on; otherwise the server never
+    # stops, the shutdown below never runs, and PM2 has to SIGKILL it.
+    previous_handlers = {
+        sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)
+    }
+
+    def _handle_shutdown_signal(sig: int = signal.SIGTERM) -> None:
         """Set the shutting_down flag when SIGTERM/SIGINT is received."""
         if not app.state.shutting_down:
             app.state.shutting_down = True
             logger.info("Shutdown signal received, rejecting new requests")
+        previous = previous_handlers.get(sig)
+        if callable(previous) and previous is not signal.default_int_handler:
+            try:
+                previous(sig, None)
+            except Exception as e:
+                logger.error(f"Server shutdown handler failed: {e}")
 
     # Register signal handlers (SIGTERM for production, SIGINT for dev)
     try:
-        loop.add_signal_handler(signal.SIGTERM, _handle_shutdown_signal)
-        loop.add_signal_handler(signal.SIGINT, _handle_shutdown_signal)
+        loop.add_signal_handler(signal.SIGTERM, _handle_shutdown_signal, signal.SIGTERM)
+        loop.add_signal_handler(signal.SIGINT, _handle_shutdown_signal, signal.SIGINT)
     except NotImplementedError:
         # Windows doesn't support add_signal_handler; use signal.signal fallback
-        signal.signal(signal.SIGTERM, lambda s, f: _handle_shutdown_signal())
-        signal.signal(signal.SIGINT, lambda s, f: _handle_shutdown_signal())
+        signal.signal(signal.SIGTERM, lambda s, f: _handle_shutdown_signal(s))
+        signal.signal(signal.SIGINT, lambda s, f: _handle_shutdown_signal(s))
 
     logger.info(
         "Application started successfully",
@@ -282,6 +295,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # --- Shutdown ---
+    # Let acknowledged TradingView alerts finish their orders first.
+    app.state.shutting_down = True
+    from src.trading import webhook_jobs
+
+    await webhook_jobs.drain(timeout=settings.shutdown_timeout)
+
     if markets_task is not None:
         markets_task.cancel()
     if reconcile_task is not None:

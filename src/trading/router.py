@@ -1,18 +1,26 @@
 """Webhook router for TradingView trading alerts.
 
-Receives POST /webhook/tradingview requests and orchestrates the full
-trade processing pipeline:
+Receives POST /webhook/tradingview requests. TradingView drops a request
+after about 3 seconds and never retries it, so the work is split in two.
+
+Before the response (fast, no exchange calls):
   1. Content-Type and body-size validation
-  2. Pydantic payload parsing
-  3. Passphrase authentication
-  4. Credential retrieval
+  2. Pydantic payload parsing (422)
+  3. Passphrase authentication and is_active check (401)
+  3b. Trading halt and leverage limit (403)
+  4. Credential retrieval (400 / 500)
+  4b. Duplicate delivery check against in-flight jobs (409)
+  -> 202 Accepted
+
+In a tracked background job (``webhook_jobs``), with the same behaviour the
+endpoint had when it ran everything before responding:
   5. Exchange creation
-  6. Position check + advisory lock
+  6. Position check + per user/symbol lock
+  6b. Bot-owned close checks; leverage set only after the position check
   7. Order execution
   8. Position record open/close
   9. Trade audit logging
-  10. Telegram notification (background task)
-  11. Return TradeSuccessResponse
+  10. Telegram notifications (sent once the job's work is done)
 
 Requirements: 1.1, 1.11, 5.7, 9.1, 9.3, 11.5, 11.6
 """
@@ -22,17 +30,18 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Annotated, Any
+from typing import Annotated, Any, Awaitable, Callable
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from . import webhook_jobs
 from .auth import authenticate_by_passphrase
 from .config import TradingSettings, get_trading_settings
 from .connector import AuthenticationError, LeverageSetError, TradingConnector
 from .credentials import CredentialStore, DecryptionError, MissingCredentialsError
 from .executor import InsufficientBalanceError, OrderExecutionError, TradeExecutor
-from .models import BalanceInfo, TradeErrorResponse, TradeSuccessResponse, WebhookPayload
+from .models import TradeAcceptedResponse, TradeErrorResponse, WebhookPayload
 from .notifier import TelegramNotifier
 from .position_manager import (
     DuplicatePositionError,
@@ -95,20 +104,19 @@ def get_supabase_client(
 
 @router.post(
     "/tradingview",
-    status_code=200,
-    response_model=TradeSuccessResponse,
+    status_code=202,
+    response_model=TradeAcceptedResponse,
     responses={
         400: {"model": TradeErrorResponse, "description": "Bad request"},
         401: {"model": TradeErrorResponse, "description": "Unauthorized"},
-        404: {"model": TradeErrorResponse, "description": "No open position found"},
-        409: {"model": TradeErrorResponse, "description": "Conflict"},
+        403: {"model": TradeErrorResponse, "description": "Order rejected"},
+        409: {"model": TradeErrorResponse, "description": "Duplicate alert in progress"},
         413: {"model": TradeErrorResponse, "description": "Payload too large"},
         422: {"model": TradeErrorResponse, "description": "Validation error"},
         500: {"model": TradeErrorResponse, "description": "Internal server error"},
-        502: {"model": TradeErrorResponse, "description": "Exchange error"},
         503: {"model": TradeErrorResponse, "description": "Service unavailable"},
     },
-    summary="Receive a TradingView strategy alert and execute the trade",
+    summary="Receive a TradingView strategy alert and execute the trade in the background",
 )
 async def receive_tradingview_alert(
     request: Request,
@@ -117,7 +125,7 @@ async def receive_tradingview_alert(
     settings: Annotated[TradingSettings, Depends(get_settings)],
     supabase: Annotated[Any, Depends(get_supabase_client)],
 ) -> JSONResponse:
-    """Process a TradingView webhook alert through the full trading pipeline.
+    """Validate a TradingView alert, acknowledge it, and execute it in the background.
 
     Requirements: 1.1, 1.11, 5.7, 9.1, 9.3, 11.5, 11.6
     """
@@ -155,9 +163,6 @@ async def receive_tradingview_alert(
 
     # Variables for the audit log (populated as we progress)
     user_id: str | None = None
-    order_id: str | None = None
-    fill_price: float | None = None
-    filled_quantity: float | None = None
     log_status: str = "failed"
     error_details: str | None = None
 
@@ -235,7 +240,7 @@ async def receive_tradingview_alert(
     started_at = time.perf_counter()
 
     # ------------------------------------------------------------------
-    # Step 4: Retrieve exchange credentials
+    # Step 4: Retrieve exchange credentials (database + local decryption)
     # ------------------------------------------------------------------
 
     try:
@@ -272,6 +277,191 @@ async def receive_tradingview_alert(
         )
 
     # ------------------------------------------------------------------
+    # Step 4b: Refuse a second delivery while the same alert is executing.
+    # No await between this check and submit(), so two requests cannot both
+    # pass it.
+    # ------------------------------------------------------------------
+
+    job_key = _job_key(user_id, payload)
+    if webhook_jobs.is_inflight(job_key):
+        rejection = (
+            "duplicate alert skipped: the same signal for this symbol is still "
+            "being executed"
+        )
+        logger.warning("Duplicate webhook delivery rejected: %s", job_key)
+        await _log_failure(trade_logger, user_id, payload, "rejected", rejection)
+        alert(rejection)
+        return JSONResponse(
+            status_code=409,
+            content=TradeErrorResponse(error="Duplicate alert", detail=rejection).model_dump(),
+        )
+
+    job_description = (
+        f"{account_name or user_id} {payload.action} {payload.side} {payload.symbol}"
+    )
+    try:
+        webhook_jobs.submit(
+            _execute_trade_job(
+                payload=payload,
+                user_id=user_id,
+                account_name=account_name,
+                chat_id=chat_id,
+                alert_prefix=alert_prefix,
+                credentials=credentials,
+                trade_logger=trade_logger,
+                position_manager=position_manager,
+                trading_connector=trading_connector,
+                executor=executor,
+                notifier=notifier,
+                started_at=started_at,
+            ),
+            key=job_key,
+            description=job_description,
+        )
+    except webhook_jobs.NotAcceptingJobsError as exc:
+        error_details = str(exc)
+        await _log_failure(trade_logger, user_id, payload, "rejected", error_details)
+        alert(error_details)
+        return JSONResponse(
+            status_code=503,
+            content=TradeErrorResponse(
+                error="Service unavailable", detail=error_details
+            ).model_dump(),
+        )
+
+    # ------------------------------------------------------------------
+    # Acknowledge. The outcome goes to trade_logs and Telegram.
+    # ------------------------------------------------------------------
+
+    return JSONResponse(
+        status_code=202,
+        content=TradeAcceptedResponse(
+            symbol=payload.symbol,
+            action=payload.action,
+            side=payload.side,
+        ).model_dump(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Background trade job
+# ---------------------------------------------------------------------------
+
+
+def _job_key(user_id: str, payload: WebhookPayload) -> str:
+    """Identity of an alert for duplicate-delivery detection.
+
+    A second open (or close) of the same side on the same symbol while the
+    first is still executing would be rejected by the exchange position check
+    anyway; refusing it up front does not depend on the exchange having
+    already reflected the first order.
+    """
+    return f"{user_id}|{payload.exchange}|{payload.symbol}|{payload.action}|{payload.side}"
+
+
+async def _execute_trade_job(
+    *,
+    payload: WebhookPayload,
+    user_id: str,
+    account_name: str | None,
+    chat_id: str | None,
+    alert_prefix: str,
+    credentials: dict,
+    trade_logger: TradeLogger,
+    position_manager: PositionManager,
+    trading_connector: TradingConnector,
+    executor: TradeExecutor,
+    notifier: TelegramNotifier,
+    started_at: float,
+) -> None:
+    """Run the exchange part of a webhook alert after it was acknowledged.
+
+    Every failure is logged, written to trade_logs and alerted on Telegram.
+    Notifications are queued while the job runs and sent at the end, so a slow
+    Telegram call never holds the position lock.
+    """
+    notifications: list[tuple[Callable[..., Awaitable[None]], tuple]] = []
+
+    def alert(reason: str) -> None:
+        notifications.append((notifier.send_alert, (chat_id, f"{alert_prefix}: {reason}")))
+
+    state: dict[str, Any] = {"exchange": None, "order_id": None}
+    try:
+        await _run_trade(
+            payload=payload,
+            user_id=user_id,
+            account_name=account_name,
+            chat_id=chat_id,
+            credentials=credentials,
+            trade_logger=trade_logger,
+            position_manager=position_manager,
+            trading_connector=trading_connector,
+            executor=executor,
+            notifier=notifier,
+            started_at=started_at,
+            alert=alert,
+            notifications=notifications,
+            state=state,
+        )
+    except Exception as exc:
+        if state["order_id"] is not None:
+            error_details = (
+                f"Unexpected error after order {state['order_id']} was placed: {exc}"
+            )
+        else:
+            error_details = f"Unexpected error during trade execution: {exc}"
+        logger.error(
+            "Webhook job failed for user=%s symbol=%s: %s",
+            user_id,
+            payload.symbol,
+            error_details,
+            exc_info=True,
+        )
+        await _log_failure(trade_logger, user_id, payload, "failed", error_details)
+        alert(error_details)
+        await _close_exchange_safe(state["exchange"])
+    finally:
+        for send, args in notifications:
+            try:
+                await send(*args)
+            except Exception as exc:
+                logger.error(
+                    "Telegram notification failed for user=%s symbol=%s: %s",
+                    user_id,
+                    payload.symbol,
+                    exc,
+                    exc_info=True,
+                )
+
+
+async def _run_trade(
+    *,
+    payload: WebhookPayload,
+    user_id: str,
+    account_name: str | None,
+    chat_id: str | None,
+    credentials: dict,
+    trade_logger: TradeLogger,
+    position_manager: PositionManager,
+    trading_connector: TradingConnector,
+    executor: TradeExecutor,
+    notifier: TelegramNotifier,
+    started_at: float,
+    alert: Callable[[str], None],
+    notifications: list,
+    state: dict,
+) -> None:
+    """Steps 5–10 of the webhook pipeline, unchanged apart from reporting.
+
+    Each outcome that used to be an HTTP error response is now logged,
+    written to trade_logs and alerted instead.
+    """
+    order_id: str | None = None
+    fill_price: float | None = None
+    filled_quantity: float | None = None
+    error_details: str | None = None
+
+    # ------------------------------------------------------------------
     # Step 5: Create exchange instance
     # ------------------------------------------------------------------
 
@@ -290,25 +480,16 @@ async def receive_tradingview_alert(
         await _log_failure(
             trade_logger, user_id, payload, "failed", error_details
         )
-        return JSONResponse(
-            status_code=400,
-            content=TradeErrorResponse(
-                error="Exchange authentication failed",
-                detail=error_details,
-            ).model_dump(),
-        )
+        alert(error_details)
+        return
     except LeverageSetError as exc:
         error_details = str(exc)
         await _log_failure(
             trade_logger, user_id, payload, "failed", error_details
         )
-        return JSONResponse(
-            status_code=400,
-            content=TradeErrorResponse(
-                error="Failed to set leverage",
-                detail=error_details,
-            ).model_dump(),
-        )
+        alert(error_details)
+        return
+    state["exchange"] = exchange
 
     # ------------------------------------------------------------------
     # Step 6: Position check and advisory lock
@@ -332,13 +513,7 @@ async def receive_tradingview_alert(
             "symbol (not opened by this signal). Check it on the exchange."
         )
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=409,
-            content=TradeErrorResponse(
-                error="Position already open",
-                detail=error_details,
-            ).model_dump(),
-        )
+        return
     except NoPositionError as exc:
         error_details = str(exc)
         await _log_failure(
@@ -347,13 +522,7 @@ async def receive_tradingview_alert(
         position_manager.mark_missing(user_id, payload.symbol)
         alert("close signal but no position is open on the exchange (closed elsewhere?)")
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=404,
-            content=TradeErrorResponse(
-                error="No open position found",
-                detail=error_details,
-            ).model_dump(),
-        )
+        return
     except LockTimeoutError as exc:
         error_details = str(exc)
         logger.warning(
@@ -362,14 +531,9 @@ async def receive_tradingview_alert(
         await _log_failure(
             trade_logger, user_id, payload, "rejected", error_details
         )
+        alert(error_details)
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=409,
-            content=TradeErrorResponse(
-                error="Symbol currently being processed",
-                detail=error_details,
-            ).model_dump(),
-        )
+        return
     except Exception as exc:
         error_details = f"Position check failed: {exc}"
         logger.error(
@@ -378,13 +542,7 @@ async def receive_tradingview_alert(
         await _log_failure(trade_logger, user_id, payload, "failed", error_details)
         alert(error_details)
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=502,
-            content=TradeErrorResponse(
-                error="Position check failed",
-                detail=error_details,
-            ).model_dump(),
-        )
+        return
 
     # ------------------------------------------------------------------
     # Step 6b: Close only what the bot opened; set leverage only for opens
@@ -422,12 +580,8 @@ async def receive_tradingview_alert(
         error_details = str(exc)
         await _log_failure(trade_logger, user_id, payload, "failed", error_details)
         alert(error_details)
-        return JSONResponse(
-            status_code=400,
-            content=TradeErrorResponse(
-                error="Failed to set leverage", detail=error_details
-            ).model_dump(),
-        )
+        await _close_exchange_safe(exchange)
+        return
     except Exception as exc:
         position_manager.release_lock(user_id, payload.symbol)
         error_details = f"Position record lookup failed: {exc}"
@@ -435,20 +589,14 @@ async def receive_tradingview_alert(
         await _log_failure(trade_logger, user_id, payload, "failed", error_details)
         alert(error_details)
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=503,
-            content=TradeErrorResponse(error="Service unavailable", detail=error_details).model_dump(),
-        )
+        return
 
     if rejection:
         position_manager.release_lock(user_id, payload.symbol)
         await _log_failure(trade_logger, user_id, payload, "rejected", rejection)
         alert(rejection)
         await _close_exchange_safe(exchange)
-        return JSONResponse(
-            status_code=409,
-            content=TradeErrorResponse(error="Position not owned by bot", detail=rejection).model_dump(),
-        )
+        return
 
     ready_at = time.perf_counter()
 
@@ -457,9 +605,8 @@ async def receive_tradingview_alert(
     # ------------------------------------------------------------------
 
     try:
-        balance_info_dict: dict | None = None
         try:
-            order, balance_info_dict = await executor.execute_trade(
+            order, _balance_info = await executor.execute_trade(
                 exchange=exchange,
                 payload=payload,
                 position=position,
@@ -471,14 +618,7 @@ async def receive_tradingview_alert(
             )
             alert(error_details)
             await _close_exchange_safe(exchange)
-            return JSONResponse(
-                status_code=400,
-                content=TradeErrorResponse(
-                    error="Insufficient balance",
-                    detail=error_details,
-                    balance_info=BalanceInfo(**exc.balance_info) if exc.balance_info else None,
-                ).model_dump(),
-            )
+            return
         except OrderExecutionError as exc:
             error_details = str(exc)
             logger.error(
@@ -492,17 +632,11 @@ async def receive_tradingview_alert(
             )
             alert(error_details)
             await _close_exchange_safe(exchange)
-            return JSONResponse(
-                status_code=502,
-                content=TradeErrorResponse(
-                    error="Order execution failed",
-                    detail=error_details,
-                    balance_info=BalanceInfo(**exc.balance_info) if exc.balance_info else None,
-                ).model_dump(),
-            )
+            return
 
         # Extract fill details from the CCXT order response
         order_id = str(order.get("id", ""))
+        state["order_id"] = order_id
         fill_price = float(order.get("average") or order.get("price") or 0.0)
         filled_quantity = float(order.get("filled") or order.get("amount") or 0.0)
 
@@ -511,7 +645,7 @@ async def receive_tradingview_alert(
         # ------------------------------------------------------------------
 
         if payload.action == "open":
-            updated_position = await position_manager.open_position(
+            await position_manager.open_position(
                 user_id=user_id,
                 symbol=payload.symbol,
                 side=payload.side,
@@ -520,7 +654,7 @@ async def receive_tradingview_alert(
                 exchange=payload.exchange,
             )
         else:  # "close"
-            updated_position = await position_manager.close_position(
+            await position_manager.close_position(
                 user_id=user_id,
                 symbol=payload.symbol,
                 exit_price=fill_price,
@@ -530,10 +664,9 @@ async def receive_tradingview_alert(
 
     # ------------------------------------------------------------------
     # Step 9: Log trade. The order is already live, so a log failure is
-    # alerted but must not turn the response into an error.
+    # alerted but must not turn the outcome into an error.
     # ------------------------------------------------------------------
 
-    log_status = "success"
     try:
         await trade_logger.log_trade(
             user_id=user_id,
@@ -542,7 +675,7 @@ async def receive_tradingview_alert(
             side=payload.side,
             exchange=payload.exchange,
             size_value=payload.size_value,
-            status=log_status,
+            status="success",
             order_id=order_id,
             fill_price=fill_price,
             filled_quantity=filled_quantity,
@@ -558,7 +691,7 @@ async def receive_tradingview_alert(
         alert(f"order {order_id} executed but its log entry failed: {exc}")
 
     # ------------------------------------------------------------------
-    # Step 10: Dispatch Telegram notification (non-blocking background task)
+    # Step 10: Queue the Telegram trade notification (sent when the job ends)
     # ------------------------------------------------------------------
 
     trade_result_for_notifier = {
@@ -571,39 +704,25 @@ async def receive_tradingview_alert(
         "account": account_name,
     }
 
-    background_tasks.add_task(
+    notifications.append((
         notifier.send_trade_notification,
-        chat_id,
-        trade_result_for_notifier,
-        # Pass position record for PnL calculation on close orders
-        position if payload.action == "close" else None,
-    )
+        (
+            chat_id,
+            trade_result_for_notifier,
+            # Pass position record for PnL calculation on close orders
+            position if payload.action == "close" else None,
+        ),
+    ))
 
     # Close the exchange session (clean up)
     await _close_exchange_safe(exchange)
 
     logger.info(
-        "Webhook timing for %s: setup=%.2fs order=%.2fs",
+        "Webhook timing for %s: setup=%.2fs order=%.2fs order_id=%s",
         payload.symbol,
         ready_at - started_at,
         time.perf_counter() - ready_at,
-    )
-
-    # ------------------------------------------------------------------
-    # Step 11: Return TradeSuccessResponse
-    # ------------------------------------------------------------------
-
-    return JSONResponse(
-        status_code=200,
-        content=TradeSuccessResponse(
-            order_id=order_id,
-            symbol=payload.symbol,
-            action=payload.action,
-            side=payload.side,
-            fill_price=fill_price,
-            filled_quantity=filled_quantity,
-            balance_info=BalanceInfo(**balance_info_dict) if balance_info_dict else None,
-        ).model_dump(),
+        order_id,
     )
 
 

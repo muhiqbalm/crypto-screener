@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.trading import position_manager, router as router_module
+from src.trading import position_manager, router as router_module, webhook_jobs
 from src.trading.executor import TradeExecutor
 from src.trading.local_db import LocalDatabaseClient
 from src.trading.models import WebhookPayload
@@ -46,6 +46,7 @@ def fake_exchange(positions=None):
 @pytest.fixture
 def flow(tmp_path, monkeypatch):
     position_manager._position_locks.clear()
+    webhook_jobs.reset()
     path = str(tmp_path / "old.db")
     conn = sqlite3.connect(path)
     conn.executescript(OLD_SCHEMA)
@@ -85,10 +86,13 @@ def flow(tmp_path, monkeypatch):
     app.include_router(router_module.router)
     app.dependency_overrides[router_module.get_settings] = lambda: settings
     app.dependency_overrides[router_module.get_supabase_client] = lambda: db
-    return SimpleNamespace(
-        client=TestClient(app), db=db, exchange=exchange, notifier=notifier,
-        settings=settings, connector=connector,
-    )
+    # Keep one event loop for the whole test so background jobs can finish.
+    with TestClient(app) as client:
+        yield SimpleNamespace(
+            client=client, db=db, exchange=exchange, notifier=notifier,
+            settings=settings, connector=connector,
+        )
+    webhook_jobs.reset()
 
 
 def bot_position(flow, side="long", quantity=1.0):
@@ -103,13 +107,27 @@ def send(flow, **overrides):
         "action": "open", "symbol": "ETHUSDT.P", "side": "long", "size_type": "percent",
         "size_value": 50, "leverage": 4, "exchange": "binance", "passphrase": PASSPHRASE,
     }
-    return flow.client.post("/webhook/tradingview", json={**body, **overrides})
+    response = flow.client.post("/webhook/tradingview", json={**body, **overrides})
+    flow.client.portal.call(wait_for_jobs)
+    return response
+
+
+async def wait_for_jobs():
+    """Wait until every acknowledged alert has finished executing."""
+    tasks = list(webhook_jobs._jobs)
+    if tasks:
+        await asyncio.wait(tasks, timeout=5)
+    assert not webhook_jobs._jobs, "webhook job did not finish"
+
+
+def last_log(flow):
+    return flow.db.table("trade_logs").select("*").execute().data[-1]
 
 
 def test_open_succeeds_and_is_recorded_on_old_database(flow):
     response = send(flow)
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     log = flow.db.table("trade_logs").select("*").execute().data[0]
     assert (log["status"], log["order_id"]) == ("success", "order-1")
     position = flow.db.table("positions").select("*").execute().data[0]
@@ -131,7 +149,7 @@ def test_failed_trade_log_keeps_success_response_and_alerts(flow, monkeypatch):
 
     response = send(flow)
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     flow.notifier.send_alert.assert_awaited_once()
     flow.notifier.send_trade_notification.assert_awaited_once()
 
@@ -155,7 +173,7 @@ def test_halt_still_allows_close(flow):
 
     response = send(flow, action="close")
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     assert flow.exchange.create_order.call_args.kwargs["params"] == {"reduceOnly": True}
 
 
@@ -166,20 +184,23 @@ def test_leverage_limit_rejects_open(flow):
     flow.exchange.create_order.assert_not_awaited()
 
 
-def test_position_check_failure_returns_502_and_alerts(flow):
+def test_position_check_failure_is_logged_and_alerted(flow):
     flow.exchange.fetch_positions.side_effect = RuntimeError("binance down")
 
-    assert send(flow).status_code == 502
+    assert send(flow).status_code == 202
     flow.notifier.send_alert.assert_awaited_once()
     flow.exchange.close.assert_awaited()
+    log = last_log(flow)
+    assert log["status"] == "failed"
 
 
 def test_lock_is_free_after_order_failure(flow):
     flow.exchange.fetch_ticker.side_effect = RuntimeError("boom")
 
-    with pytest.raises(RuntimeError):
-        send(flow)
+    assert send(flow).status_code == 202
     assert not position_manager._position_locks["u1:ETH/USDT:USDT"].locked()
+    assert last_log(flow)["status"] == "failed"
+    assert "boom" in flow.notifier.send_alert.call_args.args[1]
 
 
 @pytest.mark.asyncio
@@ -245,13 +266,15 @@ def test_pnl_accepts_exchange_position_keys():
 def test_duplicate_open_does_not_touch_leverage_and_alerts(flow):
     flow.exchange.fetch_positions.return_value = [{"contracts": 3.0, "side": "long"}]
 
-    assert send(flow).status_code == 409
+    assert send(flow).status_code == 202
     flow.connector.apply_leverage.assert_not_awaited()
     flow.notifier.send_alert.assert_awaited_once()
+    flow.exchange.create_order.assert_not_awaited()
+    assert last_log(flow)["status"] == "rejected"
 
 
 def test_open_sets_leverage_after_position_check(flow):
-    assert send(flow).status_code == 200
+    assert send(flow).status_code == 202
     flow.connector.apply_leverage.assert_awaited_once_with(
         flow.exchange, "binance", 4, "ETH/USDT:USDT"
     )
@@ -263,7 +286,7 @@ def test_close_leaves_manual_position_untouched(flow):
 
     response = send(flow, action="close")
 
-    assert response.status_code == 409
+    assert response.status_code == 202
     flow.exchange.create_order.assert_not_awaited()
     flow.notifier.send_alert.assert_awaited_once()
     assert not position_manager._position_locks["u1:ETH/USDT:USDT"].locked()
@@ -275,7 +298,7 @@ def test_close_only_sells_bot_quantity(flow):
         {"contracts": 3.0, "side": "long", "entryPrice": 2100.0}
     ]
 
-    assert send(flow, action="close").status_code == 200
+    assert send(flow, action="close").status_code == 202
     kwargs = flow.exchange.create_order.call_args.kwargs
     assert (kwargs["side"], kwargs["amount"]) == ("sell", 1.0)
     position = flow.db.table("positions").select("*").execute().data[0]
@@ -288,13 +311,15 @@ def test_close_rejects_side_mismatch(flow):
     bot_position(flow, side="short")
     flow.exchange.fetch_positions.return_value = [{"contracts": 1.0, "side": "long"}]
 
-    assert send(flow, action="close").status_code == 409
+    assert send(flow, action="close").status_code == 202
     flow.exchange.create_order.assert_not_awaited()
+    assert last_log(flow)["status"] == "rejected"
 
 
 def test_close_without_exchange_position_marks_record_missing(flow):
     bot_position(flow)
 
-    assert send(flow, action="close").status_code == 404
+    assert send(flow, action="close").status_code == 202
+    flow.notifier.send_alert.assert_awaited_once()
     position = flow.db.table("positions").select("*").execute().data[0]
     assert position["status"] == "missing"
