@@ -13,6 +13,7 @@ import os
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -24,7 +25,10 @@ from . import queue as q
 from .settings import REPO_ROOT, LabSettings, get_lab_settings
 
 log = logging.getLogger("lab.worker")
-FAST_KINDS = ("watch_eval", "universe_refresh")
+FAST_KINDS = ("watch_eval", "universe_refresh", "ledger_cycle")
+# Jobs that need the screener pipeline (pydantic-settings, ccxt) run under the worker's
+# own interpreter (screener venv) instead of the engine venv.
+SCREENER_VENV_KINDS = ("ledger_cycle", "ledger_backfill")
 
 
 def _child_preexec(nice: int, mem_mb: int) -> Callable[[], None]:
@@ -68,10 +72,11 @@ class Worker:
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
     # ── child management ───────────────────────────────────────────────
-    def _cmd(self, job_id: int) -> list[str]:
+    def _cmd(self, job_id: int, kind: Optional[str] = None) -> list[str]:
         if self.command:
             return [*self.command, str(job_id)]
-        return [self.settings.engine_python, "-m", "src.lab.runner", str(job_id)]
+        py = sys.executable if kind in SCREENER_VENV_KINDS else self.settings.engine_python
+        return [py, "-m", "src.lab.runner", str(job_id)]
 
     def _spawn(self, job: dict) -> Running:
         env = dict(os.environ)
@@ -84,7 +89,7 @@ class Worker:
         log_path = self.log_dir / f"job-{job['id']}.log"
         fh = open(log_path, "ab")
         proc = subprocess.Popen(
-            self._cmd(job["id"]), cwd=str(REPO_ROOT), env=env, stdout=fh, stderr=subprocess.STDOUT,
+            self._cmd(job["id"], job["kind"]), cwd=str(REPO_ROOT), env=env, stdout=fh, stderr=subprocess.STDOUT,
             preexec_fn=_child_preexec(self.settings.job_nice, self.settings.job_mem_mb),
         )
         fh.close()

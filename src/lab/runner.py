@@ -275,6 +275,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "universe_refresh":
             from .universal.live import execute_refresh
             execute_refresh(conn, job)
+        elif job["kind"] in ("ledger_cycle", "ledger_backfill"):
+            from .ledger.jobs import execute as execute_ledger
+            execute_ledger(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")

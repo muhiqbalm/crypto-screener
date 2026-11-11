@@ -5,6 +5,7 @@
              (SL/TP, engine intrabar rule), charge funding settlements, refresh marks
   * universe: one universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)
   * alerts:  every 30 s, deliver pending Telegram alerts (rate-limited, see universal/alerts.py)
+  * ledger:  one ledger_cycle job per closed hour + a one-off ledger_backfill (Catatan Sinyal)
   * bot:     every LAB_BOT_IMPORT_INTERVAL_S, import the live bot's CLOSED trades from
              bmtm_trading.db (opened read-only, mode=ro, short queries) into the journal
 """
@@ -156,6 +157,7 @@ class Scheduler:
         self._last_paper = 0.0
         self._last_bot = 0.0
         self._last_alerts = 0.0
+        self._last_ledger = 0.0
 
     def tick(self, conn) -> None:
         now = time.time()
@@ -164,6 +166,13 @@ class Scheduler:
             schedule_universe(conn, self.s, now)
         except Exception:  # noqa: BLE001
             log.exception("universe refresh scheduling failed")
+        if now - self._last_ledger >= 30:
+            self._last_ledger = now
+            try:
+                from .ledger.schedule import tick as ledger_tick
+                ledger_tick(conn, self.s, now)
+            except Exception:  # noqa: BLE001
+                log.exception("signal ledger scheduling failed")
         if now - self._last_alerts >= 30:
             self._last_alerts = now
             try:
