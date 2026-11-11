@@ -49,3 +49,20 @@ def test_signal_derivation():
     assert watch_eval._signal(pos, trades) == {"time": "2026-01-03T00:00:00Z", "action": "open", "side": "short",
                                                "price": 9.0}
     assert watch_eval._signal(None, []) is None
+
+
+def test_autopaper_copies_engine_notional_multiple_when_sized(conn, monkeypatch):
+    monkeypatch.setattr(market, "last_price", lambda s, ttl=5.0: 2000.0)
+    acct = paper.create_account(conn, "auto-vt", 10000.0, 100.0, 2.0)
+    w = _watch(conn, acct)
+    sig = {"time": "2026-11-08T20:00:00Z", "action": "open", "side": "long", "price": 2000.0}
+    pos = {"side": "long", "entry_price": 2000.0, "entry_time": sig["time"], "sl": 1740.0, "tp": None,
+           "notional_mult": 0.8}
+    watch_eval._autopaper(conn, w, None, {"last_bar": sig["time"], "position": pos, "last_signal": sig})
+    row = _open_auto(conn, w["id"])[0]
+    assert abs(row["qty"] * 2000.0 - 8000.0) < 1e-6           # 0.8 x balance, not risk%/stop
+    w2 = _watch(conn, acct)
+    watch_eval._autopaper(conn, w2, None, {"last_bar": sig["time"], "position": {**pos, "notional_mult": 3.5},
+                                           "last_signal": sig})
+    row = _open_auto(conn, w2["id"])[0]
+    assert abs(row["qty"] * row["entry_price"] - 20000.0) < 1e-6   # capped at leverage_max 2.0

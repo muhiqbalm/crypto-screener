@@ -53,7 +53,9 @@ def paper_sizing(entry: dict, params: dict) -> tuple[float, float]:
         multiple always hits the cap.
       * sizing_mode "risk": risk_pct = risk_per_trade_pct, leverage_max = max_notional_mult
         (the paper engine's own rule).
-      * vol_target / dd de-risk cannot be mirrored by the paper engine -> refused.
+      * sizing_mode "vol_target": auto-paper opens the engine's notional / equity multiple
+        (watch_eval position.notional_mult), capped at leverage_max = max_notional_mult.
+      * dd de-risk is not mirrored (engine and paper equity paths differ) -> refused.
     """
     s = entry.get("paper", {})
     if s.get("sizing", "mirror") == "mirror":
@@ -64,6 +66,8 @@ def paper_sizing(entry: dict, params: dict) -> tuple[float, float]:
             return 100.0, round(float(params["leverage"]) * float(params["portfolio_risk"]) / 100.0, 4)
         if mode == "risk":  # same rule as the paper engine: risk% / stop distance, capped
             return float(params["risk_per_trade_pct"]), float(params["max_notional_mult"])
+        if mode == "vol_target":  # auto-paper copies the engine's notional multiple; cap = engine cap
+            return 100.0, float(params["max_notional_mult"])
         raise SystemExit(f"{entry.get('name')}: the paper engine cannot mirror sizing_mode={mode}")
     return float(s.get("risk_pct", 0.5)), float(s.get("leverage_max", 5.0))
 

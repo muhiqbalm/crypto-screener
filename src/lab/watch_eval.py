@@ -48,6 +48,12 @@ def evaluate(watch: dict, offline: bool = False) -> dict:
     if op:
         position = {"side": op["direction"], "entry_price": op["entry_price"],
                     "entry_time": ea._iso(op["entry_timestamp"]), "sl": op["sl"], "tp": op["tp"]}
+        if ea.T.is_sized(ea.T.validate_params(params)):
+            # research sizing (vol target, ...): the paper mirror copies the engine's notional / equity
+            # at entry. Closed equity while open = equity after the last closed trade.
+            eq = res.trades[-1].equity_at_exit if res.trades else float(cfg.initial_capital)
+            if eq > 0 and op.get("position_value"):
+                position["notional_mult"] = float(op["position_value"]) / float(eq)
     last_bar = ea._iso(df["timestamp"].iloc[-1])
     return {"last_bar": last_bar, "position": position, "recent_trades": trades[-50:],
             "last_signal": _signal(position, trades)}
@@ -78,9 +84,12 @@ def _autopaper(conn, watch: dict, prev_signal: Optional[dict], state: dict) -> N
             return
     if pos is not None and fresh and sig["action"] == "open" and pos["sl"]:
         px = market.last_price(watch["symbol"])
+        qty = None
+        if pos.get("notional_mult"):  # engine-sized preset: same notional multiple (capped by leverage_max)
+            qty = paper.get_account(conn, acct)["balance"] * float(pos["notional_mult"]) / float(px)
         try:
             paper.open_position(conn, account_id=acct, symbol=watch["symbol"], side=pos["side"], price=px,
-                                sl=pos["sl"], tp=pos["tp"], watch_id=watch["id"], source="paper_auto",
+                                sl=pos["sl"], tp=pos["tp"], qty=qty, watch_id=watch["id"], source="paper_auto",
                                 note=f"auto from watch {watch['id']}")
         except paper.PaperError as e:
             log.warning("autopaper open skipped for watch %s: %s", watch["id"], e)
