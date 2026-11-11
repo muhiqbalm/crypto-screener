@@ -489,5 +489,6 @@ Configure via environment variables:
     from src.api.shadow_routes import router as shadow_router; app.include_router(shadow_router)
     from src.api.outlook_routes import router as outlook_router; app.include_router(outlook_router)
     from src.api.arena_routes import router as arena_router; app.include_router(arena_router)
+    from src.api.livecheck_routes import router as livecheck_router; app.include_router(livecheck_router)
 
     return app

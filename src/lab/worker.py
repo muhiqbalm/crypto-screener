@@ -28,7 +28,7 @@ from . import queue as q
 from .settings import REPO_ROOT, LabSettings, get_lab_settings
 
 log = logging.getLogger("lab.worker")
-FAST_KINDS = ("watch_eval", "universe_refresh", "ledger_cycle", "shadow_cycle", "outlook_refresh", "arena_snapshot")
+FAST_KINDS = ("watch_eval", "universe_refresh", "ledger_cycle", "shadow_cycle", "outlook_refresh", "arena_snapshot", "livecheck_cycle")
 # Jobs that need the screener pipeline (pydantic-settings, ccxt) run under the worker's
 # own interpreter (screener venv) instead of the engine venv.
 SCREENER_VENV_KINDS = ("ledger_cycle", "ledger_backfill")
