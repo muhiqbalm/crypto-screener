@@ -266,3 +266,30 @@ nice -n 10 /root/bmtm-v2/venv/bin/python -m src.lab.universal.robustness --sourc
 ```
 
 `/tmp/universal2/cache` is a copy of the 4H and funding parquet files from `/root/crypto-screener/data/lab/cache/perp`.
+
+## Deploy notes (not done; for whoever deploys)
+
+1. **Code** (`feat/universal-robustness`). The default behaviour is unchanged:
+   - `universe_mode` defaults to `static`;
+   - live and paper watches, the strength table and existing Lab runs behave exactly as before;
+   - the three new params (`universe_mode`, `universe_size`, `liquidity_days`) appear in the Universal param schema (Lab UI)
+     and are not tunable;
+   - nothing under `src/trading/` was touched;
+   - tests: 868 passed and 1 skipped (the parquet test is skipped in the screener venv because it has no pyarrow; it passes in the engine venv).
+   - Deploy with the normal `bmtm-deploy`. No PM2 config or `.env` change is required.
+2. **Delisted-coin data** (only needed if someone wants to run `universe_mode=liquidity` in the Lab):
+   - Location: **`/root/crypto-screener/data/lab/cache/perp_pit/`**, a sibling of the main cache. That is the default
+     because `LAB_DATA_DIR=/root/crypto-screener/data/lab/cache/perp`. Override with `LAB_PIT_DATA_DIR`.
+   - **Never put these files in `.../cache/perp/`.** The default universe is "every 4H file in the main cache", so
+     the paper watches would silently switch to 897 coins.
+   - Fastest: copy the already-downloaded set (data to 2026-11-10, 216 MB):
+     `mkdir -p /root/crypto-screener/data/lab/cache/perp_pit && cp -a /tmp/universal2/pit/. /root/crypto-screener/data/lab/cache/perp_pit/`
+   - Or download fresh (about 30 min, IO-bound):
+     `cd /root/crypto-screener && nice -n 10 /root/bmtm-v2/venv/bin/python -m src.lab.universal.pit_data --out /root/crypto-screener/data/lab/cache/perp_pit --workers 8`
+   - To update later, add `--refresh`. Without it, symbols already in `_manifest.json` are skipped.
+3. **Caveats**:
+   - a liquidity-mode Lab run loads about 900 symbols (a few GB of RAM; not yet tested inside the Lab job runner's
+     `job_mem_mb=6144` limit);
+   - it shares the `UNIVERSE` holdout lock, so each validate run increments its `touches`;
+   - it reads only from `perp_pit` and never refreshes into the main cache.
+4. `/tmp/universal2` on the VPS (downloads, cache copy, outputs, about 0.5 GB) can be deleted once the data has been copied.
