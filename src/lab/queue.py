@@ -101,6 +101,9 @@ def finish(conn: sqlite3.Connection, job_id: int, status: str, error: Optional[s
     if job is not None:
         _sync_run_status(conn, dict(job), job["status"], job["error"])
     conn.commit()
+    if job is not None:
+        from .notify_events import job_finished  # in-web notification; never raises
+        job_finished(conn, dict(job))
 
 
 def request_cancel(conn: sqlite3.Connection, job_id: int) -> Optional[str]:
@@ -169,6 +172,12 @@ def reap(conn: sqlite3.Connection, stale_after_s: int, now: Optional[datetime] =
             reaped.append(job["id"])
             _sync_run_status(conn, dict(job), new_status, err)
     conn.commit()
+    if reaped:
+        from .notify_events import job_finished  # in-web notification; never raises
+        for jid in reaped:
+            row = conn.execute("SELECT * FROM lab_jobs WHERE id=?", (jid,)).fetchone()
+            if row is not None and row["status"] != "queued":
+                job_finished(conn, dict(row))
     return reaped
 
 

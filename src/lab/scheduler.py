@@ -13,6 +13,7 @@
   * shadow:  shadow_cycle when trade_logs changes / a signal is due / hourly (Kualitas eksekusi)
   * arena:   one arena_snapshot job per hour (paper equity snapshots for Arena Paper)
   * live check: livecheck_cycle after every 4H close + hourly (Cek bot live vs strategi)
+  * weekly:  Laporan Mingguan snapshot each Monday 00:30 UTC + deploy-log notifications (weekly/schedule.py)
   * bot:     every LAB_BOT_IMPORT_INTERVAL_S, import the live bot's CLOSED trades from
              bmtm_trading.db (opened read-only, mode=ro, short queries) into the journal
 """
@@ -239,3 +240,10 @@ class Scheduler:
                     log.info("imported %d bot trades into the journal", n)
             except Exception:  # noqa: BLE001
                 log.exception("bot trade import failed")
+        if now - getattr(self, "_last_weekly", 0.0) >= 60:
+            self._last_weekly = now
+            try:  # Laporan Mingguan snapshot (Mon 00:30 UTC) + deploy-log notifications
+                from .weekly.schedule import tick as weekly_tick
+                weekly_tick(conn, self.s, now)
+            except Exception:  # noqa: BLE001
+                log.exception("weekly report hook failed")

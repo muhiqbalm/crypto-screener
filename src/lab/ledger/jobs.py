@@ -48,6 +48,8 @@ def execute_cycle(conn, job: dict, processor=None, fetch=None) -> dict:
     out["finished"] = utcnow()
     kv_set(conn, "ledger_last_cycle", out)
     conn.commit()
+    from ..notify_events import ledger_verdicts  # in-web notification on a verdict change; never raises
+    ledger_verdicts(conn)
     log.info("ledger cycle %s", out)
     return out
 
