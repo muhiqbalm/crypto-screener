@@ -65,7 +65,7 @@ def wf_windows(dev_df, warmup: int):
 
 
 def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: dict, per_fold: int,
-                       holdout_start, specs: list[dict], on_trial=None) -> dict:
+                       holdout_start, specs: list[dict], on_trial=None, template_id=None) -> dict:
     """Rolling walk-forward on the development segment; params are RE-OPTIMISED
     (same search space + objective) on every train window and evaluated once on
     the following test window. The holdout is never touched here."""
@@ -82,10 +82,10 @@ def walk_forward_reopt(ea, dev_df, warmup: int, params: dict, tf: str, costs: di
             continue
         min_tr = max(10, int(round(30 * (len(train_df) - tw) / n_dev)))
         opt = ea.optimize(train_df, tw, params, tf, costs, per_fold, holdout_start, seed=42 + k,
-                          specs=specs, min_trades=min_tr, top_n=1,
+                          specs=specs, min_trades=min_tr, top_n=1, template_id=template_id,
                           progress=(lambda d, t, k=k: on_trial(k, d, t)) if on_trial else None)
         trials += opt["trials"]
-        cfg, ecfg = ea.build_configs(opt["best_params"], tf, costs)
+        cfg, ecfg = ea.build_configs(opt["best_params"], tf, costs, template_id)
         res_test, _ = ea.run(test_df, cfg, ecfg, warmup=sw)
         mt = ea.metrics(res_test)
         growth *= 1 + (mt["net_return_pct"] or 0.0) / 100.0
@@ -122,6 +122,8 @@ def execute_run(conn, job: dict) -> None:
     if run["template_id"] == UNIVERSAL_TEMPLATE_ID:
         from .universal.runner import execute_universal_run
         return execute_universal_run(conn, job, run, prog)
+    tid = run["template_id"]
+    tm = ea.template(tid)
     conn.execute("UPDATE lab_runs SET engine_commit=? WHERE id=?", (ea.engine_commit(), run_id))
     conn.commit()
 
@@ -129,8 +131,8 @@ def execute_run(conn, job: dict) -> None:
     offline = os.environ.get("LAB_DATA_OFFLINE") == "1"
     ohlcv, fund = dc.ensure(symbol, tf, funding=bool(costs.get("funding", True)), offline=offline,
                             progress=lambda d: prog(d.get("stage", "data"), d.get("done", 0), d.get("total", 0)))
-    cfg, ecfg = ea.build_configs(params, tf, costs)
-    if ea.T.is_mtf(ea.T.validate_params(params)):
+    cfg, ecfg = ea.build_configs(params, tf, costs, tid)
+    if tm.is_mtf(tm.validate_params(params)):
         # MTF entry timing: embed the entry-timeframe sub-bars in the signal-TF rows
         etf = cfg.entry_tf
         prog(f"data {etf}", force=True)
@@ -174,7 +176,7 @@ def execute_run(conn, job: dict) -> None:
     wf, best_info = None, None
     sens_units = len(ea.sensitivity_names(cfg))
     if mode == "optimize":
-        specs = ea.T.resolve_search(labdb.loads(run.get("search_json")))
+        specs = tm.resolve_search(labdb.loads(run.get("search_json")))
         n_trials = int(run.get("n_trials") or payload.get("n_trials") or 30)
         n_trials = max(1, min(n_trials, s.optuna_max_trials))
         windows, _, _ = wf_windows(dev_df, warm)
@@ -188,7 +190,8 @@ def execute_run(conn, job: dict) -> None:
             prog(f"walk-forward fold {k + 1}/{len(windows)}", done, total, trials_done=done,
                  trials_total=trials_total)
 
-        wf = walk_forward_reopt(ea, dev_df, warm, params, tf, costs, per_fold, hs, specs, on_trial=on_wf)
+        wf = walk_forward_reopt(ea, dev_df, warm, params, tf, costs, per_fold, hs, specs, on_trial=on_wf,
+                                template_id=tid)
 
         def on_final(d, t):
             prog("optimise on development segment", wf_total + d, total, trials_done=wf_total + d,
@@ -196,9 +199,9 @@ def execute_run(conn, job: dict) -> None:
 
         on_final(0, n_trials)
         best_info = ea.optimize(dev_df, warm, params, tf, costs, n_trials, hs, specs=specs, min_trades=30,
-                                progress=on_final)
+                                progress=on_final, template_id=tid)
         params = best_info["best_params"]
-        cfg, ecfg = ea.build_configs(params, tf, costs)
+        cfg, ecfg = ea.build_configs(params, tf, costs, tid)
         trials_done = wf["trials_done"] + best_info["trials"]
         conn.execute("UPDATE lab_runs SET trials_done=?, top_trials_json=? WHERE id=?",
                      (trials_done, labdb.dumps(best_info["top_trials"]), run_id))
