@@ -288,6 +288,9 @@ def main(argv=None) -> int:
         elif job["kind"] in ("ledger_cycle", "ledger_backfill"):
             from .ledger.jobs import execute as execute_ledger
             execute_ledger(conn, job)
+        elif job["kind"] == "shadow_cycle":
+            from .shadow.jobs import execute as execute_shadow
+            execute_shadow(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")
