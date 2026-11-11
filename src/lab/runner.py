@@ -291,6 +291,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "shadow_cycle":
             from .shadow.jobs import execute as execute_shadow
             execute_shadow(conn, job)
+        elif job["kind"] == "outlook_refresh":
+            from .outlook.job import execute as execute_outlook
+            execute_outlook(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")

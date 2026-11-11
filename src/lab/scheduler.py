@@ -7,6 +7,7 @@
   * paper:   every minute, check open paper positions against closed 1m candles
              (SL/TP, engine intrabar rule), charge funding settlements, refresh marks
   * universe: one universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)
+  * outlook: one outlook_refresh job per closed 4H bar, after that bar's universe_refresh (Outlook Koin)
   * alerts:  every 30 s, deliver pending Telegram alerts (rate-limited, see universal/alerts.py)
   * ledger:  one ledger_cycle job per closed hour + a one-off ledger_backfill (Catatan Sinyal)
   * shadow:  shadow_cycle when trade_logs changes / a signal is due / hourly (Kualitas eksekusi)
@@ -189,6 +190,11 @@ class Scheduler:
             schedule_universe(conn, self.s, now)
         except Exception:  # noqa: BLE001
             log.exception("universe refresh scheduling failed")
+        try:
+            from .outlook.schedule import tick as outlook_tick
+            outlook_tick(conn, self.s, now)
+        except Exception:  # noqa: BLE001
+            log.exception("outlook scheduling failed")
         if now - self._last_ledger >= 30:
             self._last_ledger = now
             try:
