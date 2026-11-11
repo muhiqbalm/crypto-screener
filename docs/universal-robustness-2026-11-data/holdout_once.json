@@ -1,0 +1,681 @@
+{
+ "prereg_sha256": "0f0828c64ac3ef163060e60da65fd8962e9a26b20f114790589b5fab1ede7ed4",
+ "prereg": {
+  "registered_at": "2026-11-11T04:40:00Z",
+  "holdout_start": "2025-07-24T04:00:00Z",
+  "holdout_end": "last complete 4H bar before 2026-11-10 00:00 UTC",
+  "data": "point-in-time USD-M USDT perps from data.binance.vision (897 symbols incl. delisted), downloaded 2026-11-11, no cleaning; anomalous bars are reported, not removed",
+  "costs": {
+   "commission_pct": 0.05,
+   "slippage_pct": 0.05,
+   "funding": true
+  },
+  "evaluation": "R.evaluate_all(mode=validate, start=2020-05-16T08:00Z, holdout_start fixed) -> same 7 honesty checks; plus holdout per-coin contribution and holdout without its top coin (diagnostic only). Each variant evaluated once; no further variants after looking.",
+  "variants": {
+   "C1_pit_default": {
+    "params": {
+     "universe_mode": "liquidity",
+     "universe_size": 30,
+     "liquidity_days": 30
+    },
+    "reason": "Universal v0 with UNCHANGED default strategy params on a survivorship-free universe (top-30 by trailing 30d quote volume, causal). universe_size=30 chosen before any run to match the 29-coin static list, not tuned (dev: 20 -> +1173%, 30 -> +2351%, 50 -> +1637%; 30 is the best of the three, which is a reason to distrust it, but it was fixed in advance)."
+   },
+   "C2_pit_cap10": {
+    "params": {
+     "universe_mode": "liquidity",
+     "universe_size": 30,
+     "liquidity_days": 30,
+     "max_weight_pct": 10.0
+    },
+    "reason": "The verdict failed on Monte Carlo drawdown and the profit is concentrated. A 10% per-coin cap was the only change that improved tail risk in BOTH dev universes (static: MC p95 -63.6 -> -50.9, Sharpe 1.65 -> 1.76; PIT: MC p95 -65.3 -> -59.8, top-3 share 45% -> 39%) at the cost of return (PIT dev +2351% -> +1332%). top-10/15 and min_history 365d were worse on dev in both universes and are not carried forward. Rebalance-hour offsets were NOT selected from (dispersion is noise)."
+   }
+  }
+ },
+ "evaluated_at": "2026-11-11T04:20:43.267285+00:00",
+ "variants": {
+  "C1_pit_default": {
+   "verdict": "FAIL",
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 0.8898126576081221,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": -27.269934784743434,
+     "threshold": "> 0.0",
+     "passed": false
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -72.70589298526039,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 465,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -37.2821534096755,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "oos": {
+    "net_return_pct": -27.269934784743434,
+    "profit_factor": 0.8898126576081221,
+    "max_dd_pct": -36.06820091981531,
+    "sharpe": -0.30118578012907016,
+    "trades": 465,
+    "stress_net_return_pct": -37.2821534096755,
+    "win_rate_pct": 33.11827956989247,
+    "start": "2025-07-24T04:00:00Z",
+    "end": "2026-11-09T20:00:00Z"
+   },
+   "in_sample": {
+    "net_return_pct": 2350.641060747634,
+    "max_dd_pct": -47.3627788197613,
+    "sharpe": 1.6306629673873845,
+    "profit_factor": 1.2524006445369589
+   },
+   "full_range": {
+    "net_return_pct": 1676.6408258434126,
+    "max_dd_pct": -47.3627788197613,
+    "sharpe": 1.2244851304213427
+   },
+   "monte_carlo": {
+    "dd_p95": -72.70589298526039,
+    "dd_p99": -80.57086324392213,
+    "prob_dd_beyond_50pct": 0.534,
+    "n_simulations": 1000,
+    "median_dd": -51.20285141644662,
+    "block_days": 20,
+    "method": "block_bootstrap_daily",
+    "original_dd": -47.36277881976131
+   },
+   "walk_forward": {
+    "oos_compounded_net_pct": 44.59903443609055,
+    "oos_avg_pf": 1.2134782703224887,
+    "consistency": 0.6666666666666666
+   },
+   "sensitivity_unstable": 0,
+   "holdout_contrib": [
+    {
+     "symbol": "ZECUSDT",
+     "pnl": 1586.591531993295,
+     "trades": 23
+    },
+    {
+     "symbol": "LABUSDT",
+     "pnl": 1130.6092030539464,
+     "trades": 3
+    },
+    {
+     "symbol": "PIPPINUSDT",
+     "pnl": 1043.8576964621025,
+     "trades": 7
+    },
+    {
+     "symbol": "SIRENUSDT",
+     "pnl": 812.428204698782,
+     "trades": 4
+    },
+    {
+     "symbol": "BNBUSDT",
+     "pnl": 648.085454909833,
+     "trades": 18
+    },
+    {
+     "symbol": "AKEUSDT",
+     "pnl": 591.0958213146415,
+     "trades": 9
+    },
+    {
+     "symbol": "HYPEUSDT",
+     "pnl": 570.1886759630604,
+     "trades": 17
+    },
+    {
+     "symbol": "AXSUSDT",
+     "pnl": 506.05345050607565,
+     "trades": 1
+    },
+    {
+     "symbol": "TUTUSDT",
+     "pnl": -618.6093525173887,
+     "trades": 1
+    },
+    {
+     "symbol": "IPUSDT",
+     "pnl": -631.9278872352872,
+     "trades": 5
+    },
+    {
+     "symbol": "CLUSDT",
+     "pnl": -640.7852431346223,
+     "trades": 6
+    },
+    {
+     "symbol": "BCHUSDT",
+     "pnl": -651.264644549409,
+     "trades": 18
+    },
+    {
+     "symbol": "WLDUSDT",
+     "pnl": -762.9089409687,
+     "trades": 8
+    }
+   ],
+   "holdout_top1": "ZECUSDT",
+   "holdout_top1_share_pct": null,
+   "holdout_without_top1": {
+    "net_return_pct": -41.863977797635,
+    "max_dd_pct": -48.89667365441414,
+    "profit_factor": 0.81402318532285
+   },
+   "holdout_held_symbols": [
+    "1000BONKUSDT",
+    "1000LUNCUSDT",
+    "1000PEPEUSDT",
+    "AAVEUSDT",
+    "ACEUSDT",
+    "ADAUSDT",
+    "AIOTUSDT",
+    "AKEUSDT",
+    "ALLOUSDT",
+    "APEUSDT",
+    "ARBUSDT",
+    "ARIAUSDT",
+    "ASTERUSDT",
+    "AVAXUSDT",
+    "AXSUSDT",
+    "BANKUSDT",
+    "BCHUSDT",
+    "BEATUSDT",
+    "BERAUSDT",
+    "BIOUSDT",
+    "BLESSUSDT",
+    "BNBUSDT",
+    "BROCCOLI714USDT",
+    "BTCUSDT",
+    "BTWUSDT",
+    "BULLAUSDT",
+    "BZUSDT",
+    "CFXUSDT",
+    "CLUSDT",
+    "COTIUSDT",
+    "CRVUSDT",
+    "CYSUSDT",
+    "DASHUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "DUSKUSDT",
+    "EDENUSDT",
+    "EIGENUSDT",
+    "ENAUSDT",
+    "ENJUSDT",
+    "ENSOUSDT",
+    "ETHUSDT",
+    "EVAAUSDT",
+    "EWYUSDT",
+    "FARTCOINUSDT",
+    "FILUSDT",
+    "HBARUSDT",
+    "HEIUSDT",
+    "HIFIUSDT",
+    "HYPEUSDT",
+    "ICPUSDT",
+    "INJUSDT",
+    "INTCUSDT",
+    "IPUSDT",
+    "JCTUSDT",
+    "JELLYJELLYUSDT",
+    "KITEUSDT",
+    "LABUSDT",
+    "LINKUSDT",
+    "LITUSDT",
+    "LSKUSDT",
+    "LTCUSDT",
+    "LUNA2USDT",
+    "MAGICUSDT",
+    "MERLUSDT",
+    "MSTRUSDT",
+    "MUUSDT",
+    "NEARUSDT",
+    "NMRUSDT",
+    "NOMUSDT",
+    "NVDAUSDT",
+    "ONDOUSDT",
+    "ONTUSDT",
+    "ORCAUSDT",
+    "ORDIUSDT",
+    "PAXGUSDT",
+    "PENGUUSDT",
+    "PIEVERSEUSDT",
+    "PIPPINUSDT",
+    "PIXELUSDT",
+    "PUMPUSDT",
+    "PYTHUSDT",
+    "QNTUSDT",
+    "QQQUSDT",
+    "RAVEUSDT",
+    "RIVERUSDT",
+    "SAHARAUSDT",
+    "SIRENUSDT",
+    "SKYAIUSDT",
+    "SNDKUSDT",
+    "SOLUSDT",
+    "SPCXUSDT",
+    "STOUSDT",
+    "STRKUSDT",
+    "SUIUSDT",
+    "SYNUSDT",
+    "TAOUSDT",
+    "TLMUSDT",
+    "TNSRUSDT",
+    "TONUSDT",
+    "TRUMPUSDT",
+    "TRXUSDT",
+    "TUTUSDT",
+    "UBUSDT",
+    "UNIUSDT",
+    "USELESSUSDT",
+    "VANRYUSDT",
+    "VELVETUSDT",
+    "VINEUSDT",
+    "VIRTUALUSDT",
+    "VVVUSDT",
+    "WLDUSDT",
+    "XAGUSDT",
+    "XAUUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZENUSDT",
+    "ZKUSDT",
+    "ZROUSDT"
+   ],
+   "holdout_regimes": {
+    "bull": {
+     "days": 165,
+     "share_pct": 34.883720930232556,
+     "cum_pct": -12.36010653302425,
+     "ann_ret_pct": -16.25996795623298,
+     "sharpe": -0.32046648230014774
+    },
+    "bear": {
+     "days": 266,
+     "share_pct": 56.236786469344615,
+     "cum_pct": -11.422923932197381,
+     "ann_ret_pct": -8.032948075584159,
+     "sharpe": -0.192946281597975
+    },
+    "chop": {
+     "days": 42,
+     "share_pct": 8.879492600422834,
+     "cum_pct": -6.244917815927997,
+     "ann_ret_pct": -41.43847225061026,
+     "sharpe": -0.750809921840719
+    }
+   },
+   "benchmarks_holdout": {
+    "btc_buy_hold": {
+     "net_return_pct": -36.362023519870235,
+     "max_dd_pct": -53.44810393969877
+    },
+    "equal_weight": {
+     "net_return_pct": -76.00306788737576,
+     "max_dd_pct": -79.93652833412933
+    }
+   }
+  },
+  "C2_pit_cap10": {
+   "verdict": "FAIL",
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 0.8919226811606575,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": -20.741126516452802,
+     "threshold": "> 0.0",
+     "passed": false
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -66.33102052261839,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 465,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -26.765018414100574,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "oos": {
+    "net_return_pct": -20.741126516452802,
+    "profit_factor": 0.8919226811606575,
+    "max_dd_pct": -28.370556715956614,
+    "sharpe": -0.32877458581470426,
+    "trades": 465,
+    "stress_net_return_pct": -26.765018414100574,
+    "win_rate_pct": 32.903225806451616,
+    "start": "2025-07-24T04:00:00Z",
+    "end": "2026-11-09T20:00:00Z"
+   },
+   "in_sample": {
+    "net_return_pct": 1332.1749059138083,
+    "max_dd_pct": -46.89492937860021,
+    "sharpe": 1.5621038414881927,
+    "profit_factor": 1.2711525549498457
+   },
+   "full_range": {
+    "net_return_pct": 1032.8212212135652,
+    "max_dd_pct": -46.89492937860021,
+    "sharpe": 1.1970501492796253
+   },
+   "monte_carlo": {
+    "dd_p95": -66.33102052261839,
+    "dd_p99": -73.90885097984695,
+    "prob_dd_beyond_50pct": 0.321,
+    "n_simulations": 1000,
+    "median_dd": -45.31328652261711,
+    "block_days": 20,
+    "method": "block_bootstrap_daily",
+    "original_dd": -46.18554803145261
+   },
+   "walk_forward": {
+    "oos_compounded_net_pct": 51.49422648834696,
+    "oos_avg_pf": 1.2571557751164257,
+    "consistency": 0.8333333333333334
+   },
+   "sensitivity_unstable": 0,
+   "holdout_contrib": [
+    {
+     "symbol": "ZECUSDT",
+     "pnl": 1372.4587646746618,
+     "trades": 23
+    },
+    {
+     "symbol": "LABUSDT",
+     "pnl": 1154.4573098072617,
+     "trades": 3
+    },
+    {
+     "symbol": "PIPPINUSDT",
+     "pnl": 1082.4456371137412,
+     "trades": 7
+    },
+    {
+     "symbol": "SIRENUSDT",
+     "pnl": 840.8430738079443,
+     "trades": 4
+    },
+    {
+     "symbol": "AKEUSDT",
+     "pnl": 598.3534430332353,
+     "trades": 9
+    },
+    {
+     "symbol": "ENSOUSDT",
+     "pnl": 396.3291743948293,
+     "trades": 2
+    },
+    {
+     "symbol": "VELVETUSDT",
+     "pnl": 384.91796057327934,
+     "trades": 4
+    },
+    {
+     "symbol": "SKYAIUSDT",
+     "pnl": 375.7348312134153,
+     "trades": 1
+    },
+    {
+     "symbol": "DUSKUSDT",
+     "pnl": -502.0536141483277,
+     "trades": 5
+    },
+    {
+     "symbol": "PUMPUSDT",
+     "pnl": -531.1103301941424,
+     "trades": 7
+    },
+    {
+     "symbol": "IPUSDT",
+     "pnl": -623.9513268014945,
+     "trades": 5
+    },
+    {
+     "symbol": "TUTUSDT",
+     "pnl": -667.1764999473942,
+     "trades": 1
+    },
+    {
+     "symbol": "WLDUSDT",
+     "pnl": -673.572025887191,
+     "trades": 8
+    }
+   ],
+   "holdout_top1": "ZECUSDT",
+   "holdout_top1_share_pct": null,
+   "holdout_without_top1": {
+    "net_return_pct": -37.174770800279155,
+    "max_dd_pct": -43.223834488885494,
+    "profit_factor": 0.7838736700946088
+   },
+   "holdout_held_symbols": [
+    "1000BONKUSDT",
+    "1000LUNCUSDT",
+    "1000PEPEUSDT",
+    "AAVEUSDT",
+    "ACEUSDT",
+    "ADAUSDT",
+    "AIOTUSDT",
+    "AKEUSDT",
+    "ALLOUSDT",
+    "APEUSDT",
+    "ARBUSDT",
+    "ARIAUSDT",
+    "ASTERUSDT",
+    "AVAXUSDT",
+    "AXSUSDT",
+    "BANKUSDT",
+    "BCHUSDT",
+    "BEATUSDT",
+    "BERAUSDT",
+    "BIOUSDT",
+    "BLESSUSDT",
+    "BNBUSDT",
+    "BROCCOLI714USDT",
+    "BTCUSDT",
+    "BTWUSDT",
+    "BULLAUSDT",
+    "BZUSDT",
+    "CFXUSDT",
+    "CLUSDT",
+    "COTIUSDT",
+    "CRVUSDT",
+    "CYSUSDT",
+    "DASHUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "DUSKUSDT",
+    "EDENUSDT",
+    "EIGENUSDT",
+    "ENAUSDT",
+    "ENJUSDT",
+    "ENSOUSDT",
+    "ETHUSDT",
+    "EVAAUSDT",
+    "EWYUSDT",
+    "FARTCOINUSDT",
+    "FILUSDT",
+    "HBARUSDT",
+    "HEIUSDT",
+    "HIFIUSDT",
+    "HYPEUSDT",
+    "ICPUSDT",
+    "INJUSDT",
+    "INTCUSDT",
+    "IPUSDT",
+    "JCTUSDT",
+    "JELLYJELLYUSDT",
+    "KITEUSDT",
+    "LABUSDT",
+    "LINKUSDT",
+    "LITUSDT",
+    "LSKUSDT",
+    "LTCUSDT",
+    "LUNA2USDT",
+    "MAGICUSDT",
+    "MERLUSDT",
+    "MSTRUSDT",
+    "MUUSDT",
+    "NEARUSDT",
+    "NMRUSDT",
+    "NOMUSDT",
+    "NVDAUSDT",
+    "ONDOUSDT",
+    "ONTUSDT",
+    "ORCAUSDT",
+    "ORDIUSDT",
+    "PAXGUSDT",
+    "PENGUUSDT",
+    "PIEVERSEUSDT",
+    "PIPPINUSDT",
+    "PIXELUSDT",
+    "PUMPUSDT",
+    "PYTHUSDT",
+    "QNTUSDT",
+    "QQQUSDT",
+    "RAVEUSDT",
+    "RIVERUSDT",
+    "SAHARAUSDT",
+    "SIRENUSDT",
+    "SKYAIUSDT",
+    "SNDKUSDT",
+    "SOLUSDT",
+    "SPCXUSDT",
+    "STOUSDT",
+    "STRKUSDT",
+    "SUIUSDT",
+    "SYNUSDT",
+    "TAOUSDT",
+    "TLMUSDT",
+    "TNSRUSDT",
+    "TONUSDT",
+    "TRUMPUSDT",
+    "TRXUSDT",
+    "TUTUSDT",
+    "UBUSDT",
+    "UNIUSDT",
+    "USELESSUSDT",
+    "VANRYUSDT",
+    "VELVETUSDT",
+    "VINEUSDT",
+    "VIRTUALUSDT",
+    "VVVUSDT",
+    "WLDUSDT",
+    "XAGUSDT",
+    "XAUUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "ZENUSDT",
+    "ZKUSDT",
+    "ZROUSDT"
+   ],
+   "holdout_regimes": {
+    "bull": {
+     "days": 165,
+     "share_pct": 34.883720930232556,
+     "cum_pct": -1.43599194937305,
+     "ann_ret_pct": 3.0518107100894376,
+     "sharpe": 0.08602427311560287
+    },
+    "bear": {
+     "days": 266,
+     "share_pct": 56.236786469344615,
+     "cum_pct": -10.457828900267053,
+     "ann_ret_pct": -9.538189846920796,
+     "sharpe": -0.2838505251503688
+    },
+    "chop": {
+     "days": 42,
+     "share_pct": 8.879492600422834,
+     "cum_pct": -10.155289027056224,
+     "ann_ret_pct": -82.69417467189676,
+     "sharpe": -1.7875901441849404
+    }
+   },
+   "benchmarks_holdout": {
+    "btc_buy_hold": {
+     "net_return_pct": -36.362023519870235,
+     "max_dd_pct": -53.44810393969877
+    },
+    "equal_weight": {
+     "net_return_pct": -76.00306788737576,
+     "max_dd_pct": -79.93652833412933
+    }
+   }
+  }
+ }
+}

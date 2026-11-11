@@ -1,0 +1,2977 @@
+{
+ "top_contributors": [
+  "ADAUSDT",
+  "XRPUSDT",
+  "TRBUSDT"
+ ],
+ "runs": {
+  "baseline": {
+   "net_return_pct": 2350.6410607476346,
+   "cagr_pct": 85.18920628646222,
+   "max_dd_pct": -47.3627788197613,
+   "sharpe": 1.6306629673873845,
+   "profit_factor": 1.2524006445369589,
+   "trades": 1760,
+   "win_rate_pct": 39.82954545454545,
+   "turnover_per_year": 79.55275442718008,
+   "avg_gross_exposure": 0.46101473601319454,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 25605.495837520706,
+   "slippage_paid": 25605.495837520706,
+   "funding_paid": -30111.024148700053,
+   "final_equity": 245064.10607476346,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -65.27662785422146,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 15.601690105881321,
+   "top3_share_pct": 44.76819219907943,
+   "years": {
+    "2020": 167.56282439279568,
+    "2021": 287.0238911817492,
+    "2022": -37.50004017635805,
+    "2023": 244.38747805028385,
+    "2024": 21.96027320988463,
+    "2025": -9.848972649099307
+   },
+   "contrib": [
+    {
+     "symbol": "ADAUSDT",
+     "pnl": 36673.97337994509,
+     "trades": 34
+    },
+    {
+     "symbol": "XRPUSDT",
+     "pnl": 35560.74117437373,
+     "trades": 47
+    },
+    {
+     "symbol": "TRBUSDT",
+     "pnl": 32999.23624428021,
+     "trades": 21
+    },
+    {
+     "symbol": "BTCUSDT",
+     "pnl": 31238.04348439656,
+     "trades": 70
+    },
+    {
+     "symbol": "RUNEUSDT",
+     "pnl": 23798.31174491001,
+     "trades": 16
+    },
+    {
+     "symbol": "1000PEPEUSDT",
+     "pnl": 22142.17127745591,
+     "trades": 19
+    },
+    {
+     "symbol": "ALPACAUSDT",
+     "pnl": 20526.712407565996,
+     "trades": 1
+    },
+    {
+     "symbol": "ETHUSDT",
+     "pnl": 19777.920906900286,
+     "trades": 71
+    },
+    {
+     "symbol": "BNBUSDT",
+     "pnl": 19520.391088163993,
+     "trades": 55
+    },
+    {
+     "symbol": "REEFUSDT",
+     "pnl": 19283.431004720394,
+     "trades": 5
+    },
+    {
+     "symbol": "BNXUSDT",
+     "pnl": 18552.167042304478,
+     "trades": 5
+    },
+    {
+     "symbol": "SUIUSDT",
+     "pnl": 15719.429726455637,
+     "trades": 27
+    },
+    {
+     "symbol": "DOGEUSDT",
+     "pnl": 15286.135885657162,
+     "trades": 47
+    },
+    {
+     "symbol": "BLZUSDT",
+     "pnl": 15099.899755220935,
+     "trades": 6
+    },
+    {
+     "symbol": "INJUSDT",
+     "pnl": 14754.177253323096,
+     "trades": 16
+    },
+    {
+     "symbol": "SOLUSDT",
+     "pnl": 14085.131546614051,
+     "trades": 65
+    },
+    {
+     "symbol": "AXSUSDT",
+     "pnl": 12689.539284020131,
+     "trades": 9
+    },
+    {
+     "symbol": "XLMUSDT",
+     "pnl": 12461.109168186767,
+     "trades": 24
+    },
+    {
+     "symbol": "LUNAUSDT",
+     "pnl": 10882.669828544436,
+     "trades": 23
+    },
+    {
+     "symbol": "CRVUSDT",
+     "pnl": 10162.481970335552,
+     "trades": 23
+    },
+    {
+     "symbol": "SANDUSDT",
+     "pnl": 10027.5053639989,
+     "trades": 9
+    },
+    {
+     "symbol": "1000SHIBUSDT",
+     "pnl": 8969.765628742121,
+     "trades": 21
+    },
+    {
+     "symbol": "PENGUUSDT",
+     "pnl": 7819.651540640056,
+     "trades": 3
+    },
+    {
+     "symbol": "SEIUSDT",
+     "pnl": 7767.270733777422,
+     "trades": 10
+    },
+    {
+     "symbol": "HBARUSDT",
+     "pnl": 7609.177954020275,
+     "trades": 13
+    },
+    {
+     "symbol": "MOODENGUSDT",
+     "pnl": 7169.9981171151185,
+     "trades": 3
+    },
+    {
+     "symbol": "1000LUNCUSDT",
+     "pnl": 6967.4748525280065,
+     "trades": 2
+    },
+    {
+     "symbol": "AVAXUSDT",
+     "pnl": 6298.198097064815,
+     "trades": 32
+    },
+    {
+     "symbol": "ETCUSDT",
+     "pnl": 5440.2897868607315,
+     "trades": 34
+    },
+    {
+     "symbol": "UNFIUSDT",
+     "pnl": 4913.554635643744,
+     "trades": 13
+    },
+    {
+     "symbol": "ARPAUSDT",
+     "pnl": 4772.567350019506,
+     "trades": 2
+    },
+    {
+     "symbol": "LINAUSDT",
+     "pnl": 4463.3608798126115,
+     "trades": 5
+    },
+    {
+     "symbol": "TURBOUSDT",
+     "pnl": 4227.133853640984,
+     "trades": 6
+    },
+    {
+     "symbol": "POPCATUSDT",
+     "pnl": 3745.514193498658,
+     "trades": 1
+    },
+    {
+     "symbol": "ENAUSDT",
+     "pnl": 3741.220068983054,
+     "trades": 8
+    },
+    {
+     "symbol": "TAOUSDT",
+     "pnl": 3313.01677716824,
+     "trades": 7
+    },
+    {
+     "symbol": "OCEANUSDT",
+     "pnl": 3274.1068167299854,
+     "trades": 5
+    },
+    {
+     "symbol": "MASKUSDT",
+     "pnl": 3068.919470005085,
+     "trades": 12
+    },
+    {
+     "symbol": "WAVESUSDT",
+     "pnl": 2768.6043987952003,
+     "trades": 9
+    },
+    {
+     "symbol": "RLCUSDT",
+     "pnl": 2665.7049089449224,
+     "trades": 7
+    },
+    {
+     "symbol": "MKRUSDT",
+     "pnl": 2482.667280553077,
+     "trades": 11
+    },
+    {
+     "symbol": "1000BONKUSDT",
+     "pnl": 2181.48520740879,
+     "trades": 13
+    },
+    {
+     "symbol": "OGNUSDT",
+     "pnl": 2033.7446977477641,
+     "trades": 10
+    },
+    {
+     "symbol": "ICPUSDT",
+     "pnl": 2030.7337414336996,
+     "trades": 4
+    },
+    {
+     "symbol": "VETUSDT",
+     "pnl": 1879.5694402017177,
+     "trades": 10
+    },
+    {
+     "symbol": "WLDUSDT",
+     "pnl": 1792.8533350200016,
+     "trades": 6
+    },
+    {
+     "symbol": "SXPUSDT",
+     "pnl": 1774.0558892101856,
+     "trades": 5
+    },
+    {
+     "symbol": "ZILUSDT",
+     "pnl": 1541.3045916240605,
+     "trades": 10
+    },
+    {
+     "symbol": "BAKEUSDT",
+     "pnl": 1530.6507483011753,
+     "trades": 3
+    },
+    {
+     "symbol": "THETAUSDT",
+     "pnl": 1457.5505294566985,
+     "trades": 16
+    },
+    {
+     "symbol": "1000SATSUSDT",
+     "pnl": 1408.4863700118105,
+     "trades": 6
+    },
+    {
+     "symbol": "FILUSDT",
+     "pnl": 1367.3053803256216,
+     "trades": 12
+    },
+    {
+     "symbol": "LRCUSDT",
+     "pnl": 1341.5906906455934,
+     "trades": 6
+    },
+    {
+     "symbol": "ORCAUSDT",
+     "pnl": 1248.6248505913247,
+     "trades": 1
+    },
+    {
+     "symbol": "SPXUSDT",
+     "pnl": 1237.953385196168,
+     "trades": 1
+    },
+    {
+     "symbol": "CHRUSDT",
+     "pnl": 1145.5006819788043,
+     "trades": 5
+    },
+    {
+     "symbol": "FTMUSDT",
+     "pnl": 1085.7660997734633,
+     "trades": 33
+    },
+    {
+     "symbol": "OPUSDT",
+     "pnl": 907.3423592990289,
+     "trades": 13
+    },
+    {
+     "symbol": "FRONTUSDT",
+     "pnl": 867.7516962275113,
+     "trades": 3
+    },
+    {
+     "symbol": "ZENUSDT",
+     "pnl": 862.3264770056418,
+     "trades": 2
+    },
+    {
+     "symbol": "ONEUSDT",
+     "pnl": 807.9980733716927,
+     "trades": 3
+    },
+    {
+     "symbol": "NEIROUSDT",
+     "pnl": 787.8403663356937,
+     "trades": 2
+    },
+    {
+     "symbol": "LITUSDT",
+     "pnl": 745.9866972960405,
+     "trades": 6
+    },
+    {
+     "symbol": "TOMOUSDT",
+     "pnl": 706.738952505293,
+     "trades": 7
+    },
+    {
+     "symbol": "DOTUSDT",
+     "pnl": 675.3604338585815,
+     "trades": 16
+    },
+    {
+     "symbol": "MAGICUSDT",
+     "pnl": 638.419313743836,
+     "trades": 1
+    },
+    {
+     "symbol": "SAGAUSDT",
+     "pnl": 624.600428417474,
+     "trades": 6
+    },
+    {
+     "symbol": "AUCTIONUSDT",
+     "pnl": 619.7030959382108,
+     "trades": 1
+    },
+    {
+     "symbol": "AAVEUSDT",
+     "pnl": 508.9738015381125,
+     "trades": 19
+    },
+    {
+     "symbol": "XMRUSDT",
+     "pnl": 446.787061202504,
+     "trades": 15
+    },
+    {
+     "symbol": "IOTAUSDT",
+     "pnl": 314.00782736066424,
+     "trades": 4
+    },
+    {
+     "symbol": "ALICEUSDT",
+     "pnl": 296.25202495904114,
+     "trades": 4
+    },
+    {
+     "symbol": "KLAYUSDT",
+     "pnl": 289.83958142839293,
+     "trades": 1
+    },
+    {
+     "symbol": "DASHUSDT",
+     "pnl": 273.5316288873354,
+     "trades": 6
+    },
+    {
+     "symbol": "JTOUSDT",
+     "pnl": 268.70796173712057,
+     "trades": 4
+    },
+    {
+     "symbol": "ALPHAUSDT",
+     "pnl": 174.33880772539155,
+     "trades": 2
+    },
+    {
+     "symbol": "ZRXUSDT",
+     "pnl": 162.97527021388785,
+     "trades": 1
+    },
+    {
+     "symbol": "WIFUSDT",
+     "pnl": 146.17682023215764,
+     "trades": 9
+    },
+    {
+     "symbol": "STXUSDT",
+     "pnl": 89.25574791843269,
+     "trades": 6
+    },
+    {
+     "symbol": "COMPUSDT",
+     "pnl": 85.39757442479468,
+     "trades": 9
+    },
+    {
+     "symbol": "SRMUSDT",
+     "pnl": 21.831982786886872,
+     "trades": 2
+    },
+    {
+     "symbol": "ONTUSDT",
+     "pnl": 2.186595781763222,
+     "trades": 8
+    },
+    {
+     "symbol": "OMGUSDT",
+     "pnl": -19.85674335551438,
+     "trades": 4
+    },
+    {
+     "symbol": "ZECUSDT",
+     "pnl": -32.61670838826236,
+     "trades": 15
+    },
+    {
+     "symbol": "FLOWUSDT",
+     "pnl": -48.07446102940715,
+     "trades": 1
+    },
+    {
+     "symbol": "SNXUSDT",
+     "pnl": -122.09521452939678,
+     "trades": 4
+    },
+    {
+     "symbol": "GTCUSDT",
+     "pnl": -134.85378909183822,
+     "trades": 1
+    },
+    {
+     "symbol": "CHZUSDT",
+     "pnl": -179.78391403821274,
+     "trades": 11
+    },
+    {
+     "symbol": "AGLDUSDT",
+     "pnl": -207.6770916412094,
+     "trades": 2
+    },
+    {
+     "symbol": "ACHUSDT",
+     "pnl": -245.44589197043769,
+     "trades": 1
+    },
+    {
+     "symbol": "1000FLOKIUSDT",
+     "pnl": -254.03351505645708,
+     "trades": 8
+    },
+    {
+     "symbol": "BELUSDT",
+     "pnl": -270.7844096261029,
+     "trades": 7
+    },
+    {
+     "symbol": "MANAUSDT",
+     "pnl": -299.77610422334254,
+     "trades": 10
+    },
+    {
+     "symbol": "BATUSDT",
+     "pnl": -329.38991644224694,
+     "trades": 5
+    },
+    {
+     "symbol": "CKBUSDT",
+     "pnl": -330.4457577893963,
+     "trades": 4
+    },
+    {
+     "symbol": "QTUMUSDT",
+     "pnl": -365.6061583570117,
+     "trades": 7
+    },
+    {
+     "symbol": "KAVAUSDT",
+     "pnl": -386.0829093262306,
+     "trades": 2
+    },
+    {
+     "symbol": "ANKRUSDT",
+     "pnl": -402.41528917030155,
+     "trades": 3
+    },
+    {
+     "symbol": "JUPUSDT",
+     "pnl": -405.58214459399176,
+     "trades": 1
+    },
+    {
+     "symbol": "IDUSDT",
+     "pnl": -418.10791473114466,
+     "trades": 1
+    },
+    {
+     "symbol": "ENJUSDT",
+     "pnl": -422.2067257459331,
+     "trades": 5
+    },
+    {
+     "symbol": "COTIUSDT",
+     "pnl": -454.6545744386307,
+     "trades": 2
+    },
+    {
+     "symbol": "ICXUSDT",
+     "pnl": -481.6574255803711,
+     "trades": 1
+    },
+    {
+     "symbol": "1000XECUSDT",
+     "pnl": -486.48757622600044,
+     "trades": 1
+    },
+    {
+     "symbol": "DENTUSDT",
+     "pnl": -552.6493816670377,
+     "trades": 1
+    },
+    {
+     "symbol": "ALGOUSDT",
+     "pnl": -573.0917009333743,
+     "trades": 5
+    },
+    {
+     "symbol": "UMAUSDT",
+     "pnl": -616.3141808290756,
+     "trades": 1
+    },
+    {
+     "symbol": "ETHFIUSDT",
+     "pnl": -625.0182282012967,
+     "trades": 3
+    },
+    {
+     "symbol": "EGLDUSDT",
+     "pnl": -678.0948251685699,
+     "trades": 4
+    },
+    {
+     "symbol": "YFIUSDT",
+     "pnl": -711.755042573042,
+     "trades": 2
+    },
+    {
+     "symbol": "DARUSDT",
+     "pnl": -836.3077478673429,
+     "trades": 1
+    },
+    {
+     "symbol": "AERGOUSDT",
+     "pnl": -864.3709519186347,
+     "trades": 1
+    },
+    {
+     "symbol": "MATICUSDT",
+     "pnl": -1007.8088913858546,
+     "trades": 30
+    },
+    {
+     "symbol": "1000RATSUSDT",
+     "pnl": -1081.7502407075117,
+     "trades": 1
+    },
+    {
+     "symbol": "BIGTIMEUSDT",
+     "pnl": -1110.8411319550034,
+     "trades": 3
+    },
+    {
+     "symbol": "KSMUSDT",
+     "pnl": -1154.9411628361224,
+     "trades": 2
+    },
+    {
+     "symbol": "VIRTUALUSDT",
+     "pnl": -1177.372169076859,
+     "trades": 9
+    },
+    {
+     "symbol": "DYDXUSDT",
+     "pnl": -1228.5839125037885,
+     "trades": 11
+    },
+    {
+     "symbol": "API3USDT",
+     "pnl": -1245.2239590598242,
+     "trades": 4
+    },
+    {
+     "symbol": "LQTYUSDT",
+     "pnl": -1253.4965592824626,
+     "trades": 1
+    },
+    {
+     "symbol": "RAREUSDT",
+     "pnl": -1321.2729503240625,
+     "trades": 1
+    },
+    {
+     "symbol": "PENDLEUSDT",
+     "pnl": -1423.713772986311,
+     "trades": 1
+    },
+    {
+     "symbol": "RSRUSDT",
+     "pnl": -1455.6516164622235,
+     "trades": 5
+    },
+    {
+     "symbol": "XTZUSDT",
+     "pnl": -1547.2988970054867,
+     "trades": 3
+    },
+    {
+     "symbol": "POLYXUSDT",
+     "pnl": -1583.1751027793591,
+     "trades": 3
+    },
+    {
+     "symbol": "BLURUSDT",
+     "pnl": -1709.705271947632,
+     "trades": 5
+    },
+    {
+     "symbol": "IOSTUSDT",
+     "pnl": -1900.1895008990718,
+     "trades": 9
+    },
+    {
+     "symbol": "ARBUSDT",
+     "pnl": -1962.8116677720122,
+     "trades": 3
+    },
+    {
+     "symbol": "CELRUSDT",
+     "pnl": -2043.1229817211058,
+     "trades": 3
+    },
+    {
+     "symbol": "PNUTUSDT",
+     "pnl": -2123.20013659959,
+     "trades": 1
+    },
+    {
+     "symbol": "TLMUSDT",
+     "pnl": -2191.6973138013727,
+     "trades": 1
+    },
+    {
+     "symbol": "NEOUSDT",
+     "pnl": -2269.636456749648,
+     "trades": 5
+    },
+    {
+     "symbol": "FARTCOINUSDT",
+     "pnl": -2270.321931688435,
+     "trades": 7
+    },
+    {
+     "symbol": "GRTUSDT",
+     "pnl": -2307.278143771627,
+     "trades": 3
+    },
+    {
+     "symbol": "ORDIUSDT",
+     "pnl": -2387.9746734862533,
+     "trades": 3
+    },
+    {
+     "symbol": "RVNUSDT",
+     "pnl": -2440.4880396365656,
+     "trades": 6
+    },
+    {
+     "symbol": "BANDUSDT",
+     "pnl": -2589.823089781317,
+     "trades": 7
+    },
+    {
+     "symbol": "CTSIUSDT",
+     "pnl": -2599.0041190214015,
+     "trades": 3
+    },
+    {
+     "symbol": "SUSHIUSDT",
+     "pnl": -2733.802808719624,
+     "trades": 12
+    },
+    {
+     "symbol": "MEWUSDT",
+     "pnl": -2976.710921286806,
+     "trades": 4
+    },
+    {
+     "symbol": "RNDRUSDT",
+     "pnl": -3319.071985405823,
+     "trades": 3
+    },
+    {
+     "symbol": "GMTUSDT",
+     "pnl": -3417.132204548234,
+     "trades": 2
+    },
+    {
+     "symbol": "STORJUSDT",
+     "pnl": -3449.8514673516206,
+     "trades": 14
+    },
+    {
+     "symbol": "VOXELUSDT",
+     "pnl": -3450.475804248508,
+     "trades": 4
+    },
+    {
+     "symbol": "TIAUSDT",
+     "pnl": -3562.5986556921384,
+     "trades": 2
+    },
+    {
+     "symbol": "LPTUSDT",
+     "pnl": -3982.8163981034686,
+     "trades": 5
+    },
+    {
+     "symbol": "ONGUSDT",
+     "pnl": -4160.724462308681,
+     "trades": 5
+    },
+    {
+     "symbol": "APEUSDT",
+     "pnl": -4243.470336519463,
+     "trades": 12
+    },
+    {
+     "symbol": "STMXUSDT",
+     "pnl": -4460.462764441468,
+     "trades": 7
+    },
+    {
+     "symbol": "TONUSDT",
+     "pnl": -4484.449296619315,
+     "trades": 5
+    },
+    {
+     "symbol": "SFPUSDT",
+     "pnl": -4514.0458006194995,
+     "trades": 8
+    },
+    {
+     "symbol": "GALAUSDT",
+     "pnl": -4752.920275342456,
+     "trades": 5
+    },
+    {
+     "symbol": "MTLUSDT",
+     "pnl": -4868.132516358576,
+     "trades": 5
+    },
+    {
+     "symbol": "APTUSDT",
+     "pnl": -4876.674099325011,
+     "trades": 13
+    },
+    {
+     "symbol": "KNCUSDT",
+     "pnl": -5242.699881633692,
+     "trades": 3
+    },
+    {
+     "symbol": "UNIUSDT",
+     "pnl": -5351.561351640004,
+     "trades": 15
+    },
+    {
+     "symbol": "ATOMUSDT",
+     "pnl": -5512.7264110580745,
+     "trades": 24
+    },
+    {
+     "symbol": "PEOPLEUSDT",
+     "pnl": -5559.5673476574675,
+     "trades": 16
+    },
+    {
+     "symbol": "FLMUSDT",
+     "pnl": -5672.720464348299,
+     "trades": 9
+    },
+    {
+     "symbol": "LEVERUSDT",
+     "pnl": -5686.744942537353,
+     "trades": 1
+    },
+    {
+     "symbol": "LDOUSDT",
+     "pnl": -5692.0217366837105,
+     "trades": 9
+    },
+    {
+     "symbol": "NEARUSDT",
+     "pnl": -5786.677273249797,
+     "trades": 28
+    },
+    {
+     "symbol": "PERPUSDT",
+     "pnl": -5805.192203213238,
+     "trades": 1
+    },
+    {
+     "symbol": "JASMYUSDT",
+     "pnl": -5994.949545473316,
+     "trades": 4
+    },
+    {
+     "symbol": "ZROUSDT",
+     "pnl": -6036.473523204188,
+     "trades": 1
+    },
+    {
+     "symbol": "OMUSDT",
+     "pnl": -6337.960172868562,
+     "trades": 5
+    },
+    {
+     "symbol": "CAKEUSDT",
+     "pnl": -6533.095946505078,
+     "trades": 2
+    },
+    {
+     "symbol": "SPELLUSDT",
+     "pnl": -7116.088777017853,
+     "trades": 2
+    },
+    {
+     "symbol": "BCHUSDT",
+     "pnl": -7576.058349628782,
+     "trades": 38
+    },
+    {
+     "symbol": "ONDOUSDT",
+     "pnl": -8388.75567646407,
+     "trades": 7
+    },
+    {
+     "symbol": "BOMEUSDT",
+     "pnl": -10882.309032889956,
+     "trades": 4
+    },
+    {
+     "symbol": "LINKUSDT",
+     "pnl": -11220.144496329573,
+     "trades": 46
+    },
+    {
+     "symbol": "FETUSDT",
+     "pnl": -11751.010276967389,
+     "trades": 10
+    },
+    {
+     "symbol": "TRXUSDT",
+     "pnl": -12258.731024523498,
+     "trades": 29
+    },
+    {
+     "symbol": "LTCUSDT",
+     "pnl": -15110.748282931298,
+     "trades": 40
+    },
+    {
+     "symbol": "ENSUSDT",
+     "pnl": -15603.159539719567,
+     "trades": 16
+    },
+    {
+     "symbol": "EOSUSDT",
+     "pnl": -18522.420985087476,
+     "trades": 12
+    }
+   ],
+   "regimes": {
+    "bull": {
+     "days": 1090,
+     "share_pct": 57.55015839493136,
+     "cum_pct": 1964.10929505218,
+     "ann_ret_pct": 111.386322223934,
+     "sharpe": 2.4933097430390276
+    },
+    "bear": {
+     "days": 345,
+     "share_pct": 18.215417106652588,
+     "cum_pct": -25.67388433051748,
+     "ann_ret_pct": -21.66101044438734,
+     "sharpe": -0.4920707314416718
+    },
+    "chop": {
+     "days": 459,
+     "share_pct": 24.23442449841605,
+     "cum_pct": 59.1394566211596,
+     "ann_ret_pct": 45.06059286897312,
+     "sharpe": 1.1163333816920382
+    }
+   },
+   "held_symbols": [
+    "1000BONKUSDT",
+    "1000FLOKIUSDT",
+    "1000LUNCUSDT",
+    "1000PEPEUSDT",
+    "1000RATSUSDT",
+    "1000SATSUSDT",
+    "1000SHIBUSDT",
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "ACHUSDT",
+    "ADAUSDT",
+    "AERGOUSDT",
+    "AGLDUSDT",
+    "ALGOUSDT",
+    "ALICEUSDT",
+    "ALPACAUSDT",
+    "ALPHAUSDT",
+    "ANKRUSDT",
+    "APEUSDT",
+    "API3USDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "ARPAUSDT",
+    "ATOMUSDT",
+    "AUCTIONUSDT",
+    "AVAXUSDT",
+    "AXSUSDT",
+    "BAKEUSDT",
+    "BANDUSDT",
+    "BATUSDT",
+    "BCHUSDT",
+    "BELUSDT",
+    "BIGTIMEUSDT",
+    "BLURUSDT",
+    "BLZUSDT",
+    "BNBUSDT",
+    "BNXUSDT",
+    "BOMEUSDT",
+    "BTCUSDT",
+    "CAKEUSDT",
+    "CELRUSDT",
+    "CHRUSDT",
+    "CHZUSDT",
+    "CKBUSDT",
+    "COMPUSDT",
+    "COTIUSDT",
+    "CRVUSDT",
+    "CTSIUSDT",
+    "DARUSDT",
+    "DASHUSDT",
+    "DENTUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "DYDXUSDT",
+    "EGLDUSDT",
+    "ENAUSDT",
+    "ENJUSDT",
+    "ENSUSDT",
+    "EOSUSDT",
+    "ETCUSDT",
+    "ETHFIUSDT",
+    "ETHUSDT",
+    "FARTCOINUSDT",
+    "FETUSDT",
+    "FILUSDT",
+    "FLMUSDT",
+    "FLOWUSDT",
+    "FRONTUSDT",
+    "FTMUSDT",
+    "GALAUSDT",
+    "GMTUSDT",
+    "GRTUSDT",
+    "GTCUSDT",
+    "HBARUSDT",
+    "ICPUSDT",
+    "ICXUSDT",
+    "IDUSDT",
+    "INJUSDT",
+    "IOSTUSDT",
+    "IOTAUSDT",
+    "JASMYUSDT",
+    "JTOUSDT",
+    "JUPUSDT",
+    "KAVAUSDT",
+    "KLAYUSDT",
+    "KNCUSDT",
+    "KSMUSDT",
+    "LDOUSDT",
+    "LEVERUSDT",
+    "LINAUSDT",
+    "LINKUSDT",
+    "LITUSDT",
+    "LPTUSDT",
+    "LQTYUSDT",
+    "LRCUSDT",
+    "LTCUSDT",
+    "LUNAUSDT",
+    "MAGICUSDT",
+    "MANAUSDT",
+    "MASKUSDT",
+    "MATICUSDT",
+    "MEWUSDT",
+    "MKRUSDT",
+    "MOODENGUSDT",
+    "MTLUSDT",
+    "NEARUSDT",
+    "NEIROUSDT",
+    "NEOUSDT",
+    "OCEANUSDT",
+    "OGNUSDT",
+    "OMGUSDT",
+    "OMUSDT",
+    "ONDOUSDT",
+    "ONEUSDT",
+    "ONGUSDT",
+    "ONTUSDT",
+    "OPUSDT",
+    "ORCAUSDT",
+    "ORDIUSDT",
+    "PENDLEUSDT",
+    "PENGUUSDT",
+    "PEOPLEUSDT",
+    "PERPUSDT",
+    "PNUTUSDT",
+    "POLYXUSDT",
+    "POPCATUSDT",
+    "QTUMUSDT",
+    "RAREUSDT",
+    "REEFUSDT",
+    "RLCUSDT",
+    "RNDRUSDT",
+    "RSRUSDT",
+    "RUNEUSDT",
+    "RVNUSDT",
+    "SAGAUSDT",
+    "SANDUSDT",
+    "SEIUSDT",
+    "SFPUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "SPELLUSDT",
+    "SPXUSDT",
+    "SRMUSDT",
+    "STMXUSDT",
+    "STORJUSDT",
+    "STXUSDT",
+    "SUIUSDT",
+    "SUSHIUSDT",
+    "SXPUSDT",
+    "TAOUSDT",
+    "THETAUSDT",
+    "TIAUSDT",
+    "TLMUSDT",
+    "TOMOUSDT",
+    "TONUSDT",
+    "TRBUSDT",
+    "TRXUSDT",
+    "TURBOUSDT",
+    "UMAUSDT",
+    "UNFIUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "VIRTUALUSDT",
+    "VOXELUSDT",
+    "WAVESUSDT",
+    "WIFUSDT",
+    "WLDUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "XTZUSDT",
+    "YFIUSDT",
+    "ZECUSDT",
+    "ZENUSDT",
+    "ZILUSDT",
+    "ZROUSDT",
+    "ZRXUSDT"
+   ],
+   "pnl_by_age": {
+    "<180d": 2150.048320973705,
+    "180-365d": 83182.26903021724,
+    "1-2y": -12070.823525523345,
+    ">2y": 118362.7062074301,
+    "pre-data": 43439.906041668066
+   }
+  },
+  "drop_top1": {
+   "net_return_pct": 1753.948512231454,
+   "cagr_pct": 75.49812711476321,
+   "max_dd_pct": -48.4536393728677,
+   "sharpe": 1.511820998571128,
+   "profit_factor": 1.2082393482549232,
+   "trades": 1767,
+   "win_rate_pct": 39.33220147142048,
+   "turnover_per_year": 80.21163343523837,
+   "avg_gross_exposure": 0.46127079845786284,
+   "avg_positions": 4.371184800774035,
+   "fees_paid": 22671.10502893579,
+   "slippage_paid": 22671.10502893579,
+   "funding_paid": -28788.950076711775,
+   "final_equity": 185394.8512231454,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -66.8577244840864,
+   "top1": "TRBUSDT",
+   "top1_share_pct": 18.39383333993837,
+   "top3_share_pct": 51.797109500131036,
+   "years": {
+    "2020": 161.5181772768215,
+    "2021": 284.4038566506379,
+    "2022": -39.69902248443225,
+    "2023": 229.33662189504597,
+    "2024": 7.109458675049285,
+    "2025": -13.300648580211238
+   }
+  },
+  "drop_top3": {
+   "net_return_pct": 985.5969981048592,
+   "cagr_pct": 58.30691844908149,
+   "max_dd_pct": -51.872147272283,
+   "sharpe": 1.2921595865345088,
+   "profit_factor": 1.1613108679804174,
+   "trades": 1766,
+   "win_rate_pct": 39.12797281993205,
+   "turnover_per_year": 79.4768249117925,
+   "avg_gross_exposure": 0.45985957897768803,
+   "avg_positions": 4.353241270120503,
+   "fees_paid": 16118.805874417834,
+   "slippage_paid": 16118.805874417834,
+   "funding_paid": -10767.852857176416,
+   "final_equity": 108559.69981048591,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -68.47380217496004,
+   "top1": "BTCUSDT",
+   "top1_share_pct": 22.074656425619246,
+   "top3_share_pct": 52.76607428597625,
+   "years": {
+    "2020": 139.85051111933478,
+    "2021": 278.59715014939275,
+    "2022": -42.8877265879716,
+    "2023": 127.64643121970414,
+    "2024": 8.479527079369632,
+    "2025": -15.235780515241615
+   }
+  },
+  "cap_25": {
+   "net_return_pct": 2110.9887880997317,
+   "cagr_pct": 81.5542697448331,
+   "max_dd_pct": -47.489723170337285,
+   "sharpe": 1.601867132990775,
+   "profit_factor": 1.2496839764690604,
+   "trades": 1760,
+   "win_rate_pct": 39.77272727272727,
+   "turnover_per_year": 77.12040135735606,
+   "avg_gross_exposure": 0.45241186478709466,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 22624.788397203665,
+   "slippage_paid": 22624.788397203665,
+   "funding_paid": -27378.961467788467,
+   "final_equity": 221098.87880997316,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -65.12377737061092,
+   "top1": "XRPUSDT",
+   "top1_share_pct": 15.781625979057646,
+   "top3_share_pct": 45.63887951429324,
+   "years": {
+    "2020": 159.34850882530048,
+    "2021": 287.02389118174887,
+    "2022": -39.96887955331332,
+    "2023": 229.6893107127493,
+    "2024": 23.24772052467572,
+    "2025": -9.69645523599606
+   }
+  },
+  "cap_20": {
+   "net_return_pct": 1985.9590231836933,
+   "cagr_pct": 79.52984504564222,
+   "max_dd_pct": -47.90199417092508,
+   "sharpe": 1.5949560046278624,
+   "profit_factor": 1.2516113666226807,
+   "trades": 1760,
+   "win_rate_pct": 39.82954545454545,
+   "turnover_per_year": 74.27348003034011,
+   "avg_gross_exposure": 0.4395096101293659,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 20576.200563207614,
+   "slippage_paid": 20576.200563207614,
+   "funding_paid": -26310.51310247405,
+   "final_equity": 208595.90231836934,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -64.78841715575737,
+   "top1": "XRPUSDT",
+   "top1_share_pct": 16.23752447601338,
+   "top3_share_pct": 46.199908871484716,
+   "years": {
+    "2020": 153.51479681493964,
+    "2021": 287.0238911883397,
+    "2022": -40.78449222658209,
+    "2023": 220.2275611495998,
+    "2024": 23.276072151231553,
+    "2025": -9.05229777061577
+   }
+  },
+  "cap_15": {
+   "net_return_pct": 1831.4313402630237,
+   "cagr_pct": 76.88774291846359,
+   "max_dd_pct": -48.3005985637011,
+   "sharpe": 1.5984667429547246,
+   "profit_factor": 1.2607321557651585,
+   "trades": 1760,
+   "win_rate_pct": 39.659090909090914,
+   "turnover_per_year": 69.07786128811695,
+   "avg_gross_exposure": 0.4155750371612887,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 17630.083844023644,
+   "slippage_paid": 17630.083844023644,
+   "funding_paid": -25444.546200140485,
+   "final_equity": 193143.13402630237,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -63.47437102691659,
+   "top1": "XRPUSDT",
+   "top1_share_pct": 16.166789305806958,
+   "top3_share_pct": 45.746155421797994,
+   "years": {
+    "2020": 141.02702807586502,
+    "2021": 286.29422779724865,
+    "2022": -41.37918675273531,
+    "2023": 212.3652148665979,
+    "2024": 22.5371527276748,
+    "2025": -7.548700294878108
+   }
+  },
+  "cap_10": {
+   "net_return_pct": 1332.1749059138083,
+   "cagr_pct": 66.98538277599255,
+   "max_dd_pct": -46.89492937860021,
+   "sharpe": 1.5621038414881927,
+   "profit_factor": 1.2711525549498461,
+   "trades": 1760,
+   "win_rate_pct": 39.31818181818182,
+   "turnover_per_year": 58.17622979819716,
+   "avg_gross_exposure": 0.36226949424750166,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 11457.01782100819,
+   "slippage_paid": 11457.01782100819,
+   "funding_paid": -20471.02834696687,
+   "final_equity": 143217.49059138083,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -59.795363745149025,
+   "top1": "TRBUSDT",
+   "top1_share_pct": 15.027090447933652,
+   "top3_share_pct": 39.43141325639995,
+   "years": {
+    "2020": 101.35952322505135,
+    "2021": 274.9946864435046,
+    "2022": -40.04400790028898,
+    "2023": 179.8587638728101,
+    "2024": 17.76307722121746,
+    "2025": -4.011739612082376
+   }
+  },
+  "top_10": {
+   "net_return_pct": 688.2609615401475,
+   "cagr_pct": 48.841733675935075,
+   "max_dd_pct": -52.26817192079536,
+   "sharpe": 1.155880234953999,
+   "profit_factor": 1.1873169374276722,
+   "trades": 2406,
+   "win_rate_pct": 36.53366583541147,
+   "turnover_per_year": 73.24113551538079,
+   "avg_gross_exposure": 0.4892850793899689,
+   "avg_positions": 7.561790834726009,
+   "fees_paid": 9975.961995703627,
+   "slippage_paid": 9975.961995703627,
+   "funding_paid": -2557.223877988251,
+   "final_equity": 78826.09615401475,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -70.64630275720785,
+   "top1": "SOLUSDT",
+   "top1_share_pct": 14.56105570733989,
+   "top3_share_pct": 40.41159822951404,
+   "years": {
+    "2020": 97.48602914347477,
+    "2021": 198.52506644042634,
+    "2022": -45.29016500591923,
+    "2023": 185.24467556629372,
+    "2024": 6.5961156323273595,
+    "2025": -19.62360809784328
+   }
+  },
+  "top_10_cap_15": {
+   "net_return_pct": 617.2205074790601,
+   "cagr_pct": 46.15833647749863,
+   "max_dd_pct": -56.13299006160497,
+   "sharpe": 1.135814867038171,
+   "profit_factor": 1.1972097036880172,
+   "trades": 2406,
+   "win_rate_pct": 36.36741479634248,
+   "turnover_per_year": 66.52457623695744,
+   "avg_gross_exposure": 0.4700348482009579,
+   "avg_positions": 7.561790834726009,
+   "fees_paid": 8042.185935433634,
+   "slippage_paid": 8042.185935433634,
+   "funding_paid": -1719.564728998167,
+   "final_equity": 71722.050747906,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -70.83953213739841,
+   "top1": "SOLUSDT",
+   "top1_share_pct": 14.365383602459545,
+   "top3_share_pct": 39.4622664271166,
+   "years": {
+    "2020": 86.29631608794246,
+    "2021": 197.9119732472587,
+    "2022": -48.4597279096892,
+    "2023": 167.69708569329515,
+    "2024": 12.126753626345476,
+    "2025": -16.466462154219286
+   }
+  },
+  "top_15": {
+   "net_return_pct": 515.0476121739385,
+   "cagr_pct": 41.89489253472318,
+   "max_dd_pct": -51.15381092077581,
+   "sharpe": 1.0484933884663887,
+   "profit_factor": 1.1963170470632793,
+   "trades": 2607,
+   "win_rate_pct": 34.86766398158803,
+   "turnover_per_year": 69.52384269059121,
+   "avg_gross_exposure": 0.4919311754625141,
+   "avg_positions": 9.54068079866303,
+   "fees_paid": 7366.0015528472595,
+   "slippage_paid": 7366.0015528472595,
+   "funding_paid": 77.7604557277109,
+   "final_equity": 61504.76121739385,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -73.26785165253897,
+   "top1": "BTCUSDT",
+   "top1_share_pct": 17.10019701112737,
+   "top3_share_pct": 43.84727155741752,
+   "years": {
+    "2020": 80.56112738826475,
+    "2021": 152.21210161272603,
+    "2022": -44.088165121944854,
+    "2023": 182.09218644621595,
+    "2024": 3.0615880168244125,
+    "2025": -16.9141769819084
+   }
+  },
+  "top_15_cap_15": {
+   "net_return_pct": 471.53564571592244,
+   "cagr_pct": 39.90349304744652,
+   "max_dd_pct": -55.415442971514395,
+   "sharpe": 1.0333588927705373,
+   "profit_factor": 1.208970336891597,
+   "trades": 2607,
+   "win_rate_pct": 34.71423091676256,
+   "turnover_per_year": 62.961754865614736,
+   "avg_gross_exposure": 0.4741238547915175,
+   "avg_positions": 9.54068079866303,
+   "fees_paid": 5995.7235379263875,
+   "slippage_paid": 5995.7235379263875,
+   "funding_paid": 540.1816581248386,
+   "final_equity": 57153.564571592244,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -72.73776515893618,
+   "top1": "BTCUSDT",
+   "top1_share_pct": 14.995656043960892,
+   "top3_share_pct": 40.744572330651465,
+   "years": {
+    "2020": 71.36295349916777,
+    "2021": 151.69413160105262,
+    "2022": -47.544546016095765,
+    "2023": 168.03566579971604,
+    "2024": 8.633212545251045,
+    "2025": -13.242419155279428
+   }
+  },
+  "min_hist_365": {
+   "net_return_pct": 182.1398745507424,
+   "cagr_pct": 25.637003947580304,
+   "max_dd_pct": -54.20034086211667,
+   "sharpe": 0.7503446271212478,
+   "profit_factor": 1.1404665172085175,
+   "trades": 1514,
+   "win_rate_pct": 38.70541611624835,
+   "turnover_per_year": 83.31421407344651,
+   "avg_gross_exposure": 0.4664634538816161,
+   "avg_positions": 4.197327438963127,
+   "fees_paid": 3683.5212145078963,
+   "slippage_paid": 3683.5212145078963,
+   "funding_paid": -2089.8651908941797,
+   "final_equity": 28213.987455074242,
+   "start": "2021-01-07T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -80.87435163278602,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 36.44316033895822,
+   "top3_share_pct": 88.37611570884715,
+   "years": {
+    "2021": 44.82388876309577,
+    "2022": -43.12753852039856,
+    "2023": 288.6549019862646,
+    "2024": 19.179197421834672,
+    "2025": -26.046687314284224
+   }
+  },
+  "baseline_from_2021": {
+   "net_return_pct": 814.4779689028032,
+   "cagr_pct": 62.43759806416638,
+   "max_dd_pct": -47.36277881976123,
+   "sharpe": 1.3486301844544526,
+   "profit_factor": 1.2367961180476792,
+   "trades": 1568,
+   "win_rate_pct": 39.2219387755102,
+   "turnover_per_year": 78.76594638988924,
+   "avg_gross_exposure": 0.44331414334918023,
+   "avg_positions": 4.314683214893404,
+   "fees_paid": 9410.387964120813,
+   "slippage_paid": 9410.387964120813,
+   "funding_paid": -11549.240783377334,
+   "final_equity": 91447.79689028033,
+   "start": "2021-01-01T00:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -67.43780314095285,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 16.45180347232524,
+   "top3_share_pct": 46.553723150875996,
+   "years": {
+    "2021": 286.4177683696018,
+    "2022": -37.50004017635797,
+    "2023": 244.38747805028584,
+    "2024": 21.96027320988465,
+    "2025": -9.848972649099252
+   }
+  },
+  "min_hist_365_from_2021": {
+   "net_return_pct": 182.1398745507424,
+   "cagr_pct": 25.637003947580304,
+   "max_dd_pct": -54.20034086211667,
+   "sharpe": 0.7503446271212478,
+   "profit_factor": 1.1404665172085175,
+   "trades": 1514,
+   "win_rate_pct": 38.70541611624835,
+   "turnover_per_year": 83.31421407344651,
+   "avg_gross_exposure": 0.4664634538816161,
+   "avg_positions": 4.197327438963127,
+   "fees_paid": 3683.5212145078963,
+   "slippage_paid": 3683.5212145078963,
+   "funding_paid": -2089.8651908941797,
+   "final_equity": 28213.987455074242,
+   "start": "2021-01-07T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -80.87435163278602,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 36.44316033895822,
+   "top3_share_pct": 88.37611570884715,
+   "years": {
+    "2021": 44.82388876309577,
+    "2022": -43.12753852039856,
+    "2023": 288.6549019862646,
+    "2024": 19.179197421834672,
+    "2025": -26.046687314284224
+   }
+  },
+  "rebal_close_04h": {
+   "net_return_pct": 2135.67506155824,
+   "cagr_pct": 81.94300017040031,
+   "max_dd_pct": -51.05953315387073,
+   "sharpe": 1.560939870626049,
+   "profit_factor": 1.2086260476302975,
+   "trades": 1773,
+   "win_rate_pct": 38.74788494077834,
+   "turnover_per_year": 80.53996730485424,
+   "avg_gross_exposure": 0.46109012678489175,
+   "avg_positions": 4.36177324302929,
+   "fees_paid": 27478.81190042536,
+   "slippage_paid": 27478.81190042536,
+   "funding_paid": -36367.60577682871,
+   "final_equity": 223567.506155824,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -64.49634131976173,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 18.845897601822394,
+   "top3_share_pct": 48.11307183990431,
+   "years": {
+    "2020": 145.84474331334653,
+    "2021": 305.0629311192877,
+    "2022": -20.668727252095298,
+    "2023": 228.05509545012688,
+    "2024": -1.388542735033882,
+    "2025": -12.520424218651216
+   }
+  },
+  "rebal_close_08h": {
+   "net_return_pct": 3234.648209655854,
+   "cagr_pct": 96.50957827290271,
+   "max_dd_pct": -53.01576489254939,
+   "sharpe": 1.7373395743267357,
+   "profit_factor": 1.2551107261414998,
+   "trades": 1741,
+   "win_rate_pct": 37.736932797242964,
+   "turnover_per_year": 78.89847505711018,
+   "avg_gross_exposure": 0.4603903624545365,
+   "avg_positions": 4.364499956020758,
+   "fees_paid": 34254.870694988786,
+   "slippage_paid": 34254.870694988786,
+   "funding_paid": -45044.42412614576,
+   "final_equity": 333464.8209655854,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -67.06786848981699,
+   "top1": "ETHUSDT",
+   "top1_share_pct": 16.568053641834332,
+   "top3_share_pct": 45.822420900768805,
+   "years": {
+    "2020": 182.22360281082373,
+    "2021": 386.5365835234685,
+    "2022": -32.981639909234126,
+    "2023": 254.43166726228665,
+    "2024": 6.1110360261299235,
+    "2025": -3.6494223891055277
+   }
+  },
+  "rebal_close_12h": {
+   "net_return_pct": 4897.599800436948,
+   "cagr_pct": 112.43734184849315,
+   "max_dd_pct": -50.04782564726315,
+   "sharpe": 1.9072240360664359,
+   "profit_factor": 1.2452353171164021,
+   "trades": 1715,
+   "win_rate_pct": 40.64139941690962,
+   "turnover_per_year": 78.93415126438781,
+   "avg_gross_exposure": 0.4608652944624721,
+   "avg_positions": 4.36300466179963,
+   "fees_paid": 54144.074476092836,
+   "slippage_paid": 54144.074476092836,
+   "funding_paid": -67287.14709256867,
+   "final_equity": 499759.9800436947,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -65.11442642527061,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 16.73322577494771,
+   "top3_share_pct": 44.97955618609554,
+   "years": {
+    "2020": 217.343339594002,
+    "2021": 566.103995321563,
+    "2022": -34.936437991549596,
+    "2023": 264.1550000585522,
+    "2024": 19.206611410531682,
+    "2025": -16.292264521330544
+   }
+  },
+  "rebal_close_16h": {
+   "net_return_pct": 2755.2874029866175,
+   "cagr_pct": 90.72186552052177,
+   "max_dd_pct": -50.76126109958808,
+   "sharpe": 1.6688709496585308,
+   "profit_factor": 1.2368683074532274,
+   "trades": 1726,
+   "win_rate_pct": 38.87601390498262,
+   "turnover_per_year": 79.65576841275727,
+   "avg_gross_exposure": 0.4629571838702628,
+   "avg_positions": 4.3662591256926735,
+   "fees_paid": 32029.80938083483,
+   "slippage_paid": 32029.80938083483,
+   "funding_paid": -39291.5607689855,
+   "final_equity": 285528.74029866175,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -65.52247848011912,
+   "top1": "ETHUSDT",
+   "top1_share_pct": 16.54293175202282,
+   "top3_share_pct": 47.00400362510258,
+   "years": {
+    "2020": 171.03259720352227,
+    "2021": 350.2057929099657,
+    "2022": -30.603460539716743,
+    "2023": 250.71119896348227,
+    "2024": 17.65438193190656,
+    "2025": -18.28125873469929
+   }
+  },
+  "rebal_close_20h": {
+   "net_return_pct": 3951.4831213250695,
+   "cagr_pct": 104.02021968449642,
+   "max_dd_pct": -43.154912925584746,
+   "sharpe": 1.8424476132383778,
+   "profit_factor": 1.3065174995207207,
+   "trades": 1735,
+   "win_rate_pct": 40.403458213256485,
+   "turnover_per_year": 78.74895318415676,
+   "avg_gross_exposure": 0.4609026359270701,
+   "avg_positions": 4.371096842290439,
+   "fees_paid": 38281.99942020059,
+   "slippage_paid": 38281.99942020059,
+   "funding_paid": -43774.86521403872,
+   "final_equity": 405148.3121325069,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -59.92443042430319,
+   "top1": "TRBUSDT",
+   "top1_share_pct": 16.071592359385463,
+   "top3_share_pct": 42.96043676948745,
+   "years": {
+    "2020": 188.05336974634224,
+    "2021": 342.06839395572126,
+    "2022": -28.49166469643488,
+    "2023": 265.29207282317736,
+    "2024": 35.33219365243134,
+    "2025": -9.997707668714384
+   }
+  },
+  "cost_2x": {
+   "net_return_pct": 1530.7954022381352,
+   "cagr_pct": 71.21562479213468,
+   "max_dd_pct": -49.652318594184194,
+   "sharpe": 1.4495380347949671,
+   "profit_factor": 1.2057771970527267,
+   "trades": 1760,
+   "win_rate_pct": 38.57954545454545,
+   "turnover_per_year": 79.58134923044747,
+   "avg_gross_exposure": 0.46120306942936,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 39278.90685541523,
+   "slippage_paid": 39278.90685541523,
+   "funding_paid": -22376.193512172635,
+   "final_equity": 163079.54022381353,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -68.9840959259411,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 17.188399043116885,
+   "top3_share_pct": 50.53097946428286,
+   "years": {
+    "2020": 154.22927613243385,
+    "2021": 267.9190099753071,
+    "2022": -41.650114592827705,
+    "2023": 212.6868553574772,
+    "2024": 11.57267188266118,
+    "2025": -14.352592090065707
+   }
+  },
+  "cost_3x": {
+   "net_return_pct": 964.2835709346894,
+   "cagr_pct": 57.7034205043423,
+   "max_dd_pct": -53.35222318508297,
+   "sharpe": 1.2604821247957765,
+   "profit_factor": 1.161842514461409,
+   "trades": 1760,
+   "win_rate_pct": 37.44318181818182,
+   "turnover_per_year": 79.60737894517953,
+   "avg_gross_exposure": 0.4613612940830712,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 45302.99129221874,
+   "slippage_paid": 45302.99129221874,
+   "funding_paid": -16371.777005799078,
+   "final_equity": 106428.35709346893,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -72.44519250846282,
+   "top1": "TRBUSDT",
+   "top1_share_pct": 20.859487643853694,
+   "top3_share_pct": 58.81431574157227,
+   "years": {
+    "2020": 140.53584278153787,
+    "2021": 249.87347146761246,
+    "2022": -45.6796862365623,
+    "2023": 184.0859296448066,
+    "2024": 1.4889018360840778,
+    "2025": -19.251215087234453
+   }
+  },
+  "cost_0": {
+   "net_return_pct": 2932.18928249695,
+   "cagr_pct": 92.94314490543769,
+   "max_dd_pct": -44.799724422565966,
+   "sharpe": 1.7229871891436093,
+   "profit_factor": 1.2610075466676864,
+   "trades": 1760,
+   "win_rate_pct": 40.96590909090909,
+   "turnover_per_year": 79.55675580819388,
+   "avg_gross_exposure": 0.46072233683680003,
+   "avg_positions": 4.365379540856716,
+   "fees_paid": 0.0,
+   "slippage_paid": 0.0,
+   "funding_paid": 0.0,
+   "final_equity": 303218.928249695,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "top1": "BTCUSDT",
+   "top1_share_pct": 16.812697609458304,
+   "top3_share_pct": 48.53931782866358,
+   "years": {
+    "2020": 199.2610425519578,
+    "2021": 356.39844593632944,
+    "2022": -35.44864658115823,
+    "2023": 178.57346695045683,
+    "2024": 36.525206065528806,
+    "2025": -9.571771178418754
+   }
+  }
+ },
+ "extra": {
+  "universe_20": {
+   "net_return_pct": 1172.5585238844737,
+   "cagr_pct": 63.2273990516913,
+   "max_dd_pct": -62.95853030059087,
+   "sharpe": 1.3638083471262337,
+   "profit_factor": 1.2075647517553636,
+   "trades": 1472,
+   "win_rate_pct": 38.45108695652174,
+   "turnover_per_year": 72.59276850581493,
+   "avg_gross_exposure": 0.4597474183268499,
+   "avg_positions": 4.133169144163954,
+   "fees_paid": 15302.977720050007,
+   "slippage_paid": 15302.977720050007,
+   "funding_paid": -9165.523913729945,
+   "final_equity": 127255.85238844737,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -72.99680728953908,
+   "top1": "BTCUSDT",
+   "top1_share_pct": 24.79295252156371,
+   "top3_share_pct": 64.47624009101483,
+   "years": {
+    "2020": 165.24304962175952,
+    "2021": 302.1747017249824,
+    "2022": -49.9414950870781,
+    "2023": 131.04342864425408,
+    "2024": 28.584004638536076,
+    "2025": -19.784081494222217
+   }
+  },
+  "universe_50": {
+   "net_return_pct": 1636.660966113558,
+   "cagr_pct": 73.3026354018389,
+   "max_dd_pct": -56.99530689835227,
+   "sharpe": 1.421125227636384,
+   "profit_factor": 1.1445914265341406,
+   "trades": 2065,
+   "win_rate_pct": 38.93462469733656,
+   "turnover_per_year": 89.26784496528172,
+   "avg_gross_exposure": 0.4713520777403068,
+   "avg_positions": 4.582285161403817,
+   "fees_paid": 27654.95674259087,
+   "slippage_paid": 27654.95674259087,
+   "funding_paid": -40698.57118213381,
+   "final_equity": 173666.0966113558,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -73.32547494363845,
+   "top1": "BTCUSDT",
+   "top1_share_pct": 18.785219579645236,
+   "top3_share_pct": 54.87796718998618,
+   "years": {
+    "2020": 165.09933784364978,
+    "2021": 434.46794646069867,
+    "2022": -47.30623484119521,
+    "2023": 141.77216352110696,
+    "2024": 26.429580126461794,
+    "2025": -23.9024785856241
+   }
+  },
+  "survivors_only": {
+   "net_return_pct": 1124.6249177980828,
+   "cagr_pct": 62.02462822944443,
+   "max_dd_pct": -60.4396544681231,
+   "sharpe": 1.3223764304399532,
+   "profit_factor": 1.1892460588224123,
+   "trades": 1712,
+   "win_rate_pct": 36.85747663551402,
+   "turnover_per_year": 80.60381615445341,
+   "avg_gross_exposure": 0.46290490158051323,
+   "avg_positions": 4.241885829888293,
+   "fees_paid": 16193.44797030936,
+   "slippage_paid": 16193.44797030936,
+   "funding_paid": -4687.1024613872205,
+   "final_equity": 122462.49177980829,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -75.53609173660134,
+   "top1": "ADAUSDT",
+   "top1_share_pct": 20.874754629888407,
+   "top3_share_pct": 58.4412476676642,
+   "years": {
+    "2020": 172.87342875115067,
+    "2021": 230.79316069554773,
+    "2022": -47.911709478543074,
+    "2023": 172.06121597591476,
+    "2024": 21.73292098268782,
+    "2025": -21.355104494778644
+   },
+   "contrib": [
+    {
+     "symbol": "ADAUSDT",
+     "pnl": 23476.269209693386,
+     "trades": 39
+    },
+    {
+     "symbol": "TRBUSDT",
+     "pnl": 21596.686989156984,
+     "trades": 20
+    },
+    {
+     "symbol": "XRPUSDT",
+     "pnl": 20651.527155413845,
+     "trades": 50
+    },
+    {
+     "symbol": "BTCUSDT",
+     "pnl": 20165.253048170744,
+     "trades": 74
+    },
+    {
+     "symbol": "RUNEUSDT",
+     "pnl": 14876.609612778517,
+     "trades": 9
+    },
+    {
+     "symbol": "1000PEPEUSDT",
+     "pnl": 14651.525311260148,
+     "trades": 17
+    },
+    {
+     "symbol": "AXSUSDT",
+     "pnl": 12952.719065951946,
+     "trades": 9
+    },
+    {
+     "symbol": "ETHUSDT",
+     "pnl": 12858.583138315867,
+     "trades": 73
+    },
+    {
+     "symbol": "ETCUSDT",
+     "pnl": 12500.71260185383,
+     "trades": 32
+    },
+    {
+     "symbol": "BNBUSDT",
+     "pnl": 12246.622563112784,
+     "trades": 65
+    },
+    {
+     "symbol": "SOLUSDT",
+     "pnl": 11992.48666837985,
+     "trades": 62
+    },
+    {
+     "symbol": "AVAXUSDT",
+     "pnl": 10477.030599322386,
+     "trades": 35
+    },
+    {
+     "symbol": "XLMUSDT",
+     "pnl": 9916.314639065713,
+     "trades": 28
+    },
+    {
+     "symbol": "DOGEUSDT",
+     "pnl": 9818.710962524525,
+     "trades": 46
+    },
+    {
+     "symbol": "SANDUSDT",
+     "pnl": 9463.057224034274,
+     "trades": 9
+    },
+    {
+     "symbol": "SUIUSDT",
+     "pnl": 8023.141397649212,
+     "trades": 29
+    },
+    {
+     "symbol": "INJUSDT",
+     "pnl": 7435.732089608489,
+     "trades": 15
+    },
+    {
+     "symbol": "1000SHIBUSDT",
+     "pnl": 7051.0667659011,
+     "trades": 25
+    },
+    {
+     "symbol": "CRVUSDT",
+     "pnl": 5535.02260296968,
+     "trades": 31
+    },
+    {
+     "symbol": "TURBOUSDT",
+     "pnl": 4837.570106110125,
+     "trades": 5
+    },
+    {
+     "symbol": "HBARUSDT",
+     "pnl": 4608.280975104794,
+     "trades": 13
+    },
+    {
+     "symbol": "SEIUSDT",
+     "pnl": 4083.7583566726375,
+     "trades": 11
+    },
+    {
+     "symbol": "MOODENGUSDT",
+     "pnl": 4080.736562818654,
+     "trades": 3
+    },
+    {
+     "symbol": "PENGUUSDT",
+     "pnl": 3907.6061682588943,
+     "trades": 3
+    },
+    {
+     "symbol": "FILUSDT",
+     "pnl": 3637.474478722425,
+     "trades": 12
+    },
+    {
+     "symbol": "ARPAUSDT",
+     "pnl": 3323.992750816204,
+     "trades": 2
+    },
+    {
+     "symbol": "1000LUNCUSDT",
+     "pnl": 2839.0110428924427,
+     "trades": 3
+    },
+    {
+     "symbol": "OPUSDT",
+     "pnl": 2279.903179509325,
+     "trades": 15
+    },
+    {
+     "symbol": "THETAUSDT",
+     "pnl": 2258.548621894782,
+     "trades": 16
+    },
+    {
+     "symbol": "POPCATUSDT",
+     "pnl": 1924.5108599139223,
+     "trades": 1
+    },
+    {
+     "symbol": "ZILUSDT",
+     "pnl": 1883.8749410290159,
+     "trades": 11
+    },
+    {
+     "symbol": "MASKUSDT",
+     "pnl": 1697.4873882449951,
+     "trades": 14
+    },
+    {
+     "symbol": "ZECUSDT",
+     "pnl": 1552.8918656802016,
+     "trades": 12
+    },
+    {
+     "symbol": "JTOUSDT",
+     "pnl": 1524.5271814752923,
+     "trades": 4
+    },
+    {
+     "symbol": "OGNUSDT",
+     "pnl": 1469.0121820738368,
+     "trades": 12
+    },
+    {
+     "symbol": "DOTUSDT",
+     "pnl": 1287.9015584379056,
+     "trades": 22
+    },
+    {
+     "symbol": "ENJUSDT",
+     "pnl": 1213.4461619823348,
+     "trades": 6
+    },
+    {
+     "symbol": "KAVAUSDT",
+     "pnl": 1189.345782174043,
+     "trades": 6
+    },
+    {
+     "symbol": "TAOUSDT",
+     "pnl": 1110.6638193733697,
+     "trades": 6
+    },
+    {
+     "symbol": "ORCAUSDT",
+     "pnl": 892.3526628405867,
+     "trades": 1
+    },
+    {
+     "symbol": "ENAUSDT",
+     "pnl": 860.5555827149208,
+     "trades": 8
+    },
+    {
+     "symbol": "TLMUSDT",
+     "pnl": 797.6739531051469,
+     "trades": 1
+    },
+    {
+     "symbol": "YGGUSDT",
+     "pnl": 650.4525759177502,
+     "trades": 1
+    },
+    {
+     "symbol": "WLDUSDT",
+     "pnl": 649.7476632287478,
+     "trades": 7
+    },
+    {
+     "symbol": "SPXUSDT",
+     "pnl": 618.6253004841143,
+     "trades": 1
+    },
+    {
+     "symbol": "ZENUSDT",
+     "pnl": 493.9636001521843,
+     "trades": 2
+    },
+    {
+     "symbol": "BIGTIMEUSDT",
+     "pnl": 373.5364290711548,
+     "trades": 3
+    },
+    {
+     "symbol": "1000BONKUSDT",
+     "pnl": 331.09782993117415,
+     "trades": 12
+    },
+    {
+     "symbol": "DASHUSDT",
+     "pnl": 317.90009792837867,
+     "trades": 6
+    },
+    {
+     "symbol": "IOTAUSDT",
+     "pnl": 314.00782736066424,
+     "trades": 4
+    },
+    {
+     "symbol": "1000SATSUSDT",
+     "pnl": 235.11665075377988,
+     "trades": 7
+    },
+    {
+     "symbol": "COMPUSDT",
+     "pnl": 197.86863862317588,
+     "trades": 10
+    },
+    {
+     "symbol": "ARKUSDT",
+     "pnl": 167.87623935790563,
+     "trades": 1
+    },
+    {
+     "symbol": "CELRUSDT",
+     "pnl": 126.02013555346164,
+     "trades": 4
+    },
+    {
+     "symbol": "ALICEUSDT",
+     "pnl": 112.6730679380889,
+     "trades": 5
+    },
+    {
+     "symbol": "ICPUSDT",
+     "pnl": 101.43855401930583,
+     "trades": 5
+    },
+    {
+     "symbol": "VETUSDT",
+     "pnl": 55.085152506222045,
+     "trades": 15
+    },
+    {
+     "symbol": "1000FLOKIUSDT",
+     "pnl": 51.44467736096382,
+     "trades": 8
+    },
+    {
+     "symbol": "FLOWUSDT",
+     "pnl": -56.82462303652595,
+     "trades": 1
+    },
+    {
+     "symbol": "STXUSDT",
+     "pnl": -67.1063501859333,
+     "trades": 7
+    },
+    {
+     "symbol": "AGLDUSDT",
+     "pnl": -118.96297555395407,
+     "trades": 2
+    },
+    {
+     "symbol": "MAGICUSDT",
+     "pnl": -146.4019498358618,
+     "trades": 1
+    },
+    {
+     "symbol": "DYDXUSDT",
+     "pnl": -170.45687903150102,
+     "trades": 18
+    },
+    {
+     "symbol": "QTUMUSDT",
+     "pnl": -206.06908313907735,
+     "trades": 9
+    },
+    {
+     "symbol": "CKBUSDT",
+     "pnl": -234.42061952312355,
+     "trades": 4
+    },
+    {
+     "symbol": "1000XECUSDT",
+     "pnl": -238.06137378386896,
+     "trades": 3
+    },
+    {
+     "symbol": "SAGAUSDT",
+     "pnl": -270.1593751935412,
+     "trades": 7
+    },
+    {
+     "symbol": "CHZUSDT",
+     "pnl": -278.2620526125469,
+     "trades": 13
+    },
+    {
+     "symbol": "DUSKUSDT",
+     "pnl": -307.52159795277544,
+     "trades": 1
+    },
+    {
+     "symbol": "ETHFIUSDT",
+     "pnl": -312.3316519864315,
+     "trades": 3
+    },
+    {
+     "symbol": "UMAUSDT",
+     "pnl": -313.5436271522648,
+     "trades": 1
+    },
+    {
+     "symbol": "AUCTIONUSDT",
+     "pnl": -332.042122842491,
+     "trades": 1
+    },
+    {
+     "symbol": "LQTYUSDT",
+     "pnl": -346.0231352562661,
+     "trades": 1
+    },
+    {
+     "symbol": "MANAUSDT",
+     "pnl": -367.7371001323366,
+     "trades": 12
+    },
+    {
+     "symbol": "IMXUSDT",
+     "pnl": -384.654371957725,
+     "trades": 1
+    },
+    {
+     "symbol": "API3USDT",
+     "pnl": -386.2366536069215,
+     "trades": 7
+    },
+    {
+     "symbol": "MINAUSDT",
+     "pnl": -419.34269630313423,
+     "trades": 1
+    },
+    {
+     "symbol": "IDUSDT",
+     "pnl": -423.1984345212538,
+     "trades": 1
+    },
+    {
+     "symbol": "ONTUSDT",
+     "pnl": -438.93830086339835,
+     "trades": 10
+    },
+    {
+     "symbol": "WOOUSDT",
+     "pnl": -446.0843303032601,
+     "trades": 1
+    },
+    {
+     "symbol": "XMRUSDT",
+     "pnl": -499.54250047264276,
+     "trades": 16
+    },
+    {
+     "symbol": "C98USDT",
+     "pnl": -565.5162219232005,
+     "trades": 2
+    },
+    {
+     "symbol": "VIRTUALUSDT",
+     "pnl": -590.9341814089041,
+     "trades": 9
+    },
+    {
+     "symbol": "WIFUSDT",
+     "pnl": -652.4620669825646,
+     "trades": 10
+    },
+    {
+     "symbol": "COTIUSDT",
+     "pnl": -654.5286166720427,
+     "trades": 2
+    },
+    {
+     "symbol": "KSMUSDT",
+     "pnl": -701.4334654694071,
+     "trades": 5
+    },
+    {
+     "symbol": "RLCUSDT",
+     "pnl": -704.016701187978,
+     "trades": 9
+    },
+    {
+     "symbol": "GTCUSDT",
+     "pnl": -710.8144280564534,
+     "trades": 2
+    },
+    {
+     "symbol": "ACHUSDT",
+     "pnl": -773.9841075014111,
+     "trades": 1
+    },
+    {
+     "symbol": "ONEUSDT",
+     "pnl": -816.4594497944827,
+     "trades": 6
+    },
+    {
+     "symbol": "JUPUSDT",
+     "pnl": -829.8887680969491,
+     "trades": 2
+    },
+    {
+     "symbol": "ARBUSDT",
+     "pnl": -904.227166930473,
+     "trades": 2
+    },
+    {
+     "symbol": "LITUSDT",
+     "pnl": -970.5044191444227,
+     "trades": 7
+    },
+    {
+     "symbol": "RAREUSDT",
+     "pnl": -1089.9760371557336,
+     "trades": 1
+    },
+    {
+     "symbol": "BLURUSDT",
+     "pnl": -1139.6115881289204,
+     "trades": 4
+    },
+    {
+     "symbol": "PENDLEUSDT",
+     "pnl": -1166.7018305329798,
+     "trades": 2
+    },
+    {
+     "symbol": "PNUTUSDT",
+     "pnl": -1176.6294601425795,
+     "trades": 1
+    },
+    {
+     "symbol": "NEIROUSDT",
+     "pnl": -1188.0123371030716,
+     "trades": 2
+    },
+    {
+     "symbol": "MEWUSDT",
+     "pnl": -1349.0725293421754,
+     "trades": 3
+    },
+    {
+     "symbol": "BELUSDT",
+     "pnl": -1366.899795704944,
+     "trades": 9
+    },
+    {
+     "symbol": "ORDIUSDT",
+     "pnl": -1372.0337394033688,
+     "trades": 3
+    },
+    {
+     "symbol": "SNXUSDT",
+     "pnl": -1400.2280161091887,
+     "trades": 13
+    },
+    {
+     "symbol": "1000RATSUSDT",
+     "pnl": -1437.0638612470473,
+     "trades": 2
+    },
+    {
+     "symbol": "FARTCOINUSDT",
+     "pnl": -1468.5240909201564,
+     "trades": 7
+    },
+    {
+     "symbol": "SUSHIUSDT",
+     "pnl": -1470.4527781523088,
+     "trades": 13
+    },
+    {
+     "symbol": "EGLDUSDT",
+     "pnl": -1480.239711307645,
+     "trades": 5
+    },
+    {
+     "symbol": "BATUSDT",
+     "pnl": -1517.176758180256,
+     "trades": 13
+    },
+    {
+     "symbol": "ALGOUSDT",
+     "pnl": -1534.0076814235856,
+     "trades": 8
+    },
+    {
+     "symbol": "UNIUSDT",
+     "pnl": -1535.5000908552215,
+     "trades": 17
+    },
+    {
+     "symbol": "ZRXUSDT",
+     "pnl": -1701.6485440741874,
+     "trades": 5
+    },
+    {
+     "symbol": "RSRUSDT",
+     "pnl": -1712.1492404885705,
+     "trades": 5
+    },
+    {
+     "symbol": "ANKRUSDT",
+     "pnl": -1762.3989018517827,
+     "trades": 5
+    },
+    {
+     "symbol": "ONGUSDT",
+     "pnl": -1774.0923088848672,
+     "trades": 4
+    },
+    {
+     "symbol": "CTSIUSDT",
+     "pnl": -1885.4278838952828,
+     "trades": 4
+    },
+    {
+     "symbol": "AAVEUSDT",
+     "pnl": -1905.1976741932658,
+     "trades": 25
+    },
+    {
+     "symbol": "GMTUSDT",
+     "pnl": -1949.912199042397,
+     "trades": 2
+    },
+    {
+     "symbol": "TIAUSDT",
+     "pnl": -2002.3849293610851,
+     "trades": 4
+    },
+    {
+     "symbol": "NEOUSDT",
+     "pnl": -2012.3683621255452,
+     "trades": 6
+    },
+    {
+     "symbol": "IOSTUSDT",
+     "pnl": -2127.349940485791,
+     "trades": 12
+    },
+    {
+     "symbol": "RVNUSDT",
+     "pnl": -2226.9409558746115,
+     "trades": 7
+    },
+    {
+     "symbol": "APTUSDT",
+     "pnl": -2320.349358087539,
+     "trades": 13
+    },
+    {
+     "symbol": "YFIUSDT",
+     "pnl": -2391.813310477725,
+     "trades": 6
+    },
+    {
+     "symbol": "APEUSDT",
+     "pnl": -2410.8484546435457,
+     "trades": 10
+    },
+    {
+     "symbol": "BANDUSDT",
+     "pnl": -2533.5015060004434,
+     "trades": 7
+    },
+    {
+     "symbol": "POLYXUSDT",
+     "pnl": -2657.426134590192,
+     "trades": 4
+    },
+    {
+     "symbol": "CHRUSDT",
+     "pnl": -2687.628185259936,
+     "trades": 10
+    },
+    {
+     "symbol": "GRTUSDT",
+     "pnl": -2976.9637973766135,
+     "trades": 4
+    },
+    {
+     "symbol": "LDOUSDT",
+     "pnl": -3027.8783295681715,
+     "trades": 13
+    },
+    {
+     "symbol": "FETUSDT",
+     "pnl": -3154.8525225770763,
+     "trades": 14
+    },
+    {
+     "symbol": "LPTUSDT",
+     "pnl": -3206.7850803750466,
+     "trades": 4
+    },
+    {
+     "symbol": "CAKEUSDT",
+     "pnl": -3377.194175030426,
+     "trades": 2
+    },
+    {
+     "symbol": "GALAUSDT",
+     "pnl": -3488.270778026497,
+     "trades": 6
+    },
+    {
+     "symbol": "ATOMUSDT",
+     "pnl": -3553.369044237554,
+     "trades": 27
+    },
+    {
+     "symbol": "KNCUSDT",
+     "pnl": -3585.1834062003486,
+     "trades": 11
+    },
+    {
+     "symbol": "MTLUSDT",
+     "pnl": -3701.493720068749,
+     "trades": 6
+    },
+    {
+     "symbol": "XTZUSDT",
+     "pnl": -3907.9936233443727,
+     "trades": 7
+    },
+    {
+     "symbol": "SFPUSDT",
+     "pnl": -4042.330697704142,
+     "trades": 8
+    },
+    {
+     "symbol": "PEOPLEUSDT",
+     "pnl": -4265.590747259933,
+     "trades": 20
+    },
+    {
+     "symbol": "SPELLUSDT",
+     "pnl": -5052.4672463225825,
+     "trades": 3
+    },
+    {
+     "symbol": "ONDOUSDT",
+     "pnl": -5078.340471985241,
+     "trades": 7
+    },
+    {
+     "symbol": "JASMYUSDT",
+     "pnl": -5126.653007239021,
+     "trades": 4
+    },
+    {
+     "symbol": "BOMEUSDT",
+     "pnl": -5143.3229614107495,
+     "trades": 4
+    },
+    {
+     "symbol": "ZROUSDT",
+     "pnl": -5396.977959056596,
+     "trades": 1
+    },
+    {
+     "symbol": "NEARUSDT",
+     "pnl": -5492.078476274065,
+     "trades": 34
+    },
+    {
+     "symbol": "LINKUSDT",
+     "pnl": -6095.853487244264,
+     "trades": 46
+    },
+    {
+     "symbol": "LTCUSDT",
+     "pnl": -6122.379472512955,
+     "trades": 38
+    },
+    {
+     "symbol": "BCHUSDT",
+     "pnl": -8249.84863266867,
+     "trades": 43
+    },
+    {
+     "symbol": "ENSUSDT",
+     "pnl": -10878.440191661928,
+     "trades": 15
+    },
+    {
+     "symbol": "TRXUSDT",
+     "pnl": -12968.033065781894,
+     "trades": 39
+    }
+   ],
+   "regimes": {
+    "bull": {
+     "days": 1090,
+     "share_pct": 57.55015839493136,
+     "cum_pct": 1320.7815702598189,
+     "ann_ret_pct": 99.04086394643323,
+     "sharpe": 2.195545435670086
+    },
+    "bear": {
+     "days": 345,
+     "share_pct": 18.215417106652588,
+     "cum_pct": -32.08319624435898,
+     "ann_ret_pct": -30.950342147584752,
+     "sharpe": -0.6930414986594066
+    },
+    "chop": {
+     "days": 459,
+     "share_pct": 24.23442449841605,
+     "cum_pct": 26.436023636445526,
+     "ann_ret_pct": 26.174256295566412,
+     "sharpe": 0.6724725953876606
+    }
+   },
+   "held_symbols": [
+    "1000BONKUSDT",
+    "1000FLOKIUSDT",
+    "1000LUNCUSDT",
+    "1000PEPEUSDT",
+    "1000RATSUSDT",
+    "1000SATSUSDT",
+    "1000SHIBUSDT",
+    "1000XECUSDT",
+    "AAVEUSDT",
+    "ACHUSDT",
+    "ADAUSDT",
+    "AGLDUSDT",
+    "ALGOUSDT",
+    "ALICEUSDT",
+    "ANKRUSDT",
+    "APEUSDT",
+    "API3USDT",
+    "APTUSDT",
+    "ARBUSDT",
+    "ARKUSDT",
+    "ARPAUSDT",
+    "ATOMUSDT",
+    "AUCTIONUSDT",
+    "AVAXUSDT",
+    "AXSUSDT",
+    "BANDUSDT",
+    "BATUSDT",
+    "BCHUSDT",
+    "BELUSDT",
+    "BIGTIMEUSDT",
+    "BLURUSDT",
+    "BNBUSDT",
+    "BOMEUSDT",
+    "BTCUSDT",
+    "C98USDT",
+    "CAKEUSDT",
+    "CELRUSDT",
+    "CHRUSDT",
+    "CHZUSDT",
+    "CKBUSDT",
+    "COMPUSDT",
+    "COTIUSDT",
+    "CRVUSDT",
+    "CTSIUSDT",
+    "DASHUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "DUSKUSDT",
+    "DYDXUSDT",
+    "EGLDUSDT",
+    "ENAUSDT",
+    "ENJUSDT",
+    "ENSUSDT",
+    "ETCUSDT",
+    "ETHFIUSDT",
+    "ETHUSDT",
+    "FARTCOINUSDT",
+    "FETUSDT",
+    "FILUSDT",
+    "FLOWUSDT",
+    "GALAUSDT",
+    "GMTUSDT",
+    "GRTUSDT",
+    "GTCUSDT",
+    "HBARUSDT",
+    "ICPUSDT",
+    "IDUSDT",
+    "IMXUSDT",
+    "INJUSDT",
+    "IOSTUSDT",
+    "IOTAUSDT",
+    "JASMYUSDT",
+    "JTOUSDT",
+    "JUPUSDT",
+    "KAVAUSDT",
+    "KNCUSDT",
+    "KSMUSDT",
+    "LDOUSDT",
+    "LINKUSDT",
+    "LITUSDT",
+    "LPTUSDT",
+    "LQTYUSDT",
+    "LTCUSDT",
+    "MAGICUSDT",
+    "MANAUSDT",
+    "MASKUSDT",
+    "MEWUSDT",
+    "MINAUSDT",
+    "MOODENGUSDT",
+    "MTLUSDT",
+    "NEARUSDT",
+    "NEIROUSDT",
+    "NEOUSDT",
+    "OGNUSDT",
+    "ONDOUSDT",
+    "ONEUSDT",
+    "ONGUSDT",
+    "ONTUSDT",
+    "OPUSDT",
+    "ORCAUSDT",
+    "ORDIUSDT",
+    "PENDLEUSDT",
+    "PENGUUSDT",
+    "PEOPLEUSDT",
+    "PNUTUSDT",
+    "POLYXUSDT",
+    "POPCATUSDT",
+    "QTUMUSDT",
+    "RAREUSDT",
+    "RLCUSDT",
+    "RSRUSDT",
+    "RUNEUSDT",
+    "RVNUSDT",
+    "SAGAUSDT",
+    "SANDUSDT",
+    "SEIUSDT",
+    "SFPUSDT",
+    "SNXUSDT",
+    "SOLUSDT",
+    "SPELLUSDT",
+    "SPXUSDT",
+    "STXUSDT",
+    "SUIUSDT",
+    "SUSHIUSDT",
+    "TAOUSDT",
+    "THETAUSDT",
+    "TIAUSDT",
+    "TLMUSDT",
+    "TRBUSDT",
+    "TRXUSDT",
+    "TURBOUSDT",
+    "UMAUSDT",
+    "UNIUSDT",
+    "VETUSDT",
+    "VIRTUALUSDT",
+    "WIFUSDT",
+    "WLDUSDT",
+    "WOOUSDT",
+    "XLMUSDT",
+    "XMRUSDT",
+    "XRPUSDT",
+    "XTZUSDT",
+    "YFIUSDT",
+    "YGGUSDT",
+    "ZECUSDT",
+    "ZENUSDT",
+    "ZILUSDT",
+    "ZROUSDT",
+    "ZRXUSDT"
+   ],
+   "pnl_by_age": {
+    "<180d": 22485.268321078052,
+    "180-365d": 39318.05043556738,
+    "1-2y": -18375.962221648962,
+    ">2y": 44261.14769099388,
+    "pre-data": 24773.98755381794
+   },
+   "n_dropped": 163
+  },
+  "static29_liquidity": {
+   "net_return_pct": 2023.837677581615,
+   "cagr_pct": 80.15327348258265,
+   "max_dd_pct": -48.23338859261089,
+   "sharpe": 1.6520919101467981,
+   "profit_factor": 1.4619989189506064,
+   "trades": 1153,
+   "win_rate_pct": 40.4163052905464,
+   "turnover_per_year": 70.89523417035753,
+   "avg_gross_exposure": 0.4608401911319172,
+   "avg_positions": 3.544199138006861,
+   "fees_paid": 15593.088594183595,
+   "slippage_paid": 15593.088594183595,
+   "funding_paid": 18916.050627984383,
+   "final_equity": 212383.7677581615,
+   "start": "2020-05-16T08:00:00Z",
+   "end": "2025-07-24T00:00:00Z",
+   "mc_dd_p95": -63.64927372823569,
+   "top1": "SUIUSDT",
+   "top1_share_pct": 13.984931224960118,
+   "top3_share_pct": 38.888100343973434,
+   "years": {
+    "2020": 120.88151626807178,
+    "2021": 211.33241657716195,
+    "2022": -41.80824636340975,
+    "2023": 133.41649003204057,
+    "2024": 131.03868584535059,
+    "2025": -1.585312301000974
+   }
+  }
+ },
+ "dead_symbols": [
+  "1000000BOBUSDT",
+  "1000BTTCUSDT",
+  "1000WHYUSDT",
+  "1000XUSDT",
+  "42USDT",
+  "A2ZUSDT",
+  "ACXUSDT",
+  "AERGOUSDT",
+  "AGIXUSDT",
+  "AI16ZUSDT",
+  "AIUSDT",
+  "AKROUSDT",
+  "ALPACAUSDT",
+  "ALPHAUSDT",
+  "AMBUSDT",
+  "ANCUSDT",
+  "ANTUSDT",
+  "ATAUSDT",
+  "AUDIOUSDT",
+  "B3USDT",
+  "BADGERUSDT",
+  "BAKEUSDT",
+  "BALUSDT",
+  "BDXNUSDT",
+  "BIDUSDT",
+  "BLZUSDT",
+  "BNXUSDT",
+  "BOBUSDT",
+  "BONDUSDT",
+  "BSWUSDT",
+  "BTCSTUSDT",
+  "BTSUSDT",
+  "BTTUSDT",
+  "BZRXUSDT",
+  "CHESSUSDT",
+  "COCOSUSDT",
+  "COMBOUSDT",
+  "COMMONUSDT",
+  "COSUSDT",
+  "CUDISUSDT",
+  "DAMUSDT",
+  "DARUSDT",
+  "DEGENUSDT",
+  "DEGOUSDT",
+  "DENTUSDT",
+  "DFUSDT",
+  "DGBUSDT",
+  "DMCUSDT",
+  "DODOUSDT",
+  "DOTECOUSDT",
+  "EOSUSDT",
+  "EPICUSDT",
+  "EPTUSDT",
+  "FIOUSDT",
+  "FISUSDT",
+  "FLMUSDT",
+  "FORTHUSDT",
+  "FRONTUSDT",
+  "FTMUSDT",
+  "FTTUSDT",
+  "FUNUSDT",
+  "FXSUSDT",
+  "GALUSDT",
+  "GHSTUSDT",
+  "GLMRUSDT",
+  "HFTUSDT",
+  "HIFIUSDT",
+  "HIGHUSDT",
+  "HIPPOUSDT",
+  "HNTUSDT",
+  "HOOKUSDT",
+  "ICXUSDT",
+  "IDEXUSDT",
+  "IPUSDT",
+  "IRUSDT",
+  "KDAUSDT",
+  "KEEPUSDT",
+  "KEYUSDT",
+  "KLAYUSDT",
+  "LENDUSDT",
+  "LEVERUSDT",
+  "LINAUSDT",
+  "LOKAUSDT",
+  "LOOMUSDT",
+  "LRCUSDT",
+  "LUNAUSDT",
+  "MATICUSDT",
+  "MBLUSDT",
+  "MBOXUSDT",
+  "MEMEFIUSDT",
+  "MILKUSDT",
+  "MITOUSDT",
+  "MKRUSDT",
+  "MLNUSDT",
+  "MYROUSDT",
+  "NEIROETHUSDT",
+  "NFPUSDT",
+  "NKNUSDT",
+  "NTRNUSDT",
+  "NULSUSDT",
+  "NUUSDT",
+  "OBOLUSDT",
+  "OCEANUSDT",
+  "OLUSDT",
+  "OMGUSDT",
+  "OMNIUSDT",
+  "OMUSDT",
+  "ORBSUSDT",
+  "OXTUSDT",
+  "PERPUSDT",
+  "PHBUSDT",
+  "PONKEUSDT",
+  "PORT3USDT",
+  "PROMPTUSDT",
+  "PTBUSDT",
+  "PUFFERUSDT",
+  "PUMPBTCUSDT",
+  "QUICKUSDT",
+  "RADUSDT",
+  "RAYUSDT",
+  "RDNTUSDT",
+  "REEFUSDT",
+  "REIUSDT",
+  "RENUSDT",
+  "RLSUSDT",
+  "RNDRUSDT",
+  "RVVUSDT",
+  "SCRTUSDT",
+  "SCUSDT",
+  "SKATEUSDT",
+  "SLERFUSDT",
+  "SNTUSDT",
+  "SRMUSDT",
+  "STGUSDT",
+  "STMXUSDT",
+  "STORJUSDT",
+  "STPTUSDT",
+  "STRAXUSDT",
+  "SWELLUSDT",
+  "SXPUSDT",
+  "SYSUSDT",
+  "TANSSIUSDT",
+  "TOKENUSDT",
+  "TOMOUSDT",
+  "TONUSDT",
+  "TROYUSDT",
+  "TRUUSDT",
+  "UNFIUSDT",
+  "UXLINKUSDT",
+  "VANRYUSDT",
+  "VELODROMEUSDT",
+  "VFYUSDT",
+  "VICUSDT",
+  "VIDTUSDT",
+  "VINEUSDT",
+  "VOXELUSDT",
+  "WAVESUSDT",
+  "XCNUSDT",
+  "XEMUSDT",
+  "YALAUSDT",
+  "YFIIUSDT",
+  "ZKJUSDT",
+  "ZRCUSDT"
+ ]
+}

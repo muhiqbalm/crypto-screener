@@ -19,6 +19,7 @@ DESCRIPTION = ("Satu aturan untuk semua koin: pegang top-N koin dengan momentum 
                "rebalance berkala. Opsional: short koin terlemah yang downtrend.")
 
 REBALANCE_CHOICES = ["1d", "4h"]
+UNIVERSE_MODES = ["static", "liquidity"]
 
 G_SEL, G_SIG, G_RISK, G_EXEC = "Seleksi koin", "Sinyal", "Risiko & ukuran", "Eksekusi"
 
@@ -47,6 +48,14 @@ PARAMS: list[dict] = [
        help_="Koin baru listing belum boleh dipilih sebelum punya data sepanjang ini."),
     _p("min_universe", "Minimal koin layak", "int", 5, 2, 30, 1, G_SEL,
        help_="Backtest mulai saat minimal sekian koin sudah layak dipilih."),
+    _p("universe_mode", "Mode universe", "choice", "static", group=G_SEL, choices=UNIVERSE_MODES,
+       help_="static = semua koin yang dipilih/di-cache; liquidity = di setiap bar hanya top-K koin dengan "
+             "volume (quote) terbesar selama N hari terakhir yang boleh dipilih (point-in-time, termasuk "
+             "koin yang kemudian delisting bila datanya ada)."),
+    _p("universe_size", "Ukuran universe likuiditas (top-K)", "int", 30, 2, 200, 1, G_SEL,
+       help_="Dipakai hanya jika mode universe = liquidity."),
+    _p("liquidity_days", "Jendela likuiditas (hari)", "int", 30, 7, 180, 1, G_SEL,
+       help_="Jumlah volume quote (USDT) selama N hari terakhir; dipakai hanya jika mode = liquidity."),
 
     _p("mom_short_days", "Momentum pendek (hari)", "int", 7, 2, 30, 1, G_SIG, tunable=True),
     _p("mom_mid_days", "Momentum menengah (hari)", "int", 30, 10, 90, 1, G_SIG, tunable=True),

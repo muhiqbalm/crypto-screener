@@ -44,7 +44,27 @@ def universe_symbols(params: dict) -> list[str]:
     from ..data_cache import cached_datasets
     if params.get("symbols"):
         return list(params["symbols"])
+    if params.get("universe_mode") == "liquidity":
+        from . import pit_data
+        return pit_data.pit_symbols(pit_data.default_dir(), BAR_TF)
     return sorted({v["symbol"] for v in cached_datasets().values() if v["timeframe"] == BAR_TF})
+
+
+def load_universe_panel(params: dict, funding: bool = True, refresh: bool = False, offline: bool = True,
+                        progress: Optional[Callable] = None, end=None) -> S.Panel:
+    """Panel for a Lab run. universe_mode=liquidity reads the separate point-in-time directory
+    (delisted coins included) and never refreshes into the main cache; static = load_panel."""
+    if params.get("universe_mode") == "liquidity":
+        from . import pit_data
+        d = pit_data.default_dir()
+        if progress:
+            progress("data", 0, 1)
+        ohlcv, fund = pit_data.load(d, params.get("symbols") or None, BAR_TF, funding=funding)
+        if not ohlcv:
+            raise ValueError(f"no point-in-time data in {d} (run python -m src.lab.universal.pit_data)")
+        return S.build_panel(ohlcv, fund if funding else None, end=end)
+    return load_panel(universe_symbols(params), funding=funding, refresh=refresh, offline=offline,
+                      progress=progress, end=end)
 
 
 def load_panel(symbols: list[str], funding: bool = True, refresh: bool = False, offline: bool = True,
@@ -432,10 +452,9 @@ def execute_universal_run(conn, job: dict, run: dict, prog) -> None:
     p = P.validate_params(labdb.loads(run["params_json"], {}))
     costs = labdb.loads(run["costs_json"], {}) or {}
     offline = os.environ.get("LAB_DATA_OFFLINE") == "1"
-    syms = universe_symbols(p)
-    prog("data", 0, len(syms), force=True)
-    panel = load_panel(syms, funding=bool(costs.get("funding", True)), refresh=not offline, offline=offline,
-                       progress=lambda st, d, t: prog(st, d, t))
+    prog("data", 0, 1, force=True)
+    panel = load_universe_panel(p, funding=bool(costs.get("funding", True)), refresh=not offline, offline=offline,
+                                progress=lambda st, d, t: prog(st, d, t))
     specs = P.resolve_search(labdb.loads(run.get("search_json"))) if mode == "optimize" else None
     from ..settings import get_lab_settings
     n_trials = max(1, min(int(run.get("n_trials") or 30), get_lab_settings().optuna_max_trials))
