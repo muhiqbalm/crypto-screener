@@ -1,0 +1,18 @@
+{
+ "registered_at": "2026-11-11T04:40:00Z",
+ "holdout_start": "2025-07-24T04:00:00Z",
+ "holdout_end": "last complete 4H bar before 2026-11-10 00:00 UTC",
+ "data": "point-in-time USD-M USDT perps from data.binance.vision (897 symbols incl. delisted), downloaded 2026-11-11, no cleaning; anomalous bars are reported, not removed",
+ "costs": {"commission_pct": 0.05, "slippage_pct": 0.05, "funding": true},
+ "evaluation": "R.evaluate_all(mode=validate, start=2020-05-16T08:00Z, holdout_start fixed) -> same 7 honesty checks; plus holdout per-coin contribution and holdout without its top coin (diagnostic only). Each variant evaluated once; no further variants after looking.",
+ "variants": {
+  "C1_pit_default": {
+   "params": {"universe_mode": "liquidity", "universe_size": 30, "liquidity_days": 30},
+   "reason": "Universal v0 with UNCHANGED default strategy params on a survivorship-free universe (top-30 by trailing 30d quote volume, causal). universe_size=30 chosen before any run to match the 29-coin static list, not tuned (dev: 20 -> +1173%, 30 -> +2351%, 50 -> +1637%; 30 is the best of the three, which is a reason to distrust it, but it was fixed in advance)."
+  },
+  "C2_pit_cap10": {
+   "params": {"universe_mode": "liquidity", "universe_size": 30, "liquidity_days": 30, "max_weight_pct": 10.0},
+   "reason": "The verdict failed on Monte Carlo drawdown and the profit is concentrated. A 10% per-coin cap was the only change that improved tail risk in BOTH dev universes (static: MC p95 -63.6 -> -50.9, Sharpe 1.65 -> 1.76; PIT: MC p95 -65.3 -> -59.8, top-3 share 45% -> 39%) at the cost of return (PIT dev +2351% -> +1332%). top-10/15 and min_history 365d were worse on dev in both universes and are not carried forward. Rebalance-hour offsets were NOT selected from (dispersion is noise)."
+  }
+ }
+}
