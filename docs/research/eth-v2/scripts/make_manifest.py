@@ -86,7 +86,11 @@ def main():
                     "dev_walk_forward_consistency": dev.get("wf_consistency")})
                 e["snooping"] = {"runs": h["snooping"]["validated_runs_all_tf"], "timeframes": 1,
                                  "trials": dev.get("trials_all_variants"),
-                                 "holdout_touches": h["snooping"]["holdout_touches_all_tf"],
+                                 # this look + the ETH 4h looks of the 2026-11-11 MTF research (lower bound:
+                                 # earlier Lab/TradingView looks at this period are not counted)
+                                 "holdout_touches": h["snooping"]["holdout_touches_all_tf"]
+                                 + hold["4H-ETH-Basic"]["snooping"]["holdout_touches_all_tf"],
+                                 "holdout_touches_is_lower_bound": True,
                                  "holdout_viewed": True, "holdout_contaminated": True,
                                  "counted_in": "research /tmp lab.db 2026-11-11 (bukan lab.db produksi)"}
                 hold_txt = (f"Holdout {ho['start'][:10]}..{ho['end'][:10]} TERKONTAMINASI (holdout ETH 4h sudah "
