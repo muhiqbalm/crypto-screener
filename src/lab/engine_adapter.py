@@ -281,6 +281,10 @@ def cost_profile(df, warmup: int, cfg, ecfg, m_net: dict, indicators=None) -> di
     ev = df.iloc[warmup:]
     rng = ((ev["high"] - ev["low"]) / ev["close"]).mean() * 100.0 if len(ev) else None
     rt = 2.0 * (float(ecfg.commission_pct) + float(ecfg.slippage_pct))
+    maker = getattr(ecfg, "maker_commission_pct", None)
+    if getattr(cfg, "entry_mode", "bar_close") == "ltf_limit" and maker is not None:
+        # limit entries: maker fee, no entry slippage (timeout market fills are rarer; ignored here)
+        rt = float(ecfg.commission_pct) + float(ecfg.slippage_pct) + float(maker)
     days = (ev["timestamp"].iloc[-1] - ev["timestamp"].iloc[0]).total_seconds() / 86400.0 if len(ev) > 1 else 0
     net, gross = m_net.get("net_return_pct"), m0.get("net_return_pct")
     return {
