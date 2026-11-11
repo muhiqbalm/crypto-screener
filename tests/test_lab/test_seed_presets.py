@@ -101,7 +101,9 @@ def test_mirror_sizing_modes(seed_mod):
     assert seed_mod.paper_sizing({}, {"leverage": 4.0, "portfolio_risk": 25.0}) == (100.0, 1.0)
     assert seed_mod.paper_sizing({}, {"sizing_mode": "risk", "risk_per_trade_pct": 1.5, "max_notional_mult": 2.0,
                                       "leverage": 4.0, "portfolio_risk": 50.0}) == (1.5, 2.0)
-    for bad in ({"sizing_mode": "vol_target"}, {"sizing_mode": "margin", "dd_derisk_pct": 20.0}):
+    assert seed_mod.paper_sizing({}, {"sizing_mode": "vol_target", "max_notional_mult": 2.0, "leverage": 4.0,
+                                      "portfolio_risk": 50.0}) == (100.0, 2.0)
+    for bad in ({"sizing_mode": "margin", "dd_derisk_pct": 20.0}, {"sizing_mode": "kelly"}):
         with pytest.raises(SystemExit):
             seed_mod.paper_sizing({"name": "x"}, {"leverage": 4.0, "portfolio_risk": 50.0, **bad})
 
@@ -116,3 +118,45 @@ def test_stored_preset_without_new_template_keys_is_not_a_conflict(seed_mod, con
     conn.execute("UPDATE lab_presets SET params_json=? WHERE id=?", (labdb.dumps(old), r["id"]))
     conn.commit()
     assert seed_mod.main(["--manifest", str(MANIFEST), "--apply", "--only", "4H-BTC-Opt"]) == 0
+
+
+SIZING = {"1x": ROOT / "ops" / "lab_presets_sizing_1x_seed.json", "vt": ROOT / "ops" / "lab_presets_sizing_vt_seed.json"}
+
+
+@pytest.mark.parametrize("kind", ["1x", "vt"])
+def test_sizing_manifests_are_variants_of_the_paper_presets(kind):
+    from src.lab import presets as pr
+    from src.lab.templates import rosyade_family as T
+    base = {e["name"]: e for e in json.loads(MANIFEST.read_text())["presets"]}
+    m = json.loads(SIZING[kind].read_text())
+    for e in m["presets"]:
+        parent = e["name"].rsplit("_", 1)[0]
+        assert parent in base and pr.make_name(e["timeframe"], e["symbol"], e["label"]) == e["name"]
+        pp = T.defaults() if base[parent].get("live_reference") else T.validate_params(base[parent]["params"])
+        p = T.validate_params(e["params"])
+        changed = {k for k in p if p[k] != pp[k]}
+        if kind == "1x":   # deploy-free: only keys the pre-sizing template knows, margin 25% x 4 = 1x
+            assert not set(e["params"]) & T.SIZING_KEYS and changed == {"portfolio_risk"}
+            assert p["portfolio_risk"] * p["leverage"] / 100 == 1.0
+        else:
+            assert changed == {"sizing_mode", "vol_target_pct"}            # lookback 60 / cap 2x = defaults
+            assert p["sizing_mode"] == "vol_target" and p["max_notional_mult"] == 2.0
+        assert e["paper"] == {"balance": 10000.0, "sizing": "mirror"} and not e.get("live_reference")
+        assert e["holdout"]["contaminated"] is True and e["snooping"]["holdout_viewed"] is True
+        assert len(e["notes"]) <= 2000
+
+
+def test_sizing_manifests_seed_idempotently_next_to_the_parents(seed_mod, conn):
+    assert seed_mod.main(["--manifest", str(MANIFEST), "--apply"]) == 0
+    before = _counts(conn)
+    for path in SIZING.values():
+        assert seed_mod.main(["--manifest", str(path)]) == 0                 # dry-run writes nothing
+        assert _counts(conn) == before
+    for path in SIZING.values():
+        assert seed_mod.main(["--manifest", str(path), "--apply"]) == 0
+        assert seed_mod.main(["--manifest", str(path), "--apply"]) == 0      # idempotent
+    after = _counts(conn)
+    assert after["lab_presets"] == before["lab_presets"] + 6 and after["watches"] == before["watches"] + 6
+    acc = {r["name"]: (r["risk_pct"], r["leverage_max"]) for r in conn.execute("SELECT * FROM paper_accounts")}
+    assert acc["Paper 4H-ETH-v2_1x"] == (100.0, 1.0) and acc["Paper 4H-ETH-v2_VT60"] == (100.0, 2.0)
+    assert acc["Paper 4H-ETH-v2"] == (100.0, 2.0)                             # parent untouched
