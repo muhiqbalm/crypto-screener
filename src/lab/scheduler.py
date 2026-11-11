@@ -9,6 +9,7 @@
   * universe: one universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)
   * alerts:  every 30 s, deliver pending Telegram alerts (rate-limited, see universal/alerts.py)
   * ledger:  one ledger_cycle job per closed hour + a one-off ledger_backfill (Catatan Sinyal)
+  * shadow:  shadow_cycle when trade_logs changes / a signal is due / hourly (Kualitas eksekusi)
   * bot:     every LAB_BOT_IMPORT_INTERVAL_S, import the live bot's CLOSED trades from
              bmtm_trading.db (opened read-only, mode=ro, short queries) into the journal
 """
@@ -195,6 +196,11 @@ class Scheduler:
                 ledger_tick(conn, self.s, now)
             except Exception:  # noqa: BLE001
                 log.exception("signal ledger scheduling failed")
+            try:
+                from .shadow.schedule import tick as shadow_tick
+                shadow_tick(conn, self.s, now)
+            except Exception:  # noqa: BLE001
+                log.exception("shadow execution scheduling failed")
         if now - self._last_alerts >= 30:
             self._last_alerts = now
             try:
