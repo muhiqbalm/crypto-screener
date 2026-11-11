@@ -2,7 +2,10 @@
 
 The child is the bmtm-v2 interpreter running ``-m src.lab.runner <job_id>``,
 started with nice(LAB_JOB_NICE), RLIMIT_AS = LAB_JOB_MEM_MB and a wall-clock
-timeout. One job at a time by default (LAB_MAX_CONCURRENT_JOBS).
+timeout (per job type: LAB_JOB_TIMEOUTS, fallback LAB_JOB_TIMEOUT_S). One job at a
+time by default (LAB_MAX_CONCURRENT_JOBS); scan cells are capped separately
+(LAB_SCAN_MAX_CONCURRENT) so a big scan never takes every slot, and an extra
+slot is only used while the 1-min load per CPU is below LAB_MAX_LOAD_PER_CPU.
 
 The worker itself never imports the engine, pandas or src.trading.
 """
@@ -55,6 +58,8 @@ class Running:
     started: float
     log_path: Path
     killed_reason: Optional[str] = None
+    timeout_s: int = 3 * 3600
+    scan_cell: bool = False
 
 
 @dataclass
@@ -95,6 +100,29 @@ class Worker:
         fh.close()
         log.info("job %s (%s ref=%s) started pid=%s", job["id"], job["kind"], job["ref_id"], proc.pid)
         return Running(job=job, proc=proc, started=time.time(), log_path=log_path)
+
+    def _job_meta(self, conn, job: dict) -> tuple[int, bool]:
+        """(timeout_s, is_scan_cell) for a claimed job; SQL only, never the engine."""
+        mode, scan = None, False
+        if job.get("kind") == "run" and job.get("ref_id") is not None:
+            row = conn.execute("SELECT mode, scan_id FROM lab_runs WHERE id=?", (job["ref_id"],)).fetchone()
+            if row is not None:
+                mode, scan = row["mode"], row["scan_id"] is not None
+        return self.settings.timeout_for(job.get("kind") or "", mode), scan
+
+    def _heavy(self) -> list[Running]:
+        return [r for r in self.running.values() if r.job["kind"] not in FAST_KINDS or not self.settings.fast_lane]
+
+    def _load_ok(self) -> bool:
+        """Starting an EXTRA heavy job is skipped while the box is busy (production
+        shares this VPS). The first heavy job always starts, as before."""
+        if not self._heavy():
+            return True
+        try:
+            load1 = os.getloadavg()[0]
+        except (OSError, AttributeError):
+            return True
+        return load1 / max(1, os.cpu_count() or 1) <= self.settings.max_load_per_cpu
 
     def _kill(self, r: Running, reason: str) -> None:
         r.killed_reason = reason
@@ -138,8 +166,8 @@ class Worker:
         for job_id, r in list(self.running.items()):
             if r.proc.poll() is not None:
                 continue
-            if now - r.started > self.settings.job_timeout_s:
-                self._kill(r, f"timeout after {self.settings.job_timeout_s}s")
+            if now - r.started > r.timeout_s:
+                self._kill(r, f"timeout after {r.timeout_s}s (batas waktu job; atur LAB_JOB_TIMEOUTS)")
                 continue
             if do_hb:
                 alive = q.heartbeat(conn, job_id, self.worker_id, pid=r.proc.pid)
@@ -162,8 +190,11 @@ class Worker:
                 hook(conn)
             except Exception:  # noqa: BLE001
                 log.exception("scheduler hook failed")
-        while len(self.running) < max(1, self.settings.max_concurrent_jobs):
-            job = q.claim(conn, self.worker_id)
+        slots = max(1, self.settings.max_concurrent_jobs)
+        scan_cap = max(1, min(self.settings.scan_max_concurrent, slots))
+        while len(self.running) < slots and self._load_ok():
+            scans_running = sum(1 for r in self.running.values() if r.scan_cell)
+            job = q.claim(conn, self.worker_id, exclude_scan_cells=scans_running >= scan_cap)
             if job is None:
                 break
             self._start(conn, job)
@@ -176,7 +207,10 @@ class Worker:
 
     def _start(self, conn, job: dict) -> None:
         try:
-            self.running[job["id"]] = self._spawn(job)
+            timeout_s, scan_cell = self._job_meta(conn, job)
+            r = self._spawn(job)
+            r.timeout_s, r.scan_cell = timeout_s, scan_cell
+            self.running[job["id"]] = r
         except Exception as e:  # noqa: BLE001
             q.finish(conn, job["id"], "error", f"spawn failed: {e}")
 

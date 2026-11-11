@@ -58,6 +58,7 @@ class RunCreate(BaseModel):
     mode: Literal["backtest", "validate", "optimize"] = "backtest"
     n_trials: Optional[int] = None  # 10 | 30 | 60 (optimize); also capped by LAB_OPTUNA_MAX_TRIALS
     search: Optional[SearchSpec] = None  # optimize only
+    preset_id: Optional[int] = None  # provenance: recorded only when params equal the preset's
 
     @field_validator("n_trials")
     @classmethod
@@ -86,11 +87,22 @@ class ScanCreate(BaseModel):
     end: Optional[str] = None
     n_trials: Optional[int] = None
     search: Optional[SearchSpec] = None
+    # Optional per-timeframe start date (e.g. shorter history for 15m); falls back to `start`.
+    starts: Optional[dict[str, str]] = None
+    preset_id: Optional[int] = None      # every cell uses this preset's params (overrides `params`)
+    use_best_presets: bool = False       # per cell: best PASS preset for that coin+TF, else `params`
 
     @field_validator("n_trials")
     @classmethod
     def _trials(cls, v: Optional[int]) -> Optional[int]:
         return _check_trials(v)
+
+    @field_validator("starts")
+    @classmethod
+    def _starts(cls, v: Optional[dict[str, str]]) -> Optional[dict[str, str]]:
+        if not v:
+            return None
+        return {k: d for k, d in ((k, _check_date(d)) for k, d in v.items()) if d}
 
     @field_validator("symbols")
     @classmethod
@@ -106,6 +118,65 @@ class ScanCreate(BaseModel):
     @classmethod
     def _dates(cls, v: Optional[str]) -> Optional[str]:
         return _check_date(v)
+
+
+class EstimateRequest(BaseModel):
+    """Runtime estimate for a run (one symbol x one timeframe) or a scan (cartesian product)."""
+    template_id: Optional[str] = None
+    mode: Literal["backtest", "validate", "optimize"] = "validate"
+    symbols: list[str] = Field(min_length=1, max_length=60)
+    timeframes: list[str] = Field(min_length=1, max_length=5)
+    start: Optional[str] = None
+    end: Optional[str] = None
+    starts: Optional[dict[str, str]] = None
+    n_trials: Optional[int] = Field(None, ge=1, le=500)
+    scan: bool = False  # True: cells run under the scan concurrency cap
+
+    @field_validator("symbols")
+    @classmethod
+    def _syms(cls, v: list[str]) -> list[str]:
+        return list(dict.fromkeys(norm_symbol(s) for s in v))
+
+    @field_validator("start", "end")
+    @classmethod
+    def _dates(cls, v: Optional[str]) -> Optional[str]:
+        return _check_date(v)
+
+    @field_validator("starts")
+    @classmethod
+    def _starts(cls, v: Optional[dict[str, str]]) -> Optional[dict[str, str]]:
+        if not v:
+            return None
+        return {k: d for k, d in ((k, _check_date(d)) for k, d in v.items()) if d}
+
+
+class PresetFromRun(BaseModel):
+    label: str = Field(min_length=1, max_length=24)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+
+class PresetCreate(BaseModel):
+    label: str = Field(min_length=1, max_length=24)
+    template_id: str
+    symbol: str
+    timeframe: str
+    params: dict[str, Any] = Field(default_factory=dict)
+    costs: Costs = Field(default_factory=Costs)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    @field_validator("symbol")
+    @classmethod
+    def _sym(cls, v: str) -> str:
+        return norm_symbol(v)
+
+
+class PresetPatch(BaseModel):
+    label: Optional[str] = Field(None, min_length=1, max_length=24)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+
+class PresetWatch(BaseModel):
+    autopaper_account_id: Optional[int] = None  # paper only
 
 
 class WatchCreate(BaseModel):

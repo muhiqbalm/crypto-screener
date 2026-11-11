@@ -25,6 +25,12 @@ module.exports = {
         LAB_JOB_NICE: "15",
         LAB_JOB_MEM_MB: "6144",
         LAB_JOB_TIMEOUT_S: "10800",
+        // per job type (run mode or job kind); unlisted types use LAB_JOB_TIMEOUT_S
+        LAB_JOB_TIMEOUTS: "backtest=3600,validate=10800,optimize=18000",
+        // scan cells running at once (never more than LAB_MAX_CONCURRENT_JOBS) and the
+        // 1-min load/CPU above which no EXTRA heavy job starts (prod shares this VPS)
+        LAB_SCAN_MAX_CONCURRENT: "1",
+        LAB_MAX_LOAD_PER_CPU: "0.75",
         LAB_OPTUNA_MAX_TRIALS: "60",
       },
     },
