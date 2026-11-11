@@ -93,7 +93,10 @@ def effective_warmup(p: dict, tf: str) -> int:
 def build_configs(params: dict, tf: str, costs: dict):
     E = _engine()
     p = T.validate_params(params)
+    T.validate_for_timeframe(p, tf)
     strat = {k: v for k, v in p.items() if k not in T.ENGINE_KEYS}
+    if not T.is_mtf(p):  # plain runs pass exactly the pre-MTF StrategyConfig fields
+        strat = {k: v for k, v in strat.items() if k not in T.MTF_KEYS}
     strat["ema_htf_tf"] = _htf(strat["ema_htf_tf"], tf)
     strat["dcb_htf_input"] = _htf(strat["dcb_htf_input"], tf)
     strat["base_timeframe"] = tf
@@ -106,7 +109,25 @@ def build_configs(params: dict, tf: str, costs: dict):
         maintenance_margin_pct=float(p["maintenance_margin_pct"]),
         use_liquidation=True,
     )
+    if T.is_mtf(p):
+        ecfg = replace(ecfg, maker_commission_pct=float(p["maker_fee_pct"]))
     return cfg, ecfg
+
+
+def scaled_costs(ecfg, mult: float, **kw):
+    """EngineConfig with commission, slippage and (if set) the maker fee x mult."""
+    extra = {}
+    if getattr(ecfg, "maker_commission_pct", None) is not None:
+        extra["maker_commission_pct"] = ecfg.maker_commission_pct * mult
+    return replace(ecfg, commission_pct=ecfg.commission_pct * mult, slippage_pct=ecfg.slippage_pct * mult,
+                   slippage_bps=None, **extra, **kw)
+
+
+def attach_entry_bars(ohlcv, ltf_ohlcv, tf: str, entry_tf: str):
+    """Embed the lower-TF (entry timeframe) OHLC sub-bars in the signal-TF rows."""
+    _ensure_path()
+    from backtest_engine.data.ltf_bars import attach_ltf_bars
+    return attach_ltf_bars(ohlcv, ltf_ohlcv, tf, entry_tf)
 
 
 # ── data ─────────────────────────────────────────────────────────────────
@@ -189,7 +210,12 @@ def metrics(res) -> dict:
         "account_blown": bool(res.account_blown),
         "longs": sum(1 for t in trades if t.direction == "long"),
         "shorts": sum(1 for t in trades if t.direction == "short"),
+        **({"entry": _entry_stats(res.entry_stats)} if getattr(res, "entry_stats", None) else {}),
     }
+
+
+def _entry_stats(st: dict) -> dict:
+    return {k: (_f(v) if isinstance(v, float) else v) for k, v in st.items()}
 
 
 def _iso(ts) -> Optional[str]:
@@ -218,6 +244,8 @@ def trades_out(res) -> list[dict]:
         "fees": _f(t.fees),
         "funding": _f(t.funding),
         "bars_held": int(t.bars_held),
+        **({"signal_price": _f(t.signal_price), "entry_kind": t.entry_kind}
+           if getattr(t, "entry_kind", "bar_close") != "bar_close" else {}),
     } for t in res.trades]
 
 
@@ -247,7 +275,7 @@ def cost_profile(df, warmup: int, cfg, ecfg, m_net: dict, indicators=None) -> di
     """How much of the edge the costs eat on this timeframe: the same window
     re-run with zero commission/slippage, plus the round-trip cost relative to
     the average bar range (the lower the timeframe, the larger this burden)."""
-    zero = replace(ecfg, warmup_period=warmup, commission_pct=0.0, slippage_pct=0.0, slippage_bps=None)
+    zero = scaled_costs(ecfg, 0.0, warmup_period=warmup)
     res0, _ = run(df, cfg, zero, indicators=indicators)
     m0 = metrics(res0)
     ev = df.iloc[warmup:]
