@@ -28,11 +28,14 @@ from typing import Callable, Optional
 
 from .settings import get_lab_settings
 
-TF_SECONDS = {"1h": 3600, "4h": 14400, "1d": 86400}
+TF_SECONDS = {"15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400}
 VISION = "https://data.binance.vision/data/futures/um"
 DEFAULT_START = "2020-01-01"
 # klines limit=1500 costs 10 weight; 300 weight/min -> one page per 2 s.
 CCXT_PAGE_SLEEP_S = 2.0
+# Optional pause between data.binance.vision requests (CDN, no API weight); the
+# prefetch CLI sets it so a 29-coin x 15m/30m backfill stays polite.
+VISION_PAUSE_S = 0.0
 _UA = {"User-Agent": "bmtm-lab/1.0"}
 
 
@@ -235,6 +238,8 @@ def fetch_vision_klines(symbol: str, tf: str, start: date, progress: Optional[Ca
     frames, failed = [], []
     months = list(_months(start, today))
     for n, (y, m) in enumerate(months):
+        if VISION_PAUSE_S and n:
+            time.sleep(VISION_PAUSE_S)
         try:
             df = _vision_month_klines(symbol, tf, y, m, today)
             if df is not None:
@@ -292,9 +297,18 @@ def fetch_vision_funding(symbol: str, start: date, ccxt_fallback: Optional[Calla
 
 # ── ccxt public tail ─────────────────────────────────────────────────────
 
+_EX = None
+
+
 def _ccxt():
-    import ccxt  # type: ignore
-    return ccxt.binanceusdm({"enableRateLimit": True})  # public endpoints only, no keys
+    """One public ccxt instance per process: markets are loaded once, and ccxt's
+    own rate limiter spans every fetch in the process (e.g. a batched watch job
+    touching many symbols)."""
+    global _EX
+    if _EX is None:
+        import ccxt  # type: ignore
+        _EX = ccxt.binanceusdm({"enableRateLimit": True, "timeout": 20000})  # public endpoints only, no keys
+    return _EX
 
 
 def _market(symbol: str) -> str:
@@ -442,3 +456,62 @@ def ensure(symbol: str, tf: str, start: str = DEFAULT_START, funding: bool = Tru
                 if fdf is not None and len(fdf):
                     _save(fdf, funding_path(symbol))
     return df, fdf
+
+
+# ── CLI: bulk prefetch ───────────────────────────────────────────────────
+
+def _default_symbols() -> list[str]:
+    """Symbols that already have a 4h cache (the Lab's working universe)."""
+    return sorted({v["symbol"] for v in cached_datasets().values() if v["timeframe"] == "4h"})
+
+
+def prefetch(symbols: list[str], tfs: list[str], start: str = DEFAULT_START, pause_s: float = 0.2,
+             log: Callable[[str], None] = print) -> dict:
+    """Download/refresh OHLCV for every symbol x timeframe (sequential, polite).
+    Errors are logged and skipped; returns {key: rows | error}."""
+    global VISION_PAUSE_S
+    VISION_PAUSE_S = pause_s
+    out: dict = {}
+    for tf in tfs:
+        if tf not in TF_SECONDS:
+            raise ValueError(f"unsupported timeframe {tf}")
+    for sym in symbols:
+        for tf in tfs:
+            t0 = time.time()
+            try:
+                df, _ = ensure(sym, tf, start=start, funding=True)
+                out[f"{sym}_{tf}"] = int(len(df))
+                log(f"{sym} {tf}: {len(df)} bars {df['timestamp'].iloc[0]:%Y-%m-%d}..{df['timestamp'].iloc[-1]:%Y-%m-%d %H:%M}"
+                    f" ({time.time() - t0:.0f}s, {ohlcv_path(sym, tf).stat().st_size / 1e6:.1f} MB)")
+            except Exception as e:  # noqa: BLE001
+                out[f"{sym}_{tf}"] = f"{type(e).__name__}: {e}"
+                log(f"{sym} {tf}: ERROR {type(e).__name__}: {e}")
+    return out
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(prog="python -m src.lab.data_cache",
+                                 description="Strategy Lab data cache (public Binance data only).")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    pf = sub.add_parser("prefetch", help="bulk download OHLCV (data.binance.vision + ccxt tail)")
+    pf.add_argument("--tf", default="15m,30m", help="comma list, e.g. 15m,30m,1h")
+    pf.add_argument("--symbols", default="", help="comma list; default = every symbol with a 4h cache")
+    pf.add_argument("--start", default=DEFAULT_START)
+    pf.add_argument("--pause", type=float, default=0.2, help="seconds between data.binance.vision requests")
+    sub.add_parser("reindex", help="rebuild _index.json from the parquet files")
+    a = ap.parse_args(argv)
+    if a.cmd == "reindex":
+        print(f"{len(rebuild_index())} datasets indexed")
+        return 0
+    syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] or _default_symbols()
+    tfs = [t.strip() for t in a.tf.split(",") if t.strip()]
+    print(f"prefetch {len(syms)} symbols x {tfs} from {a.start} into {data_dir()}")
+    res = prefetch(syms, tfs, a.start, a.pause)
+    bad = [k for k, v in res.items() if not isinstance(v, int)]
+    print(f"done: {len(res) - len(bad)} ok, {len(bad)} failed {bad}")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

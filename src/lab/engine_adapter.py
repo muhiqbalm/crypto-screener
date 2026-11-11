@@ -14,11 +14,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Optional
 
+from .data_cache import TF_SECONDS
 from .settings import get_lab_settings
 from .templates import rosyade_family as T
 
-TF_SECONDS = {"1h": 3600, "4h": 14400, "1d": 86400}
-_TF_RANK = {"1h": 1, "4h": 2, "1d": 3, "1w": 4}
+HTF_SECONDS = {**TF_SECONDS, "1w": 7 * 86400}
+_TF_RANK = {tf: sec for tf, sec in HTF_SECONDS.items()}
+# TradingView input.timeframe spellings -> lab timeframe
+_TV_TF = {"15": "15m", "30": "30m", "60": "1h", "240": "4h", "D": "1d", "1D": "1d", "W": "1w", "1W": "1w"}
 MAX_EQUITY_POINTS = 4000
 
 
@@ -68,8 +71,23 @@ def _engine():
 def _htf(value: str, tf: str) -> str:
     if value in (None, "", "same"):
         return tf
-    v = {"240": "4h", "60": "1h", "D": "1d", "W": "1w"}.get(value, value)
+    v = _TV_TF.get(value, value)
     return v if _TF_RANK.get(v, 0) > _TF_RANK[tf] else tf
+
+
+HTF_WARMUP_MARGIN = 1.25  # covers sensitivity / optimiser nudges of ema_htf_len
+
+
+def effective_warmup(p: dict, tf: str) -> int:
+    """Warm-up bars on the base timeframe. With a true higher-timeframe EMA
+    filter (e.g. EMA-194 on 4H while trading 15m) the engine needs ~len closed
+    HTF bars before the filter is defined, i.e. len x (HTF/TF) base bars."""
+    w = int(p["warmup_bars"])
+    htf = _htf(p.get("ema_htf_tf"), tf)
+    if p.get("use_ema_htf") and htf != tf:
+        ratio = HTF_SECONDS[htf] / TF_SECONDS[tf]
+        w = max(w, int(math.ceil((p["ema_htf_len"] * HTF_WARMUP_MARGIN + 1) * ratio)))
+    return w
 
 
 def build_configs(params: dict, tf: str, costs: dict):
@@ -82,7 +100,7 @@ def build_configs(params: dict, tf: str, costs: dict):
     strat["initial_capital"] = 100.0
     cfg = E["StrategyConfig"](**strat)
     ecfg = E["EngineConfig"](
-        warmup_period=int(p["warmup_bars"]),
+        warmup_period=effective_warmup(p, tf),
         commission_pct=float(costs.get("commission_pct", 0.05)),
         slippage_pct=float(costs.get("slippage_pct", 0.05)),
         maintenance_margin_pct=float(p["maintenance_margin_pct"]),
@@ -223,6 +241,30 @@ def equity_out(res, holdout_start=None, oos_windows=None) -> list[dict]:
             seg = "oos"
         out.append({"t": _iso(t), "equity": _f(val), "segment": seg})
     return out
+
+
+def cost_profile(df, warmup: int, cfg, ecfg, m_net: dict, indicators=None) -> dict:
+    """How much of the edge the costs eat on this timeframe: the same window
+    re-run with zero commission/slippage, plus the round-trip cost relative to
+    the average bar range (the lower the timeframe, the larger this burden)."""
+    zero = replace(ecfg, warmup_period=warmup, commission_pct=0.0, slippage_pct=0.0, slippage_bps=None)
+    res0, _ = run(df, cfg, zero, indicators=indicators)
+    m0 = metrics(res0)
+    ev = df.iloc[warmup:]
+    rng = ((ev["high"] - ev["low"]) / ev["close"]).mean() * 100.0 if len(ev) else None
+    rt = 2.0 * (float(ecfg.commission_pct) + float(ecfg.slippage_pct))
+    days = (ev["timestamp"].iloc[-1] - ev["timestamp"].iloc[0]).total_seconds() / 86400.0 if len(ev) > 1 else 0
+    net, gross = m_net.get("net_return_pct"), m0.get("net_return_pct")
+    return {
+        "round_trip_cost_pct": _f(rt),
+        "avg_bar_range_pct": _f(rng),
+        "cost_to_bar_range": _f(rt / rng) if rng else None,
+        "zero_cost_net_return_pct": _f(gross),
+        "zero_cost_profit_factor": m0.get("profit_factor"),
+        "cost_drag_pct": _f(gross - net) if gross is not None and net is not None else None,
+        "fees_paid": m_net.get("fees_paid"),
+        "trades_per_month": _f(m_net["trades"] / (days / 30.44)) if days > 0 else None,
+    }
 
 
 # ── robustness ───────────────────────────────────────────────────────────

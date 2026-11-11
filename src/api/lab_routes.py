@@ -220,9 +220,27 @@ def list_runs(_: Admin, conn: Conn, limit: int = Query(50, ge=1, le=500)) -> lis
     return [_run_list_item(r) for r in rows]
 
 
+def _snooping(conn, r) -> dict:
+    """How much this (template, symbol) has been tried across timeframes, so the UI
+    can warn that picking the best timeframe/params out of many is data-snooping."""
+    locks = conn.execute("SELECT timeframe, touches FROM holdout_locks WHERE template_id=? AND symbol=?",
+                         (r["template_id"], r["symbol"])).fetchall()
+    runs = conn.execute(
+        "SELECT COUNT(*) AS n, COUNT(DISTINCT timeframe) AS tfs, COALESCE(SUM(trials_done), 0) AS trials "
+        "FROM lab_runs WHERE template_id=? AND symbol=? AND mode IN ('validate','optimize') "
+        "AND status NOT IN ('cancelled','error')", (r["template_id"], r["symbol"])).fetchone()
+    return {"timeframes_tested": sorted(x["timeframe"] for x in locks),
+            "holdout_touches_all_tf": int(sum(x["touches"] or 0 for x in locks)),
+            "validated_runs_all_tf": int(runs["n"] or 0),
+            "optimizer_trials_all_tf": int(runs["trials"] or 0)}
+
+
 @router.get("/runs/{run_id}")
 def get_run(run_id: int, _: Admin, conn: Conn) -> dict:
-    return _run_detail(_get_run(conn, run_id))
+    r = _get_run(conn, run_id)
+    d = _run_detail(r)
+    d["snooping"] = _snooping(conn, r)
+    return d
 
 
 @router.get("/runs/{run_id}/equity")
@@ -384,6 +402,9 @@ def _watch_out(conn, w) -> dict:
 def create_watch(body: WatchCreate, _: Admin, conn: Conn) -> dict:
     t = _template_or_422(body.template_id)
     params = _validate(t, body.timeframe, body.params)
+    n_active = conn.execute("SELECT COUNT(*) FROM watches WHERE active=1").fetchone()[0]
+    if n_active >= get_lab_settings().watch_max_active:
+        raise HTTPException(422, f"too many active watches ({n_active}); delete one first")
     wid = conn.execute(
         "INSERT INTO watches (template_id, symbol, timeframe, params_json, costs_json, active, created_at) "
         "VALUES (?, ?, ?, ?, ?, 1, ?)",
@@ -404,8 +425,9 @@ def delete_watch(watch_id: int, _: Admin, conn: Conn) -> dict:
     _get_watch(conn, watch_id)
     conn.execute("DELETE FROM watch_state WHERE watch_id=?", (watch_id,))
     conn.execute("DELETE FROM watches WHERE id=?", (watch_id,))
+    # single-watch jobs only; a batched job (payload.watch_ids) just skips the deleted watch
     conn.execute("UPDATE lab_jobs SET status='cancelled', finished_at=? WHERE kind='watch_eval' AND ref_id=? "
-                 "AND status='queued'", (labdb.utcnow(), watch_id))
+                 "AND status='queued' AND payload_json NOT LIKE '%\"watch_ids\"%'", (labdb.utcnow(), watch_id))
     conn.commit()
     return {"id": watch_id, "deleted": True}
 
