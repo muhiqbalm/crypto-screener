@@ -294,6 +294,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "outlook_refresh":
             from .outlook.job import execute as execute_outlook
             execute_outlook(conn, job)
+        elif job["kind"] == "arena_snapshot":
+            from .arena.jobs import execute as execute_arena
+            execute_arena(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")
