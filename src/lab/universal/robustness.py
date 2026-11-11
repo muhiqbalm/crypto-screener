@@ -57,6 +57,20 @@ def drop_empty(panel: S.Panel) -> S.Panel:
     return S.subset_panel(panel, np.flatnonzero(panel.present.any(axis=0)))
 
 
+def dead_symbols(data_dir: str, days: int = 3) -> list[str]:
+    """Symbols whose last bar with traded volume is more than `days` before the newest one."""
+    from . import pit_data
+    o, _ = pit_data.load(data_dir, funding=False)
+    last = {}
+    for s_, df in o.items():
+        tr = df.loc[df["quote_volume"] > 0, "timestamp"]
+        if len(tr):
+            last[s_] = tr.iloc[-1]
+    newest = max(last.values())
+    import pandas as pd
+    return [s_ for s_, t in last.items() if t < newest - pd.Timedelta(days=days)]
+
+
 def dev_panel(panel: S.Panel) -> S.Panel:
     return S.slice_panel(panel, R.bar_index(panel, HOLDOUT_START))
 
@@ -272,13 +286,10 @@ def main(argv=None) -> int:
         extra = {}
         for k in (20, 50):
             extra[f"universe_{k}"] = run(dev, {**base, "universe_size": k})
-        # decomposition: drop every coin that is no longer trading today (hindsight, on purpose)
-        from pathlib import Path
-        man = json.loads((Path(a.data) / "_manifest.json").read_text())
-        last = max(v["last"] for v in man.values() if v.get("last"))
-        import pandas as pd
-        cutoff = pd.Timestamp(last) - pd.Timedelta(days=3)
-        dead = sorted(s_ for s_, v in man.items() if v.get("last") and pd.Timestamp(v["last"]) < cutoff)
+        # decomposition: drop every coin that is no longer trading today (hindsight, on purpose). Uses only
+        # listing status (last bar with volume > 0), never holdout returns. data.binance.vision keeps writing
+        # flat zero-volume bars after a delisting, so the file's last row is not the delisting date.
+        dead = sorted(dead_symbols(a.data))
         extra["survivors_only"] = run(dev, base, drop=dead, detail=True)
         extra["survivors_only"]["n_dropped"] = len(dead)
         # the 29 cached survivors, but chosen point-in-time by liquidity like the PIT run
