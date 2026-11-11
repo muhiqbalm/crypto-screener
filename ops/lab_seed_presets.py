@@ -46,14 +46,25 @@ def _args(argv=None):
 def paper_sizing(entry: dict, params: dict) -> tuple[float, float]:
     """(risk_pct, leverage_max) of the paper account.
 
-    "mirror" (default) reproduces the backtest's sizing: notional = equity x leverage x
-    margin%, independent of the stop distance (4H-ETH-Basic: 4 x 50% = 2x). The paper
-    engine sizes risk_pct/stop-distance capped at leverage_max, so risk_pct=100 with
-    leverage_max = the backtest notional multiple always hits the cap.
+    "mirror" (default) reproduces the backtest's sizing:
+      * sizing_mode "margin" (live): notional = equity x leverage x margin%, independent of the
+        stop distance (4H-ETH-Basic: 4 x 50% = 2x). The paper engine sizes risk_pct/stop-distance
+        capped at leverage_max, so risk_pct=100 with leverage_max = the backtest notional
+        multiple always hits the cap.
+      * sizing_mode "risk": risk_pct = risk_per_trade_pct, leverage_max = max_notional_mult
+        (the paper engine's own rule).
+      * vol_target / dd de-risk cannot be mirrored by the paper engine -> refused.
     """
     s = entry.get("paper", {})
     if s.get("sizing", "mirror") == "mirror":
-        return 100.0, round(float(params["leverage"]) * float(params["portfolio_risk"]) / 100.0, 4)
+        mode = params.get("sizing_mode", "margin")
+        if float(params.get("dd_derisk_pct", 0.0) or 0.0) > 0:
+            raise SystemExit(f"{entry.get('name')}: the paper engine cannot mirror dd_derisk sizing")
+        if mode == "margin":
+            return 100.0, round(float(params["leverage"]) * float(params["portfolio_risk"]) / 100.0, 4)
+        if mode == "risk":  # same rule as the paper engine: risk% / stop distance, capped
+            return float(params["risk_per_trade_pct"]), float(params["max_notional_mult"])
+        raise SystemExit(f"{entry.get('name')}: the paper engine cannot mirror sizing_mode={mode}")
     return float(s.get("risk_pct", 0.5)), float(s.get("leverage_max", 5.0))
 
 
@@ -109,8 +120,8 @@ def main(argv=None) -> int:
             r = conn.execute("SELECT * FROM lab_presets WHERE name=? AND archived=0", (name,)).fetchone()
             if r is not None:
                 same = (r["template_id"] == e["template_id"] and r["symbol"] == e["symbol"]
-                        and r["timeframe"] == e["timeframe"] and pr.params_match(labdb.loads(r["params_json"], {}),
-                                                                                  params))
+                        and r["timeframe"] == e["timeframe"] and pr.params_match(
+                            lab_routes._validate(t, e["timeframe"], labdb.loads(r["params_json"], {})), params))
                 row["preset"] = "exists" if same else "CONFLICT: same name, different params (left untouched)"
                 if not same:
                     rc = 1

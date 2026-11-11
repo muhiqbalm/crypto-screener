@@ -97,6 +97,8 @@ def build_configs(params: dict, tf: str, costs: dict):
     strat = {k: v for k, v in p.items() if k not in T.ENGINE_KEYS}
     if not T.is_mtf(p):  # plain runs pass exactly the pre-MTF StrategyConfig fields
         strat = {k: v for k, v in strat.items() if k not in T.MTF_KEYS}
+    if not T.is_sized(p):  # live sizing: same fields as before (works with engines without sizing modes)
+        strat = {k: v for k, v in strat.items() if k not in T.SIZING_KEYS}
     strat["ema_htf_tf"] = _htf(strat["ema_htf_tf"], tf)
     strat["dcb_htf_input"] = _htf(strat["dcb_htf_input"], tf)
     strat["base_timeframe"] = tf

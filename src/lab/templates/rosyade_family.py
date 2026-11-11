@@ -53,6 +53,12 @@ G_ENTRY, G_CHOP, G_SHORT, G_BE, G_OB, G_RISK, G_ENGINE = (
     "Entry filters", "Anti-sideways", "Short filters", "Breakeven lock",
     "Order blocks", "Risk & sizing", "Engine")
 G_MTF = "Entry timing (MTF)"
+G_SIZE = "Ukuran posisi"
+
+# Position sizing (research; engine StrategyConfig.sizing_mode). "margin" is the live sizing
+# (notional = equity x portfolio_risk% x leverage, 4 x 50% = 2x). "risk": equity x risk% / hard-SL
+# distance; "vol_target": equity x target / realised annual vol. Both capped at max_notional_mult.
+SIZING_MODES = ["margin", "risk", "vol_target"]
 
 # MTF entry timing (research only). "bar_close" = the live behaviour: fill at the
 # close of the signal bar. Other modes keep the signal / trend / exits on the run's
@@ -182,6 +188,15 @@ PARAMS: list[dict] = [
     _b("use_cooldown", "Cooldown after loss", True, G_RISK),
     _i("cooldown_bars", "Cooldown bars", 3, 0, 50, G_RISK, tunable=True),
 
+    # Position sizing (research). "margin" = live sizing: notional = equity x margin% x leverage.
+    _p("sizing_mode", "Mode ukuran posisi", "choice", "margin", group=G_SIZE, choices=SIZING_MODES),
+    _f("risk_per_trade_pct", "Risiko per trade (% ekuitas, mode risk)", 1.0, 0.1, 20.0, 0.1, G_SIZE),
+    _f("max_notional_mult", "Maks. notional (x ekuitas, mode risk/vol)", 2.0, 0.1, 10.0, 0.1, G_SIZE),
+    _f("vol_target_pct", "Target volatilitas tahunan % (mode vol)", 50.0, 5.0, 200.0, 5.0, G_SIZE),
+    _i("vol_lookback", "Lookback volatilitas (bar, mode vol)", 60, 10, 500, G_SIZE),
+    _f("dd_derisk_pct", "Kecilkan size saat DD > % (0 = mati)", 0.0, 0.0, 90.0, 1.0, G_SIZE),
+    _f("dd_derisk_mult", "Pengali size saat DD", 0.5, 0.05, 1.0, 0.05, G_SIZE),
+
     _p("entry_mode", "Mode entry", "choice", "bar_close", group=G_MTF, choices=ENTRY_MODES),
     _p("entry_tf", "Timeframe entry", "choice", "1h", group=G_MTF, choices=ENTRY_TFS),
     _i("entry_wait_bars", "Maks. tunggu (bar TF entry)", 4, 1, 96, G_MTF),
@@ -204,12 +219,18 @@ PARAM_INDEX = {p["key"]: p for p in PARAMS}
 ENGINE_KEYS = {"warmup_bars", "maintenance_margin_pct", "maker_fee_pct"}
 
 MTF_KEYS = {p["key"] for p in PARAMS if p["group"] == G_MTF}
+SIZING_KEYS = {p["key"] for p in PARAMS if p["group"] == G_SIZE}
 
 _TF_SEC = {"15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400}
 
 
 def is_mtf(p: dict) -> bool:
     return p.get("entry_mode", "bar_close") != "bar_close"
+
+
+def is_sized(p: dict) -> bool:
+    """True when any position-sizing key differs from the live default (engine needs sizing support)."""
+    return any(p.get(k, PARAM_INDEX[k]["default"]) != PARAM_INDEX[k]["default"] for k in SIZING_KEYS)
 
 
 def validate_for_timeframe(p: dict, tf: str) -> None:

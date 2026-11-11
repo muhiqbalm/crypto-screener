@@ -38,7 +38,10 @@ def test_manifest_is_valid_and_paper_only():
         if e.get("live_reference"):
             continue
         assert pr.make_name(e["timeframe"], e["symbol"], e["label"]) == e["name"]
-        assert t.validate_params(e["params"]) == e["params"]          # full, valid param set
+        full = t.validate_params(e["params"])                         # valid; complete except keys the
+        assert {k: full[k] for k in e["params"]} == e["params"]        # template gained later with their
+        assert all(full[k] == t.defaults()[k] for k in set(full) - set(e["params"]))  # live defaults
+        assert set(full) - set(e["params"]) <= t.SIZING_KEYS
         assert not t.is_mtf(e["params"])                              # watchable live
         assert e["source_run_id"] is None and e["source_mode"] == "research"
         assert e["holdout"]["trades"] > 0 and e["snooping"]["holdout_viewed"] is True
@@ -92,3 +95,24 @@ def test_mirror_sizing_matches_backtest_notional(seed_mod):
     assert seed_mod.paper_sizing({}, {"leverage": 4.0, "portfolio_risk": 50.0}) == (100.0, 2.0)
     assert seed_mod.paper_sizing({"paper": {"sizing": "risk", "risk_pct": 1.0, "leverage_max": 3.0}},
                                  {"leverage": 4.0, "portfolio_risk": 50.0}) == (1.0, 3.0)
+
+
+def test_mirror_sizing_modes(seed_mod):
+    assert seed_mod.paper_sizing({}, {"leverage": 4.0, "portfolio_risk": 25.0}) == (100.0, 1.0)
+    assert seed_mod.paper_sizing({}, {"sizing_mode": "risk", "risk_per_trade_pct": 1.5, "max_notional_mult": 2.0,
+                                      "leverage": 4.0, "portfolio_risk": 50.0}) == (1.5, 2.0)
+    for bad in ({"sizing_mode": "vol_target"}, {"sizing_mode": "margin", "dd_derisk_pct": 20.0}):
+        with pytest.raises(SystemExit):
+            seed_mod.paper_sizing({"name": "x"}, {"leverage": 4.0, "portfolio_risk": 50.0, **bad})
+
+
+def test_stored_preset_without_new_template_keys_is_not_a_conflict(seed_mod, conn):
+    """Presets stored before a template gained keys (e.g. sizing) must still match their manifest entry."""
+    from src.lab import db as labdb
+    from src.lab.templates import rosyade_family as T
+    assert seed_mod.main(["--manifest", str(MANIFEST), "--apply", "--only", "4H-BTC-Opt"]) == 0
+    r = conn.execute("SELECT id, params_json FROM lab_presets WHERE name='4H-BTC-Opt'").fetchone()
+    old = {k: v for k, v in labdb.loads(r["params_json"]).items() if k not in T.SIZING_KEYS}
+    conn.execute("UPDATE lab_presets SET params_json=? WHERE id=?", (labdb.dumps(old), r["id"]))
+    conn.commit()
+    assert seed_mod.main(["--manifest", str(MANIFEST), "--apply", "--only", "4H-BTC-Opt"]) == 0
