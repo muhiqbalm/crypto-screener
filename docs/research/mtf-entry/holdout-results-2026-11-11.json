@@ -1,0 +1,1972 @@
+{
+ "note": "ONE validate run per pre-registered config (prereg-2026-11-11.json), normal Lab pipeline on a /tmp copy of lab.db; engine feat/mtf-entry a259ceb",
+ "results": {
+  "4H-ETH-Basic": {
+   "run_id_tmp_db": 2,
+   "symbol": "ETHUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 1,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 3,
+    "validated_runs_all_tf": 3,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "oos_profit_factor",
+    "mc_dd_p95",
+    "cost_stress"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.032501052338789,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 18.788185729170024,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -68.06530924941345,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 72,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -9.63278182527418,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 18.788185729170024,
+    "profit_factor": 1.032501052338789,
+    "max_dd_pct": -73.80068747628185,
+    "max_dd_intrabar_pct": -73.80068747628185,
+    "trades": 72,
+    "win_rate_pct": 29.166666666666668,
+    "sharpe": 0.5182,
+    "liquidations": 0,
+    "funding_paid": 3.8878207465904673,
+    "fees_paid": 34.74949864936114,
+    "final_equity": 118.78818572917002,
+    "gross_profit": 604.4318924158786,
+    "gross_loss": 585.4055945480525,
+    "account_blown": false,
+    "longs": 32,
+    "shorts": 40,
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": -9.63278182527418,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 1.8591291290776994,
+     "cost_to_bar_range": 0.10757725048351997,
+     "zero_cost_net_return_pct": 68.52124377318714,
+     "zero_cost_profit_factor": 1.1126399958112283,
+     "cost_drag_pct": 49.73305804401711,
+     "fees_paid": 34.74949864936114,
+     "trades_per_month": 4.466739130434783
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 165256.66307550817,
+    "profit_factor": 1.5907965411857345,
+    "max_dd_pct": -36.878957448475816,
+    "sharpe": 2.1785,
+    "trades": 218,
+    "entry": null
+   },
+   "monte_carlo": {
+    "dd_p95": -68.06530924941345,
+    "dd_p99": -75.52642502779145,
+    "prob_dd_beyond_50pct": 0.587,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -72.26532827521162
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 196384.191043307,
+    "profit_factor": 1.1577110087656064,
+    "max_dd_pct": -73.79268313192789,
+    "max_dd_intrabar_pct": -73.79268313192789,
+    "trades": 289,
+    "win_rate_pct": 42.21453287197232,
+    "sharpe": 1.8851,
+    "liquidations": 0,
+    "funding_paid": 10860.660375951964,
+    "fees_paid": 73658.02151347214,
+    "final_equity": 196484.191043307,
+    "gross_profit": 1444490.853771016,
+    "gross_loss": 1247712.8081481964,
+    "account_blown": false,
+    "longs": 131,
+    "shorts": 158
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14724,
+    "warmup_bars": 300,
+    "funding_attached": true
+   }
+  },
+  "4H15M-ETH-Pullback": {
+   "run_id_tmp_db": 3,
+   "symbol": "ETHUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 3,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 3,
+    "validated_runs_all_tf": 3,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "oos_profit_factor",
+    "mc_dd_p95",
+    "cost_stress"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.025059621954785,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 9.926462918727793,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -71.77161419254882,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 71,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -16.00768060798447,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 9.926462918727793,
+    "profit_factor": 1.025059621954785,
+    "max_dd_pct": -61.91739644374562,
+    "max_dd_intrabar_pct": -62.43362320270423,
+    "trades": 71,
+    "win_rate_pct": 36.61971830985916,
+    "sharpe": 0.4252,
+    "liquidations": 0,
+    "funding_paid": 2.6480848615469417,
+    "fees_paid": 24.14119837599397,
+    "final_equity": 109.9264629187278,
+    "gross_profit": 406.0402964249975,
+    "gross_loss": 396.11383350626977,
+    "account_blown": false,
+    "longs": 31,
+    "shorts": 40,
+    "entry": {
+     "signals": 72,
+     "filled": 71,
+     "filled_close": 0,
+     "filled_pullback": 23,
+     "filled_limit": 0,
+     "filled_timeout": 48,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9861111111111112,
+     "avg_improvement_bps": -0.15866802958149773,
+     "avg_wait_sub_bars": 13.394366197183098,
+     "pending_at_end": true
+    },
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": -16.00768060798447,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 1.8591291290776994,
+     "cost_to_bar_range": 0.10757725048351997,
+     "zero_cost_net_return_pct": 88.61015064529431,
+     "zero_cost_profit_factor": 1.166098282949955,
+     "cost_drag_pct": 78.68368772656652,
+     "fees_paid": 24.14119837599397,
+     "trades_per_month": 4.404701086956522
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 42093.77146548753,
+    "profit_factor": 1.6940112762874593,
+    "max_dd_pct": -46.557809107078626,
+    "sharpe": 1.8872,
+    "trades": 211,
+    "entry": {
+     "signals": 211,
+     "filled": 211,
+     "filled_close": 0,
+     "filled_pullback": 57,
+     "filled_limit": 0,
+     "filled_timeout": 154,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -45.707700732616594,
+     "avg_wait_sub_bars": 14.113744075829384,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -71.77161419254882,
+    "dd_p99": -77.41589195610094,
+    "prob_dd_beyond_50pct": 0.688,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -63.1193759784478
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 43546.94568681656,
+    "profit_factor": 1.1923530118514698,
+    "max_dd_pct": -63.53198136317425,
+    "max_dd_intrabar_pct": -64.02632169992992,
+    "trades": 282,
+    "win_rate_pct": 42.198581560283685,
+    "sharpe": 1.6138,
+    "liquidations": 0,
+    "funding_paid": 2358.153723819446,
+    "fees_paid": 13773.569446984167,
+    "final_equity": 43646.94568681656,
+    "gross_profit": 269937.71164187405,
+    "gross_loss": 226390.76595505755,
+    "account_blown": false,
+    "longs": 130,
+    "shorts": 152,
+    "entry": {
+     "signals": 283,
+     "filled": 282,
+     "filled_close": 0,
+     "filled_pullback": 80,
+     "filled_limit": 0,
+     "filled_timeout": 202,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9964664310954063,
+     "avg_improvement_bps": -34.372763280719596,
+     "avg_wait_sub_bars": 13.932624113475176,
+     "pending_at_end": true
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14724,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "15m",
+    "entry_mode": "ltf_pullback"
+   }
+  },
+  "4H1H-ETH-Limit": {
+   "run_id_tmp_db": 4,
+   "symbol": "ETHUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 2,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 3,
+    "validated_runs_all_tf": 3,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "oos_profit_factor",
+    "mc_dd_p95"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.0726129031154785,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 42.264360910407845,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -67.00864703850137,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 70,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 20.217747635959356,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 42.264360910407845,
+    "profit_factor": 1.0726129031154785,
+    "max_dd_pct": -67.95301402240219,
+    "max_dd_intrabar_pct": -67.95301402240219,
+    "trades": 70,
+    "win_rate_pct": 32.857142857142854,
+    "sharpe": 0.7257,
+    "liquidations": 0,
+    "funding_paid": 3.6311933577054414,
+    "fees_paid": 24.471119800488278,
+    "final_equity": 142.26436091040785,
+    "gross_profit": 624.3146453232712,
+    "gross_loss": 582.0502844128632,
+    "account_blown": false,
+    "longs": 30,
+    "shorts": 40,
+    "entry": {
+     "signals": 72,
+     "filled": 70,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 70,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 1,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9722222222222222,
+     "avg_improvement_bps": -9.029925958729866e-14,
+     "avg_wait_sub_bars": 1.0142857142857142,
+     "pending_at_end": true
+    },
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 20.217747635959356,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.12000000000000001,
+     "avg_bar_range_pct": 1.8591291290776994,
+     "cost_to_bar_range": 0.06454635029011199,
+     "zero_cost_net_return_pct": 68.28377085550693,
+     "zero_cost_profit_factor": 1.1138898014979797,
+     "cost_drag_pct": 26.019409945099085,
+     "fees_paid": 24.471119800488278,
+     "trades_per_month": 4.342663043478261
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 236805.97334151884,
+    "profit_factor": 1.7577797818741883,
+    "max_dd_pct": -40.609082061334426,
+    "sharpe": 2.2428,
+    "trades": 213,
+    "entry": {
+     "signals": 215,
+     "filled": 213,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 213,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 5,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9906976744186047,
+     "avg_improvement_bps": 4.879862029149088e-15,
+     "avg_wait_sub_bars": 1.0704225352112675,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -67.00864703850137,
+    "dd_p99": -74.35687897616228,
+    "prob_dd_beyond_50pct": 0.525,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -65.5662848721358
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 336932.7689328932,
+    "profit_factor": 1.1992021135769753,
+    "max_dd_pct": -67.95301402240217,
+    "max_dd_intrabar_pct": -67.95301402240217,
+    "trades": 283,
+    "win_rate_pct": 44.87632508833922,
+    "sharpe": 1.9744,
+    "liquidations": 0,
+    "funding_paid": 13267.91184699657,
+    "fees_paid": 71738.0298056431,
+    "final_equity": 337032.7689328932,
+    "gross_profit": 2028344.385420066,
+    "gross_loss": 1691411.616487173,
+    "account_blown": false,
+    "longs": 127,
+    "shorts": 156,
+    "entry": {
+     "signals": 287,
+     "filled": 283,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 283,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 6,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9860627177700348,
+     "avg_improvement_bps": -1.8662676886580037e-14,
+     "avg_wait_sub_bars": 1.0565371024734982,
+     "pending_at_end": true
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14724,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "1h",
+    "entry_mode": "ltf_limit"
+   }
+  },
+  "4H-BTC-Opt": {
+   "run_id_tmp_db": 5,
+   "symbol": "BTCUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 1,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.4882558125307408,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 15.37177451711527,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -34.48838593159647,
+     "threshold": "> -50.0",
+     "passed": true
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 17,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 8.045580669216832,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 15.37177451711527,
+    "profit_factor": 1.4882558125307408,
+    "max_dd_pct": -12.737626694157637,
+    "max_dd_intrabar_pct": -13.154599677852255,
+    "trades": 17,
+    "win_rate_pct": 35.294117647058826,
+    "sharpe": 0.6912,
+    "liquidations": 0,
+    "funding_paid": 0.029815104302438743,
+    "fees_paid": 3.5043719549322714,
+    "final_equity": 115.37177451711527,
+    "gross_profit": 46.85480886634274,
+    "gross_loss": 31.48303434922746,
+    "account_blown": false,
+    "longs": 4,
+    "shorts": 13,
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 8.045580669216832,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 1.2494753453881766,
+     "cost_to_bar_range": 0.16006718398902514,
+     "zero_cost_net_return_pct": 23.15878462936172,
+     "zero_cost_profit_factor": 1.8310582357804563,
+     "cost_drag_pct": 7.787010112246449,
+     "fees_paid": 3.5043719549322714,
+     "trades_per_month": 1.0546467391304348
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 335.9375124260906,
+    "profit_factor": 2.291708385840976,
+    "max_dd_pct": -26.61755371994342,
+    "sharpe": 1.2471,
+    "trades": 45,
+    "entry": null
+   },
+   "monte_carlo": {
+    "dd_p95": -34.48838593159647,
+    "dd_p99": -38.76026328422205,
+    "prob_dd_beyond_50pct": 0.0,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -15.03010980229421
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 457.9729936509081,
+    "profit_factor": 2.1106851060423426,
+    "max_dd_pct": -26.61755371994342,
+    "max_dd_intrabar_pct": -28.02164617654833,
+    "trades": 63,
+    "win_rate_pct": 47.61904761904761,
+    "sharpe": 1.2122,
+    "liquidations": 0,
+    "funding_paid": 37.63932253562196,
+    "fees_paid": 46.95351289967303,
+    "final_equity": 557.9729936509082,
+    "gross_profit": 870.3067785908933,
+    "gross_loss": 412.3337849399852,
+    "account_blown": false,
+    "longs": 26,
+    "shorts": 37
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14718,
+    "warmup_bars": 300,
+    "funding_attached": true
+   }
+  },
+  "4H-BTC-Basic": {
+   "run_id_tmp_db": 6,
+   "symbol": "BTCUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 2,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "oos_profit_factor",
+    "mc_dd_p95",
+    "cost_stress"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.0185142963081348,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 4.264216109155967,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -79.43437950564483,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 72,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -22.629036540996537,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 4.264216109155967,
+    "profit_factor": 1.0185142963081348,
+    "max_dd_pct": -49.555140897604645,
+    "max_dd_intrabar_pct": -49.555140897604645,
+    "trades": 72,
+    "win_rate_pct": 30.555555555555557,
+    "sharpe": 0.3056,
+    "liquidations": 0,
+    "funding_paid": -1.2710846713001236,
+    "fees_paid": 19.896879178202322,
+    "final_equity": 104.26421610915597,
+    "gross_profit": 234.58439885800135,
+    "gross_loss": 230.32018274884544,
+    "account_blown": false,
+    "longs": 24,
+    "shorts": 48,
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": -22.629036540996537,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 1.2494753453881766,
+     "cost_to_bar_range": 0.16006718398902514,
+     "zero_cost_net_return_pct": 37.44621998272427,
+     "zero_cost_profit_factor": 1.1562964564932543,
+     "cost_drag_pct": 33.182003873568306,
+     "fees_paid": 19.896879178202322,
+     "trades_per_month": 4.466739130434783
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 560.8611376766376,
+    "profit_factor": 1.120244984660487,
+    "max_dd_pct": -56.971135047986934,
+    "sharpe": 0.8856,
+    "trades": 245,
+    "entry": null
+   },
+   "monte_carlo": {
+    "dd_p95": -79.43437950564483,
+    "dd_p99": -85.03851474051686,
+    "prob_dd_beyond_50pct": 0.922,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -53.54718697505009
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 635.0084424630726,
+    "profit_factor": 1.1023682568334214,
+    "max_dd_pct": -57.318036715023034,
+    "max_dd_intrabar_pct": -57.579233477467916,
+    "trades": 316,
+    "win_rate_pct": 35.12658227848101,
+    "sharpe": 0.7999,
+    "liquidations": 0,
+    "funding_paid": 107.61252989245389,
+    "fees_paid": 483.0540872560447,
+    "final_equity": 735.0084424630726,
+    "gross_profit": 6838.185697853784,
+    "gross_loss": 6203.17725539071,
+    "account_blown": false,
+    "longs": 146,
+    "shorts": 170
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14718,
+    "warmup_bars": 300,
+    "funding_attached": true
+   }
+  },
+  "4H15M-BTC-Pullback": {
+   "run_id_tmp_db": 7,
+   "symbol": "BTCUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 3,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 2.693993534637764,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 55.03379236134961,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -32.111470870466945,
+     "threshold": "> -50.0",
+     "passed": true
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 18,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 44.772534334484504,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 55.03379236134961,
+    "profit_factor": 2.693993534637764,
+    "max_dd_pct": -13.765635711426953,
+    "max_dd_intrabar_pct": -14.116933141891321,
+    "trades": 18,
+    "win_rate_pct": 44.44444444444444,
+    "sharpe": 1.6167,
+    "liquidations": 0,
+    "funding_paid": -0.04389469088781057,
+    "fees_paid": 4.297885078328418,
+    "final_equity": 155.0337923613496,
+    "gross_profit": 87.5213970871361,
+    "gross_loss": 32.4876047257865,
+    "account_blown": false,
+    "longs": 5,
+    "shorts": 13,
+    "entry": {
+     "signals": 18,
+     "filled": 18,
+     "filled_close": 0,
+     "filled_pullback": 16,
+     "filled_limit": 0,
+     "filled_timeout": 2,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 30.46346701772823,
+     "avg_wait_sub_bars": 12.277777777777779,
+     "pending_at_end": false
+    },
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 44.772534334484504,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 1.2494753453881766,
+     "cost_to_bar_range": 0.16006718398902514,
+     "zero_cost_net_return_pct": 58.13271621008621,
+     "zero_cost_profit_factor": 2.7145589811267516,
+     "cost_drag_pct": 3.0989238487365967,
+     "fees_paid": 4.297885078328418,
+     "trades_per_month": 1.1166847826086959
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 394.2517222620895,
+    "profit_factor": 2.5243877277991076,
+    "max_dd_pct": -25.6732042308962,
+    "sharpe": 1.2664,
+    "trades": 45,
+    "entry": {
+     "signals": 46,
+     "filled": 45,
+     "filled_close": 0,
+     "filled_pullback": 31,
+     "filled_limit": 0,
+     "filled_timeout": 14,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 1,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9782608695652174,
+     "avg_improvement_bps": -7.523841941027841,
+     "avg_wait_sub_bars": 14.266666666666667,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -32.111470870466945,
+    "dd_p99": -37.72660610405207,
+    "prob_dd_beyond_50pct": 0.0,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -17.53787795690617
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 700.5058467612224,
+    "profit_factor": 2.642926089492388,
+    "max_dd_pct": -25.6732042308962,
+    "max_dd_intrabar_pct": -26.2146913244554,
+    "trades": 64,
+    "win_rate_pct": 53.125,
+    "sharpe": 1.3436,
+    "liquidations": 0,
+    "funding_paid": 40.26470110380329,
+    "fees_paid": 53.06727182726913,
+    "final_equity": 800.5058467612224,
+    "gross_profit": 1126.8828160244325,
+    "gross_loss": 426.3769692632103,
+    "account_blown": false,
+    "longs": 27,
+    "shorts": 37,
+    "entry": {
+     "signals": 65,
+     "filled": 64,
+     "filled_close": 0,
+     "filled_pullback": 47,
+     "filled_limit": 0,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 1,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9846153846153847,
+     "avg_improvement_bps": -1.6803034604293314,
+     "avg_wait_sub_bars": 13.984375,
+     "pending_at_end": false
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14718,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "15m",
+    "entry_mode": "ltf_pullback"
+   }
+  },
+  "4H1H-BTC-Limit": {
+   "run_id_tmp_db": 8,
+   "symbol": "BTCUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-07-06T04:00:00Z",
+   "holdout_touches_after_run": 4,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 2.81421736958745,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 54.571062890510916,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -31.013557470586523,
+     "threshold": "> -50.0",
+     "passed": true
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 17,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 47.63932956906237,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 54.571062890510916,
+    "profit_factor": 2.81421736958745,
+    "max_dd_pct": -13.069849790931688,
+    "max_dd_intrabar_pct": -13.487699958923102,
+    "trades": 17,
+    "win_rate_pct": 35.294117647058826,
+    "sharpe": 1.6115,
+    "liquidations": 0,
+    "funding_paid": 0.03234784533332187,
+    "fees_paid": 3.0906191344771896,
+    "final_equity": 154.57106289051092,
+    "gross_profit": 84.6507346020216,
+    "gross_loss": 30.079671711510674,
+    "account_blown": false,
+    "longs": 4,
+    "shorts": 13,
+    "entry": {
+     "signals": 17,
+     "filled": 17,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 13,
+     "filled_timeout": 4,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 24.308227775393032,
+     "avg_wait_sub_bars": 2.1176470588235294,
+     "pending_at_end": false
+    },
+    "start": "2025-07-06T04:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 47.63932956906237,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.12000000000000001,
+     "avg_bar_range_pct": 1.2494753453881766,
+     "cost_to_bar_range": 0.0960403103934151,
+     "zero_cost_net_return_pct": 58.75390046005122,
+     "zero_cost_profit_factor": 2.9114480835098617,
+     "cost_drag_pct": 4.182837569540304,
+     "fees_paid": 3.0906191344771896,
+     "trades_per_month": 1.0546467391304348
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 440.3470073137692,
+    "profit_factor": 2.5414751823422517,
+    "max_dd_pct": -25.110506865951,
+    "sharpe": 1.3246,
+    "trades": 45,
+    "entry": {
+     "signals": 45,
+     "filled": 45,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 37,
+     "filled_timeout": 8,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 11.36769385261898,
+     "avg_wait_sub_bars": 1.8,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -31.013557470586523,
+    "dd_p99": -35.93521405039453,
+    "prob_dd_beyond_50pct": 0.0,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -16.34698084398668
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 785.0581253785127,
+    "profit_factor": 2.7144784124717227,
+    "max_dd_pct": -25.110506865951,
+    "max_dd_intrabar_pct": -25.110506865951,
+    "trades": 63,
+    "win_rate_pct": 47.61904761904761,
+    "sharpe": 1.398,
+    "liquidations": 0,
+    "funding_paid": 42.607632967212346,
+    "fees_paid": 43.675333073827915,
+    "final_equity": 885.0581253785127,
+    "gross_profit": 1242.9572273256256,
+    "gross_loss": 457.89910194711257,
+    "account_blown": false,
+    "longs": 26,
+    "shorts": 37,
+    "entry": {
+     "signals": 63,
+     "filled": 63,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 50,
+     "filled_timeout": 13,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.1,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 10.848324620844698,
+     "avg_wait_sub_bars": 1.9206349206349207,
+     "pending_at_end": false
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-02-20T00:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 14718,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "1h",
+    "entry_mode": "ltf_limit"
+   }
+  },
+  "4H-SOL-Opt": {
+   "run_id_tmp_db": 9,
+   "symbol": "SOLUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-08-26T12:00:00Z",
+   "holdout_touches_after_run": 1,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "mc_dd_p95",
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.766028373459169,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 58.46344645797769,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -66.67115924752511,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 10,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 52.95558174134673,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 58.46344645797769,
+    "profit_factor": 1.766028373459169,
+    "max_dd_pct": -25.681857395532955,
+    "max_dd_intrabar_pct": -27.762830404365285,
+    "trades": 10,
+    "win_rate_pct": 60.0,
+    "sharpe": 1.2392,
+    "liquidations": 0,
+    "funding_paid": 1.8306318497581937,
+    "fees_paid": 2.8277239414780873,
+    "final_equity": 158.46344645797768,
+    "gross_profit": 134.7836566271822,
+    "gross_loss": 76.32021016920453,
+    "account_blown": false,
+    "longs": 0,
+    "shorts": 10,
+    "start": "2025-08-26T12:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 52.95558174134673,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 2.0911056059380932,
+     "cost_to_bar_range": 0.09564318484540515,
+     "zero_cost_net_return_pct": 64.14226722810594,
+     "zero_cost_profit_factor": 1.854301746888129,
+     "cost_drag_pct": 5.678820770128247,
+     "fees_paid": 2.8277239414780873,
+     "trades_per_month": 0.692867981790592
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 1708.6382166366047,
+    "profit_factor": 1.744990088180818,
+    "max_dd_pct": -49.77743300931613,
+    "sharpe": 1.1779,
+    "trades": 36,
+    "entry": null
+   },
+   "monte_carlo": {
+    "dd_p95": -66.67115924752511,
+    "dd_p99": -70.92268684502535,
+    "prob_dd_beyond_50pct": 0.444,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -40.16201003664078
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 2766.0304520384684,
+    "profit_factor": 1.752894669396188,
+    "max_dd_pct": -49.877903267142905,
+    "max_dd_intrabar_pct": -61.89899671403404,
+    "trades": 46,
+    "win_rate_pct": 60.86956521739131,
+    "sharpe": 1.1576,
+    "liquidations": 0,
+    "funding_paid": 80.67130371466088,
+    "fees_paid": 124.48054537269209,
+    "final_equity": 2866.0304520384684,
+    "gross_profit": 6439.891570296604,
+    "gross_loss": 3673.861118258136,
+    "account_blown": false,
+    "longs": 13,
+    "shorts": 33
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-11-03T04:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 13145,
+    "warmup_bars": 300,
+    "funding_attached": true
+   }
+  },
+  "4H-SOL-Basic": {
+   "run_id_tmp_db": 10,
+   "symbol": "SOLUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-08-26T12:00:00Z",
+   "holdout_touches_after_run": 2,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "oos_profit_factor",
+    "oos_net_return",
+    "mc_dd_p95",
+    "cost_stress"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 0.9535558419755209,
+     "threshold": ">= 1.2",
+     "passed": false
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": -15.16525439168173,
+     "threshold": "> 0.0",
+     "passed": false
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -96.72994668310612,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 68,
+     "threshold": ">= 30",
+     "passed": true
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": -33.870052680832686,
+     "threshold": "> 0",
+     "passed": false
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 3,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": -15.16525439168173,
+    "profit_factor": 0.9535558419755209,
+    "max_dd_pct": -69.83518279535573,
+    "max_dd_intrabar_pct": -70.09534881114621,
+    "trades": 68,
+    "win_rate_pct": 23.52941176470588,
+    "sharpe": 0.1189,
+    "liquidations": 0,
+    "funding_paid": 3.8036304842726,
+    "fees_paid": 16.259528766872013,
+    "final_equity": 84.83474560831827,
+    "gross_profit": 311.3613753663316,
+    "gross_loss": 326.5266297580133,
+    "account_blown": false,
+    "longs": 21,
+    "shorts": 47,
+    "start": "2025-08-26T12:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": -33.870052680832686,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 2.0911056059380932,
+     "cost_to_bar_range": 0.09564318484540515,
+     "zero_cost_net_return_pct": 8.725471517217997,
+     "zero_cost_profit_factor": 1.0256298957398173,
+     "cost_drag_pct": 23.890725908899725,
+     "fees_paid": 16.259528766872013,
+     "trades_per_month": 4.711502276176025
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 187.53431290774313,
+    "profit_factor": 1.1931574096181825,
+    "max_dd_pct": -92.98685657004461,
+    "sharpe": 0.7187,
+    "trades": 222,
+    "entry": null
+   },
+   "monte_carlo": {
+    "dd_p95": -96.72994668310612,
+    "dd_p99": -98.06125521082295,
+    "prob_dd_beyond_50pct": 1.0,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -92.70510787966161
+   },
+   "sensitivity": {
+    "unstable": 3,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 143.9290028919096,
+    "profit_factor": 1.075364786191287,
+    "max_dd_pct": -92.98685657004461,
+    "max_dd_intrabar_pct": -93.2154397270749,
+    "trades": 290,
+    "win_rate_pct": 32.758620689655174,
+    "sharpe": 0.628,
+    "liquidations": 0,
+    "funding_paid": 34.992498402741276,
+    "fees_paid": 92.34846469929695,
+    "final_equity": 243.9290028919096,
+    "gross_profit": 2053.693631250256,
+    "gross_loss": 1909.7646283583467,
+    "account_blown": false,
+    "longs": 142,
+    "shorts": 148
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-11-03T04:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 13145,
+    "warmup_bars": 300,
+    "funding_attached": true
+   }
+  },
+  "4H15M-SOL-Pullback": {
+   "run_id_tmp_db": 11,
+   "symbol": "SOLUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-08-26T12:00:00Z",
+   "holdout_touches_after_run": 3,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "mc_dd_p95",
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.352218594525307,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 24.820830932468937,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -69.81845479955093,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 10,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 20.297827511947744,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 24.820830932468937,
+    "profit_factor": 1.352218594525307,
+    "max_dd_pct": -31.51708464489205,
+    "max_dd_intrabar_pct": -31.51708464489205,
+    "trades": 10,
+    "win_rate_pct": 50.0,
+    "sharpe": 0.6609,
+    "liquidations": 0,
+    "funding_paid": 2.3551710724248522,
+    "fees_paid": 2.132667976335256,
+    "final_equity": 124.82083093246894,
+    "gross_profit": 95.29079282054163,
+    "gross_loss": 70.46996188807272,
+    "account_blown": false,
+    "longs": 0,
+    "shorts": 10,
+    "entry": {
+     "signals": 10,
+     "filled": 10,
+     "filled_close": 0,
+     "filled_pullback": 6,
+     "filled_limit": 0,
+     "filled_timeout": 4,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 38.193069710817596,
+     "avg_wait_sub_bars": 10.6,
+     "pending_at_end": false
+    },
+    "start": "2025-08-26T12:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 20.297827511947744,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.2,
+     "avg_bar_range_pct": 2.0911056059380932,
+     "cost_to_bar_range": 0.09564318484540515,
+     "zero_cost_net_return_pct": 29.490099187835767,
+     "zero_cost_profit_factor": 1.4277612557359787,
+     "cost_drag_pct": 4.6692682553668305,
+     "fees_paid": 2.132667976335256,
+     "trades_per_month": 0.692867981790592
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 498.9850713996402,
+    "profit_factor": 1.8142842177663434,
+    "max_dd_pct": -45.796673708888584,
+    "sharpe": 0.8412,
+    "trades": 37,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 16,
+     "filled_limit": 0,
+     "filled_timeout": 21,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -31.3360438328825,
+     "avg_wait_sub_bars": 11.08108108108108,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -69.81845479955093,
+    "dd_p99": -75.24126199084031,
+    "prob_dd_beyond_50pct": 0.577,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -52.806837964781664
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 647.658143282473,
+    "profit_factor": 1.6258205350422734,
+    "max_dd_pct": -60.4010013069431,
+    "max_dd_intrabar_pct": -60.4010013069431,
+    "trades": 47,
+    "win_rate_pct": 59.57446808510638,
+    "sharpe": 0.8023,
+    "liquidations": 0,
+    "funding_paid": 30.725726414911026,
+    "fees_paid": 37.39069217470354,
+    "final_equity": 747.658143282473,
+    "gross_profit": 1682.5525051920324,
+    "gross_loss": 1034.8943619095596,
+    "account_blown": false,
+    "longs": 13,
+    "shorts": 34,
+    "entry": {
+     "signals": 47,
+     "filled": 47,
+     "filled_close": 0,
+     "filled_pullback": 22,
+     "filled_limit": 0,
+     "filled_timeout": 25,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -16.54261541932928,
+     "avg_wait_sub_bars": 10.97872340425532,
+     "pending_at_end": false
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-11-03T04:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 13145,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "15m",
+    "entry_mode": "ltf_pullback"
+   }
+  },
+  "4H1H-SOL-Limit": {
+   "run_id_tmp_db": 12,
+   "symbol": "SOLUSDT",
+   "verdict": "FAIL",
+   "holdout_start": "2025-08-26T12:00:00Z",
+   "holdout_touches_after_run": 4,
+   "snooping": {
+    "timeframes_tested": [
+     "4h"
+    ],
+    "holdout_touches_all_tf": 4,
+    "validated_runs_all_tf": 4,
+    "optimizer_trials_all_tf": 0
+   },
+   "failed_checks": [
+    "mc_dd_p95",
+    "min_oos_trades"
+   ],
+   "checks": [
+    {
+     "name": "oos_profit_factor",
+     "label": "Holdout profit factor",
+     "value": 1.7337480351646612,
+     "threshold": ">= 1.2",
+     "passed": true
+    },
+    {
+     "name": "oos_net_return",
+     "label": "Holdout net return after costs (%)",
+     "value": 54.15714464963406,
+     "threshold": "> 0.0",
+     "passed": true
+    },
+    {
+     "name": "mc_dd_p95",
+     "label": "Monte Carlo 95th-pct drawdown (%)",
+     "value": -65.08259714031601,
+     "threshold": "> -50.0",
+     "passed": false
+    },
+    {
+     "name": "min_oos_trades",
+     "label": "Holdout trades",
+     "value": 10,
+     "threshold": ">= 30",
+     "passed": false
+    },
+    {
+     "name": "cost_stress",
+     "label": "Holdout net at 2x costs (%)",
+     "value": 50.660947354365646,
+     "threshold": "> 0",
+     "passed": true
+    },
+    {
+     "name": "sensitivity",
+     "label": "Fragile parameters",
+     "value": 0,
+     "threshold": "<= 3",
+     "passed": true
+    },
+    {
+     "name": "no_liquidation",
+     "label": "Liquidations",
+     "value": 0,
+     "threshold": "<= 0",
+     "passed": true
+    }
+   ],
+   "holdout": {
+    "net_return_pct": 54.15714464963406,
+    "profit_factor": 1.7337480351646612,
+    "max_dd_pct": -25.396470523087167,
+    "max_dd_intrabar_pct": -27.48069237725214,
+    "trades": 10,
+    "win_rate_pct": 50.0,
+    "sharpe": 1.1484,
+    "liquidations": 0,
+    "funding_paid": 2.324605176445651,
+    "fees_paid": 1.9105734524690532,
+    "final_equity": 154.15714464963406,
+    "gross_profit": 127.966057320154,
+    "gross_loss": 73.80891267051993,
+    "account_blown": false,
+    "longs": 0,
+    "shorts": 10,
+    "entry": {
+     "signals": 10,
+     "filled": 10,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 10,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 3.694013225294102e-13,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    },
+    "start": "2025-08-26T12:00:00Z",
+    "end": "2026-11-09T00:00:00Z",
+    "stress_net_return_pct": 50.660947354365646,
+    "stress_multiplier": 2.0,
+    "costs": {
+     "round_trip_cost_pct": 0.12000000000000001,
+     "avg_bar_range_pct": 2.0911056059380932,
+     "cost_to_bar_range": 0.0573859109072431,
+     "zero_cost_net_return_pct": 57.72430505476452,
+     "zero_cost_profit_factor": 1.791412060598804,
+     "cost_drag_pct": 3.5671604051304584,
+     "fees_paid": 1.9105734524690532,
+     "trades_per_month": 0.692867981790592
+    }
+   },
+   "dev_in_sample": {
+    "net_return_pct": 2069.035796775887,
+    "profit_factor": 1.8395560966943814,
+    "max_dd_pct": -49.471563600215966,
+    "sharpe": 1.2329,
+    "trades": 36,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.335296841656301,
+     "avg_wait_sub_bars": 1.6944444444444444,
+     "pending_at_end": false
+    }
+   },
+   "monte_carlo": {
+    "dd_p95": -65.08259714031601,
+    "dd_p99": -70.27080114623404,
+    "prob_dd_beyond_50pct": 0.399,
+    "n_simulations": 1000,
+    "original_trade_path_dd": -40.424754929331776
+   },
+   "sensitivity": {
+    "unstable": 0,
+    "tested": 12
+   },
+   "full_range": {
+    "net_return_pct": 3243.723650738146,
+    "profit_factor": 1.797889029652319,
+    "max_dd_pct": -50.49326929988466,
+    "max_dd_intrabar_pct": -60.182107755612556,
+    "trades": 46,
+    "win_rate_pct": 65.21739130434783,
+    "sharpe": 1.1971,
+    "liquidations": 0,
+    "funding_paid": 102.68154064050947,
+    "fees_paid": 100.1216735535831,
+    "final_equity": 3343.723650738146,
+    "gross_profit": 7309.105590068234,
+    "gross_loss": 4065.381939330088,
+    "account_blown": false,
+    "longs": 13,
+    "shorts": 33,
+    "entry": {
+     "signals": 46,
+     "filled": 46,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 46,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.0450149195571854,
+     "avg_wait_sub_bars": 1.5434782608695652,
+     "pending_at_end": false
+    }
+   },
+   "data": {
+    "timeframe": "4h",
+    "eval_start": "2020-11-03T04:00:00Z",
+    "eval_end": "2026-11-09T00:00:00Z",
+    "bars": 13145,
+    "warmup_bars": 300,
+    "funding_attached": true,
+    "entry_tf": "1h",
+    "entry_mode": "ltf_limit"
+   }
+  }
+ }
+}
