@@ -1,7 +1,7 @@
 """Strategy templates registry."""
-from . import rosyade_family
+from . import donchian_breakout, mean_reversion_range, rosyade_family
 
-TEMPLATES = {rosyade_family.TEMPLATE_ID: rosyade_family}
+TEMPLATES = {m.TEMPLATE_ID: m for m in (rosyade_family, donchian_breakout, mean_reversion_range)}
 
 
 def get_template(template_id: str):

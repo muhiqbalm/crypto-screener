@@ -1,0 +1,9 @@
+4H-ETH-Basic                 trades= 289 net=196384.191043307 dd=-73.79268313192789 trades_sha=22a46fcb937fdb74 equity_sha=b01a7620567d628c
+4H-ETH-v2                    trades= 210 net=207491.7035860561 dd=-52.86551950416067 trades_sha=c266425b2001592c equity_sha=5a89bee1ee635963
+4H-BTC-Opt                   trades=  63 net=457.9729936509081 dd=-26.61755371994342 trades_sha=dee3f0a8cd141aed equity_sha=203ca0fd2cb25550
+4H-SOL-Opt                   trades=  46 net=2766.0304520384684 dd=-49.877903267142905 trades_sha=aeccc25b2c919aa3 equity_sha=38d019a95a5de3e3
+4H-ETH-Basic_VT60            trades= 289 net=9492.864721013426 dd=-48.50387047534051 trades_sha=d232b918e43fb838 equity_sha=e9306ea2c0cb2eb2
+4H-SOL-Opt_VT60              trades=  46 net=388.4557147271328 dd=-25.97726978049145 trades_sha=0b098bf19c3aa3fe equity_sha=89537167537b20a0
+4H-ETH-Basic+MTF-pullback    trades= 107 net=8.191662674961961 dd=-73.4244948908622 trades_sha=a338172822ffd9f7 equity_sha=33ff13de03bee3d9
+4H-BTC-Basic+risk1%          trades= 319 net=34.1017404457144 dd=-13.386194409258215 trades_sha=1c03b0275a1c950c equity_sha=648546aac9454c51
+1D-SOL-Basic                 trades=  14 net=216.4517339934863 dd=-48.12653330255374 trades_sha=8a640b13599c2777 equity_sha=90b4ee77134f0b71

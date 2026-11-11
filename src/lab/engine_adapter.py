@@ -16,7 +16,8 @@ from typing import Callable, Optional
 
 from .data_cache import TF_SECONDS
 from .settings import get_lab_settings
-from .templates import rosyade_family as T
+from .templates import get_template
+from .templates import rosyade_family as T  # default template (callers without a template_id)
 
 HTF_SECONDS = {**TF_SECONDS, "1w": 7 * 86400}
 _TF_RANK = {tf: sec for tf, sec in HTF_SECONDS.items()}
@@ -68,6 +69,14 @@ def _engine():
 
 # ── config translation ───────────────────────────────────────────────────
 
+def template(template_id: Optional[str] = None):
+    """Template module for a run / watch (None -> Rosyade family)."""
+    t = get_template(template_id or T.TEMPLATE_ID)
+    if t is None:
+        raise ValueError(f"unknown template_id {template_id}")
+    return t
+
+
 def _htf(value: str, tf: str) -> str:
     if value in (None, "", "same"):
         return tf
@@ -78,11 +87,14 @@ def _htf(value: str, tf: str) -> str:
 HTF_WARMUP_MARGIN = 1.25  # covers sensitivity / optimiser nudges of ema_htf_len
 
 
-def effective_warmup(p: dict, tf: str) -> int:
+def effective_warmup(p: dict, tf: str, tm=None) -> int:
     """Warm-up bars on the base timeframe. With a true higher-timeframe EMA
     filter (e.g. EMA-194 on 4H while trading 15m) the engine needs ~len closed
-    HTF bars before the filter is defined, i.e. len x (HTF/TF) base bars."""
+    HTF bars before the filter is defined, i.e. len x (HTF/TF) base bars.
+    Family templates also cover their own indicator look-backs (min_warmup)."""
     w = int(p["warmup_bars"])
+    if tm is not None and hasattr(tm, "min_warmup"):
+        w = max(w, int(tm.min_warmup(p)))
     htf = _htf(p.get("ema_htf_tf"), tf)
     if p.get("use_ema_htf") and htf != tf:
         ratio = HTF_SECONDS[htf] / TF_SECONDS[tf]
@@ -90,28 +102,32 @@ def effective_warmup(p: dict, tf: str) -> int:
     return w
 
 
-def build_configs(params: dict, tf: str, costs: dict):
+def build_configs(params: dict, tf: str, costs: dict, template_id: Optional[str] = None):
     E = _engine()
-    p = T.validate_params(params)
-    T.validate_for_timeframe(p, tf)
-    strat = {k: v for k, v in p.items() if k not in T.ENGINE_KEYS}
-    if not T.is_mtf(p):  # plain runs pass exactly the pre-MTF StrategyConfig fields
-        strat = {k: v for k, v in strat.items() if k not in T.MTF_KEYS}
-    if not T.is_sized(p):  # live sizing: same fields as before (works with engines without sizing modes)
-        strat = {k: v for k, v in strat.items() if k not in T.SIZING_KEYS}
+    tm = template(template_id)
+    p = tm.validate_params(params)
+    tm.validate_for_timeframe(p, tf)
+    if tm is T:
+        strat = {k: v for k, v in p.items() if k not in T.ENGINE_KEYS}
+        if not T.is_mtf(p):  # plain runs pass exactly the pre-MTF StrategyConfig fields
+            strat = {k: v for k, v in strat.items() if k not in T.MTF_KEYS}
+        if not T.is_sized(p):  # live sizing: same fields as before (works with engines without sizing modes)
+            strat = {k: v for k, v in strat.items() if k not in T.SIZING_KEYS}
+    else:  # strategy_family template: needs an engine with StrategyConfig.strategy_family
+        strat = tm.engine_fields(p)
     strat["ema_htf_tf"] = _htf(strat["ema_htf_tf"], tf)
     strat["dcb_htf_input"] = _htf(strat["dcb_htf_input"], tf)
     strat["base_timeframe"] = tf
     strat["initial_capital"] = 100.0
     cfg = E["StrategyConfig"](**strat)
     ecfg = E["EngineConfig"](
-        warmup_period=effective_warmup(p, tf),
+        warmup_period=effective_warmup(p, tf, None if tm is T else tm),
         commission_pct=float(costs.get("commission_pct", 0.05)),
         slippage_pct=float(costs.get("slippage_pct", 0.05)),
         maintenance_margin_pct=float(p["maintenance_margin_pct"]),
         use_liquidation=True,
     )
-    if T.is_mtf(p):
+    if tm.is_mtf(p):
         ecfg = replace(ecfg, maker_commission_pct=float(p["maker_fee_pct"]))
     return cfg, ecfg
 
@@ -395,7 +411,8 @@ def _clamp_to_spec(v, spec):
 
 def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials: int,
              holdout_start, seed: int = 42, progress: Optional[Callable] = None,
-             min_trades: int = 10, specs: Optional[list[dict]] = None, top_n: int = 5) -> dict:
+             min_trades: int = 10, specs: Optional[list[dict]] = None, top_n: int = 5,
+             template_id: Optional[str] = None) -> dict:
     """Optuna TPE over `specs` (default: all tunables) on `df`, which must be
     development data only (asserted against the locked holdout). Other params stay
     at base_params. Objective: robust_score (see OBJECTIVE)."""
@@ -403,8 +420,9 @@ def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials:
     from .honesty import assert_dev_only
     assert_dev_only([df["timestamp"].iloc[-1]], holdout_start)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    specs = specs or T.tunable_params()
-    base = T.validate_params(base_params)
+    tm = template(template_id)
+    specs = specs or tm.tunable_params()
+    base = tm.validate_params(base_params)
     keys = [s["key"] for s in specs]
 
     def obj(trial):
@@ -412,8 +430,8 @@ def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials:
         for s in specs:
             p[s["key"]] = _suggest(trial, s, base[s["key"]])
         try:
-            p = T.validate_params(p)
-            cfg, ecfg = build_configs(p, tf, costs)
+            p = tm.validate_params(p)
+            cfg, ecfg = build_configs(p, tf, costs, template_id)
             res, _ = run(df, cfg, ecfg, warmup=warmup)
             m = metrics(res)
             segs = segment_returns(res)
@@ -443,7 +461,7 @@ def optimize(df, warmup: int, base_params: dict, tf: str, costs: dict, n_trials:
            for i, t in enumerate(ranked[:top_n])]
     best = dict(base)
     best.update(_params(study.best_trial))
-    best = T.validate_params(best)
+    best = tm.validate_params(best)
     return {"best_params": best, "best_score": _f(study.best_value) if study.best_value > -1e8 else None,
             "best_metrics": study.best_trial.user_attrs.get("m"), "trials": len(done), "top_trials": top,
             "searched": [{"key": s["key"], "min": s["min"], "max": s["max"]} for s in specs],

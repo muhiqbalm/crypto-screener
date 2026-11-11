@@ -36,7 +36,8 @@ def evaluate(watch: dict, offline: bool = False) -> dict:
     from . import engine_adapter as ea
     params, costs, tf = loads(watch["params_json"], {}), loads(watch["costs_json"], {}), watch["timeframe"]
     ohlcv, fund = dc.ensure(watch["symbol"], tf, funding=bool(costs.get("funding", True)), offline=offline)
-    cfg, ecfg = ea.build_configs(params, tf, costs)
+    tm = ea.template(watch["template_id"] if "template_id" in watch.keys() else None)
+    cfg, ecfg = ea.build_configs(params, tf, costs, tm.TEMPLATE_ID)
     anchor = pd.Timestamp(watch["created_at"].replace("Z", "")).tz_localize("UTC") \
         - pd.Timedelta(seconds=ea.TF_SECONDS[tf] * HISTORY_BARS)
     df, _, _, _ = ea.prepare_frame(ohlcv, fund, tf, anchor.strftime("%Y-%m-%d %H:%M:%S"), None,
@@ -48,7 +49,7 @@ def evaluate(watch: dict, offline: bool = False) -> dict:
     if op:
         position = {"side": op["direction"], "entry_price": op["entry_price"],
                     "entry_time": ea._iso(op["entry_timestamp"]), "sl": op["sl"], "tp": op["tp"]}
-        if ea.T.is_sized(ea.T.validate_params(params)):
+        if tm.is_sized(tm.validate_params(params)):
             # research sizing (vol target, ...): the paper mirror copies the engine's notional / equity
             # at entry. Closed equity while open = equity after the last closed trade.
             eq = res.trades[-1].equity_at_exit if res.trades else float(cfg.initial_capital)
