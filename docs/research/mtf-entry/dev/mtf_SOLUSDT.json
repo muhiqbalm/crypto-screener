@@ -1,0 +1,5422 @@
+{
+ "symbol": "SOLUSDT",
+ "base_params": {
+  "enable_long": true,
+  "enable_short": true,
+  "swing_len": 15,
+  "long_sl_pct": 29.0,
+  "long_tp_pct": 62.5,
+  "use_long_tp1": true,
+  "long_tp1_pct": 10.0,
+  "use_long_tp2": true,
+  "long_tp2_pct": 25.0,
+  "short_sl_pct": 16.0,
+  "short_tp_pct": 12.5,
+  "use_short_tp1": true,
+  "short_tp1_pct": 10.0,
+  "use_short_tp2": true,
+  "short_tp2_pct": 12.5,
+  "use_tp_check": true,
+  "tp_chk_vol_period": 50,
+  "tp_chk_vol_mult": 1.3,
+  "tp_chk_body_lookback": 11,
+  "tp_chk_body_mult": 0.05,
+  "tp_chk_atr_decay": 0.2,
+  "use_ema_exit": true,
+  "ema_exit_len": 62,
+  "use_adaptive_exit": true,
+  "use_structure_exit_long": true,
+  "use_structure_exit_short": true,
+  "structure_pivot_len": 11,
+  "use_exit_rsi": true,
+  "exit_rsi_ob": 91,
+  "exit_rsi_os": 10,
+  "use_atr_trailing_long": true,
+  "atr_trailing_len_long": 26,
+  "atr_lookback_long": 13,
+  "atr_mult_strong_long": 3.5,
+  "atr_mult_medium_long": 7.3,
+  "atr_mult_weak_long": 2.0,
+  "use_atr_trailing_short": true,
+  "atr_trailing_len_short": 26,
+  "atr_lookback_short": 13,
+  "atr_mult_strong_short": 3.5,
+  "atr_mult_medium_short": 7.6,
+  "atr_mult_weak_short": 2.0,
+  "adx_strong_threshold": 32,
+  "adx_weak_threshold": 15,
+  "dcb_htf_input": "same",
+  "use_dcb_entry": false,
+  "use_dcb_reverse": true,
+  "dcb_vol_thresh": 4.4,
+  "use_dcb_htf_exit": false,
+  "use_dcb_close": false,
+  "use_entry_volume": true,
+  "entry_vol_period": 50,
+  "entry_vol_mult": 2.9,
+  "use_ema_htf": true,
+  "ema_htf_len": 215,
+  "ema_htf_tf": "same",
+  "use_entry_rsi": true,
+  "entry_rsi_len": 14,
+  "entry_rsi_ob": 78,
+  "entry_rsi_os": 16,
+  "use_entry_adx": true,
+  "entry_adx_threshold": 11,
+  "use_entry_macd": true,
+  "macd_fast_len": 13,
+  "macd_slow_len": 28,
+  "macd_sig_len": 9,
+  "use_entry_bb": true,
+  "bb_len": 14,
+  "bb_mult": 1.0,
+  "use_candle": true,
+  "body_pct": 20.0,
+  "use_atr_filter": false,
+  "atr_len_filter": 26,
+  "atr_min_pct": 1.5,
+  "use_chop": true,
+  "chop_len": 15,
+  "chop_limit": 41.0,
+  "use_slope": true,
+  "slope_len": 12,
+  "slope_th": 0.1,
+  "use_sqz": true,
+  "sqz_bb_mult": 2.0,
+  "sqz_kc_mult": 1.0,
+  "use_rvol": true,
+  "rvol_thresh": 1.3,
+  "rvol_len": 20,
+  "use_short_oversold": false,
+  "short_rsi_min": 30,
+  "use_short_drop_filter": true,
+  "short_drop_lookback": 11,
+  "short_max_drop_pct": 22.0,
+  "use_be_lock": true,
+  "be_lock_long_pct": 12.0,
+  "be_lock_short_pct": 8.0,
+  "be_lock_buffer_pct": 0.2,
+  "use_ob_exit": true,
+  "ob_pivot_len": 47,
+  "exit_wick_rej": true,
+  "wick_body_ratio": 25.0,
+  "use_ob_trail": true,
+  "ob_trail_pivot_len": 30,
+  "ob_trail_atr_len": 1,
+  "ob_trail_mult": 1.1,
+  "leverage": 4.0,
+  "portfolio_risk": 50.0,
+  "use_max_daily_loss": true,
+  "max_daily_loss_pct": 10.0,
+  "use_cooldown": true,
+  "cooldown_bars": 21,
+  "entry_mode": "bar_close",
+  "entry_tf": "1h",
+  "entry_wait_bars": 4,
+  "entry_band": "atr",
+  "entry_atr_mult": 0.5,
+  "entry_atr_len": 14,
+  "entry_ema_len": 20,
+  "entry_timeout": "skip",
+  "limit_through_ticks": 1,
+  "tick_size": 0.0,
+  "maker_fee_pct": 0.02,
+  "ltf_stop_check": true,
+  "warmup_bars": 300,
+  "maintenance_margin_pct": 0.5
+ },
+ "rows": [
+  {
+   "label": "baseline",
+   "mtf": {},
+   "dev": {
+    "net_return_pct": 1708.6382166366047,
+    "profit_factor": 1.744990088180818,
+    "max_dd_pct": -49.77743300931613,
+    "sharpe": 1.1779,
+    "trades": 36,
+    "win_rate_pct": 61.111111111111114,
+    "fees_paid": 73.33724950613652,
+    "liquidations": 0,
+    "segments": [
+     148.32,
+     136.05,
+     91.89,
+     60.8
+    ],
+    "score": 1.1779,
+    "stress2x_net_pct": 1498.6107408449543,
+    "entry": null
+   }
+  },
+  {
+   "label": "close-1h",
+   "mtf": {
+    "entry_mode": "ltf_close",
+    "entry_tf": "1h"
+   },
+   "dev": {
+    "net_return_pct": 590.3347685528862,
+    "profit_factor": 1.676469385922126,
+    "max_dd_pct": -76.12501718986931,
+    "sharpe": 0.8856,
+    "trades": 36,
+    "win_rate_pct": 63.888888888888886,
+    "fees_paid": 27.993768830856272,
+    "liquidations": 1,
+    "segments": [
+     11.19,
+     64.03,
+     154.67,
+     48.63
+    ],
+    "score": -1000000000.0,
+    "stress2x_net_pct": 510.26142152627233,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 36,
+     "filled_pullback": 0,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_close",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -56.167098813431764,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "close-30m",
+   "mtf": {
+    "entry_mode": "ltf_close",
+    "entry_tf": "30m"
+   },
+   "dev": {
+    "net_return_pct": 2472.041745742375,
+    "profit_factor": 1.8775088343571973,
+    "max_dd_pct": -52.6278578159604,
+    "sharpe": 1.2631,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 95.80025814595568,
+    "liquidations": 0,
+    "segments": [
+     179.01,
+     98.48,
+     154.48,
+     82.51
+    ],
+    "score": 0.2630999999999999,
+    "stress2x_net_pct": 2153.484590661915,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 36,
+     "filled_pullback": 0,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 8,
+     "mode": "ltf_close",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 7.320354868315473,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "close-15m",
+   "mtf": {
+    "entry_mode": "ltf_close",
+    "entry_tf": "15m"
+   },
+   "dev": {
+    "net_return_pct": 1745.098148699243,
+    "profit_factor": 1.717930396889193,
+    "max_dd_pct": -50.78295126276803,
+    "sharpe": 1.1893,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 76.41960442905287,
+    "liquidations": 0,
+    "segments": [
+     189.5,
+     94.95,
+     112.33,
+     53.97
+    ],
+    "score": 0.18930000000000002,
+    "stress2x_net_pct": 1528.949358610172,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 36,
+     "filled_pullback": 0,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_close",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 6.710486877543205,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 170.71637492767235,
+    "profit_factor": 1.2905060386986331,
+    "max_dd_pct": -56.5300049046034,
+    "sharpe": 0.6539,
+    "trades": 24,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 15.291742705784436,
+    "liquidations": 0,
+    "segments": [
+     111.97,
+     1.5,
+     147.6,
+     -49.18
+    ],
+    "score": -0.60766,
+    "stress2x_net_pct": 148.04520746406538,
+    "entry": {
+     "signals": 44,
+     "filled": 24,
+     "filled_close": 0,
+     "filled_pullback": 24,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 20,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.5454545454545454,
+     "avg_improvement_bps": 191.63938270643624,
+     "avg_wait_sub_bars": 1.6666666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 443.29498940895553,
+    "profit_factor": 1.7054872204233211,
+    "max_dd_pct": -47.435377077855925,
+    "sharpe": 0.8158,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 23.983762624813835,
+    "liquidations": 0,
+    "segments": [
+     37.84,
+     -4.67,
+     163.23,
+     57.07
+    ],
+    "score": 0.61185,
+    "stress2x_net_pct": 378.22785076632834,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 20,
+     "filled_limit": 0,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -54.95658905244397,
+     "avg_wait_sub_bars": 2.7567567567567566,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 330.59160878583026,
+    "profit_factor": 1.4328626299199465,
+    "max_dd_pct": -46.508787600368045,
+    "sharpe": 0.8195,
+    "trades": 26,
+    "win_rate_pct": 61.53846153846154,
+    "fees_paid": 20.02631467965864,
+    "liquidations": 0,
+    "segments": [
+     112.72,
+     1.5,
+     147.6,
+     -19.46
+    ],
+    "score": 0.532675,
+    "stress2x_net_pct": 292.13661051514123,
+    "entry": {
+     "signals": 44,
+     "filled": 26,
+     "filled_close": 0,
+     "filled_pullback": 26,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 15,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.5909090909090909,
+     "avg_improvement_bps": 184.38667352476767,
+     "avg_wait_sub_bars": 1.9615384615384615,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 243.45746572233858,
+    "profit_factor": 1.1824885862108434,
+    "max_dd_pct": -64.61680816432785,
+    "sharpe": 0.695,
+    "trades": 36,
+    "win_rate_pct": 50.0,
+    "fees_paid": 31.116863783888434,
+    "liquidations": 0,
+    "segments": [
+     66.05,
+     68.02,
+     158.92,
+     -52.46
+    ],
+    "score": -0.47875,
+    "stress2x_net_pct": 201.7915785870149,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 21,
+     "filled_limit": 0,
+     "filled_timeout": 15,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -80.0177786636269,
+     "avg_wait_sub_bars": 4.416666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 114.18142243714865,
+    "profit_factor": 1.1857856270627911,
+    "max_dd_pct": -53.608382584886805,
+    "sharpe": 0.5615,
+    "trades": 29,
+    "win_rate_pct": 55.172413793103445,
+    "fees_paid": 14.978745022513534,
+    "liquidations": 0,
+    "segments": [
+     112.72,
+     -31.59,
+     147.6,
+     -40.55
+    ],
+    "score": -0.7286083333333333,
+    "stress2x_net_pct": 92.19310407463047,
+    "entry": {
+     "signals": 44,
+     "filled": 29,
+     "filled_close": 0,
+     "filled_pullback": 29,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 11,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.6590909090909091,
+     "avg_improvement_bps": 182.24266512123324,
+     "avg_wait_sub_bars": 3.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.25-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 810.1940644207277,
+    "profit_factor": 1.2840398425558683,
+    "max_dd_pct": -60.85710653871025,
+    "sharpe": 0.9663,
+    "trades": 37,
+    "win_rate_pct": 59.45945945945946,
+    "fees_paid": 71.05121781911564,
+    "liquidations": 0,
+    "segments": [
+     322.38,
+     32.27,
+     160.3,
+     -37.41
+    ],
+    "score": -0.27527499999999994,
+    "stress2x_net_pct": 699.4928440847526,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 26,
+     "filled_limit": 0,
+     "filled_timeout": 11,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": 14.741694929996541,
+     "avg_wait_sub_bars": 6.864864864864865,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 34.3476065558383,
+    "profit_factor": 1.1522039292116284,
+    "max_dd_pct": -49.52515126465343,
+    "sharpe": 0.3649,
+    "trades": 15,
+    "win_rate_pct": 46.666666666666664,
+    "fees_paid": 4.988517898542885,
+    "liquidations": 0,
+    "segments": [
+     0.61,
+     1.43,
+     142.28,
+     -45.66
+    ],
+    "score": 0.1368375,
+    "stress2x_net_pct": 27.176189823043583,
+    "entry": {
+     "signals": 46,
+     "filled": 15,
+     "filled_close": 0,
+     "filled_pullback": 15,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 31,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.32608695652173914,
+     "avg_improvement_bps": 306.6070328673563,
+     "avg_wait_sub_bars": 2.066666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 159.22549055554293,
+    "profit_factor": 1.4777663697882044,
+    "max_dd_pct": -57.73099729418435,
+    "sharpe": 0.6198,
+    "trades": 37,
+    "win_rate_pct": 59.45945945945946,
+    "fees_paid": 12.5011980485493,
+    "liquidations": 0,
+    "segments": [
+     9.94,
+     -35.57,
+     129.02,
+     59.78
+    ],
+    "score": -0.53515,
+    "stress2x_net_pct": 127.36817257660331,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 12,
+     "filled_limit": 0,
+     "filled_timeout": 25,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -74.65879761715865,
+     "avg_wait_sub_bars": 3.3783783783783785,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 73.85694975543481,
+    "profit_factor": 1.2554662726598982,
+    "max_dd_pct": -52.70825855424823,
+    "sharpe": 0.4765,
+    "trades": 17,
+    "win_rate_pct": 52.94117647058824,
+    "fees_paid": 6.863986347069716,
+    "liquidations": 0,
+    "segments": [
+     0.61,
+     1.43,
+     202.03,
+     -43.59
+    ],
+    "score": -0.7974875,
+    "stress2x_net_pct": 63.5892709884237,
+    "entry": {
+     "signals": 46,
+     "filled": 17,
+     "filled_close": 0,
+     "filled_pullback": 17,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 26,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.3695652173913043,
+     "avg_improvement_bps": 294.0958149825671,
+     "avg_wait_sub_bars": 2.5294117647058822,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 305.75570109657804,
+    "profit_factor": 1.1971128186176827,
+    "max_dd_pct": -66.08649993194119,
+    "sharpe": 0.7421,
+    "trades": 36,
+    "win_rate_pct": 50.0,
+    "fees_paid": 36.67735988765059,
+    "liquidations": 0,
+    "segments": [
+     46.86,
+     109.16,
+     180.71,
+     -52.94
+    ],
+    "score": -0.44342499999999996,
+    "stress2x_net_pct": 256.27703916550865,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 14,
+     "filled_limit": 0,
+     "filled_timeout": 22,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -102.16034977522277,
+     "avg_wait_sub_bars": 5.916666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 2.2749495831153865,
+    "profit_factor": 1.007646191886498,
+    "max_dd_pct": -63.69074681668546,
+    "sharpe": 0.2728,
+    "trades": 22,
+    "win_rate_pct": 45.45454545454545,
+    "fees_paid": 6.69674094715741,
+    "liquidations": 0,
+    "segments": [
+     0.61,
+     -14.84,
+     175.62,
+     -56.69
+    ],
+    "score": -0.8999733333333333,
+    "stress2x_net_pct": -5.790387360440818,
+    "entry": {
+     "signals": 46,
+     "filled": 22,
+     "filled_close": 0,
+     "filled_pullback": 22,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 19,
+     "replaced": 5,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.4782608695652174,
+     "avg_improvement_bps": 292.01003753016533,
+     "avg_wait_sub_bars": 4.909090909090909,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m0.5-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 819.9385489539859,
+    "profit_factor": 1.2572418985879774,
+    "max_dd_pct": -67.12419161789688,
+    "sharpe": 0.9706,
+    "trades": 37,
+    "win_rate_pct": 59.45945945945946,
+    "fees_paid": 77.28866230003615,
+    "liquidations": 0,
+    "segments": [
+     263.8,
+     64.68,
+     177.92,
+     -44.75
+    ],
+    "score": -0.27205,
+    "stress2x_net_pct": 706.8378442849837,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 20,
+     "filled_limit": 0,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -10.823256153251759,
+     "avg_wait_sub_bars": 9.756756756756756,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 14.126761646768202,
+    "profit_factor": 9.872623122327479,
+    "max_dd_pct": -36.09751450217633,
+    "sharpe": 0.2393,
+    "trades": 4,
+    "win_rate_pct": 50.0,
+    "fees_paid": 0.8426000145850738,
+    "liquidations": 0,
+    "segments": [
+     0.75,
+     0.0,
+     14.38,
+     -0.96
+    ],
+    "score": 0.015953333333333333,
+    "stress2x_net_pct": 12.568240354653398,
+    "entry": {
+     "signals": 48,
+     "filled": 4,
+     "filled_close": 0,
+     "filled_pullback": 4,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 44,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.08333333333333333,
+     "avg_improvement_bps": 715.6422589564679,
+     "avg_wait_sub_bars": 2.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 146.53838008752854,
+    "profit_factor": 1.4161813467292945,
+    "max_dd_pct": -58.80625868230119,
+    "sharpe": 0.6055,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 11.859527206410597,
+    "liquidations": 0,
+    "segments": [
+     9.84,
+     -35.15,
+     134.14,
+     47.82
+    ],
+    "score": -0.545875,
+    "stress2x_net_pct": 117.03613866689525,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 3,
+     "filled_limit": 0,
+     "filled_timeout": 33,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -62.94121053547033,
+     "avg_wait_sub_bars": 3.888888888888889,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -49.09795430625056,
+    "profit_factor": 0.24211416261340143,
+    "max_dd_pct": -69.69399085539355,
+    "sharpe": -0.1292,
+    "trades": 8,
+    "win_rate_pct": 25.0,
+    "fees_paid": 1.5593844217781847,
+    "liquidations": 0,
+    "segments": [
+     0.51,
+     0.0,
+     -9.69,
+     -43.92
+    ],
+    "score": -1.8625333333333334,
+    "stress2x_net_pct": -50.71340096516464,
+    "entry": {
+     "signals": 47,
+     "filled": 8,
+     "filled_close": 0,
+     "filled_pullback": 8,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 36,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.1702127659574468,
+     "avg_improvement_bps": 637.2883140044357,
+     "avg_wait_sub_bars": 4.125,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 396.5304484854246,
+    "profit_factor": 1.2710690948997596,
+    "max_dd_pct": -58.225466273143645,
+    "sharpe": 0.8014,
+    "trades": 35,
+    "win_rate_pct": 51.42857142857142,
+    "fees_paid": 35.90375842035182,
+    "liquidations": 0,
+    "segments": [
+     46.72,
+     107.33,
+     192.61,
+     -44.22
+    ],
+    "score": -0.39895,
+    "stress2x_net_pct": 338.2426305887941,
+    "entry": {
+     "signals": 37,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 4,
+     "filled_limit": 0,
+     "filled_timeout": 31,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9459459459459459,
+     "avg_improvement_bps": -82.78226370257002,
+     "avg_wait_sub_bars": 7.6,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -70.87647127687055,
+    "profit_factor": 0.3831883805585768,
+    "max_dd_pct": -82.66046254571746,
+    "sharpe": -0.3365,
+    "trades": 13,
+    "win_rate_pct": 23.076923076923077,
+    "fees_paid": 2.41363852025212,
+    "liquidations": 0,
+    "segments": [
+     0.51,
+     24.66,
+     -17.59,
+     -71.79
+    ],
+    "score": -1.9031666666666667,
+    "stress2x_net_pct": -72.43790679107272,
+    "entry": {
+     "signals": 47,
+     "filled": 13,
+     "filled_close": 0,
+     "filled_pullback": 13,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 29,
+     "replaced": 5,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.2765957446808511,
+     "avg_improvement_bps": 574.9413171862634,
+     "avg_wait_sub_bars": 7.076923076923077,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-1h-m1.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 270.7950346811435,
+    "profit_factor": 1.1035205092969458,
+    "max_dd_pct": -78.55048393503992,
+    "sharpe": 0.7202,
+    "trades": 37,
+    "win_rate_pct": 54.054054054054056,
+    "fees_paid": 53.154482771229844,
+    "liquidations": 0,
+    "segments": [
+     263.25,
+     61.8,
+     132.42,
+     -72.86
+    ],
+    "score": -0.4598500000000001,
+    "stress2x_net_pct": 223.74500111505594,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 10,
+     "filled_limit": 0,
+     "filled_timeout": 27,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -24.05008490045315,
+     "avg_wait_sub_bars": 13.513513513513514,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 74.82242187758587,
+    "profit_factor": 1.225616871109863,
+    "max_dd_pct": -45.735002676020024,
+    "sharpe": 0.4837,
+    "trades": 27,
+    "win_rate_pct": 55.55555555555556,
+    "fees_paid": 8.646048782763582,
+    "liquidations": 0,
+    "segments": [
+     2.4,
+     0.6,
+     111.98,
+     -19.94
+    ],
+    "score": 0.3264975,
+    "stress2x_net_pct": 56.57794499198968,
+    "entry": {
+     "signals": 44,
+     "filled": 27,
+     "filled_close": 0,
+     "filled_pullback": 27,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 17,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.6136363636363636,
+     "avg_improvement_bps": 174.02337760757075,
+     "avg_wait_sub_bars": 3.4814814814814814,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 322.90270161687874,
+    "profit_factor": 1.668370171779705,
+    "max_dd_pct": -54.09121837630978,
+    "sharpe": 0.7497,
+    "trades": 37,
+    "win_rate_pct": 59.45945945945946,
+    "fees_paid": 17.734004263664524,
+    "liquidations": 0,
+    "segments": [
+     0.21,
+     -5.52,
+     125.36,
+     98.2
+    ],
+    "score": -0.4377249999999999,
+    "stress2x_net_pct": 266.82048899483067,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 22,
+     "filled_limit": 0,
+     "filled_timeout": 15,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -44.78404813044061,
+     "avg_wait_sub_bars": 8.567567567567568,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 78.63817868397956,
+    "profit_factor": 1.2014851056798341,
+    "max_dd_pct": -52.472956452900895,
+    "sharpe": 0.4939,
+    "trades": 30,
+    "win_rate_pct": 56.666666666666664,
+    "fees_paid": 10.42700453825507,
+    "liquidations": 0,
+    "segments": [
+     2.77,
+     0.6,
+     111.98,
+     -18.49
+    ],
+    "score": -0.629575,
+    "stress2x_net_pct": 58.17305826622998,
+    "entry": {
+     "signals": 44,
+     "filled": 30,
+     "filled_close": 0,
+     "filled_pullback": 30,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 12,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.6818181818181818,
+     "avg_improvement_bps": 169.53575004680906,
+     "avg_wait_sub_bars": 5.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 434.64094670857367,
+    "profit_factor": 1.329963290271185,
+    "max_dd_pct": -64.15478483852924,
+    "sharpe": 0.8157,
+    "trades": 36,
+    "win_rate_pct": 55.55555555555556,
+    "fees_paid": 35.33571933723703,
+    "liquidations": 0,
+    "segments": [
+     67.87,
+     66.52,
+     121.68,
+     -13.72
+    ],
+    "score": -0.38822500000000004,
+    "stress2x_net_pct": 365.4599886826148,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 24,
+     "filled_limit": 0,
+     "filled_timeout": 12,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -35.791888159528156,
+     "avg_wait_sub_bars": 13.63888888888889,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 26.70048651647231,
+    "profit_factor": 1.0833510200887884,
+    "max_dd_pct": -52.472956452900895,
+    "sharpe": 0.3832,
+    "trades": 32,
+    "win_rate_pct": 56.25,
+    "fees_paid": 8.298952667186029,
+    "liquidations": 0,
+    "segments": [
+     8.15,
+     -32.2,
+     111.98,
+     -18.49
+    ],
+    "score": -0.8084,
+    "stress2x_net_pct": 11.199572474636113,
+    "entry": {
+     "signals": 44,
+     "filled": 32,
+     "filled_close": 0,
+     "filled_pullback": 32,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 9,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.7272727272727273,
+     "avg_improvement_bps": 179.8920145828737,
+     "avg_wait_sub_bars": 7.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.25-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 877.3103556927479,
+    "profit_factor": 1.4236906060701855,
+    "max_dd_pct": -58.97771145507147,
+    "sharpe": 0.9898,
+    "trades": 37,
+    "win_rate_pct": 64.86486486486487,
+    "fees_paid": 58.264664791690144,
+    "liquidations": 0,
+    "segments": [
+     228.37,
+     31.09,
+     122.86,
+     1.88
+    ],
+    "score": -0.010199999999999987,
+    "stress2x_net_pct": 748.8479349995256,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 28,
+     "filled_limit": 0,
+     "filled_timeout": 9,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": 28.644270568703664,
+     "avg_wait_sub_bars": 21.08108108108108,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 225.42571682331277,
+    "profit_factor": 1.4321452206351715,
+    "max_dd_pct": -48.64441483599708,
+    "sharpe": 0.7377,
+    "trades": 19,
+    "win_rate_pct": 57.89473684210527,
+    "fees_paid": 12.139470152818122,
+    "liquidations": 0,
+    "segments": [
+     107.58,
+     0.6,
+     132.78,
+     -33.05
+    ],
+    "score": 0.3504075,
+    "stress2x_net_pct": 203.75202851816817,
+    "entry": {
+     "signals": 44,
+     "filled": 19,
+     "filled_close": 0,
+     "filled_pullback": 19,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 25,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.4318181818181818,
+     "avg_improvement_bps": 269.65048440595405,
+     "avg_wait_sub_bars": 4.842105263157895,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 498.9850713996402,
+    "profit_factor": 1.8142842177663434,
+    "max_dd_pct": -45.796673708888584,
+    "sharpe": 0.8412,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 24.616329373934548,
+    "liquidations": 0,
+    "segments": [
+     39.31,
+     -5.52,
+     131.4,
+     96.67
+    ],
+    "score": 0.6309,
+    "stress2x_net_pct": 427.0344838979537,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 16,
+     "filled_limit": 0,
+     "filled_timeout": 21,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -31.3360438328825,
+     "avg_wait_sub_bars": 11.08108108108108,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 336.39261863041474,
+    "profit_factor": 1.4917409676754432,
+    "max_dd_pct": -48.64441483599709,
+    "sharpe": 0.8498,
+    "trades": 23,
+    "win_rate_pct": 60.86956521739131,
+    "fees_paid": 17.542263201225975,
+    "liquidations": 0,
+    "segments": [
+     107.58,
+     0.6,
+     154.21,
+     -17.79
+    ],
+    "score": 0.488635,
+    "stress2x_net_pct": 301.4960875356858,
+    "entry": {
+     "signals": 44,
+     "filled": 23,
+     "filled_close": 0,
+     "filled_pullback": 23,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 18,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.5227272727272727,
+     "avg_improvement_bps": 255.77266878747187,
+     "avg_wait_sub_bars": 7.434782608695652,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 399.97665837358545,
+    "profit_factor": 1.2879100469759028,
+    "max_dd_pct": -65.88792571936098,
+    "sharpe": 0.8015,
+    "trades": 36,
+    "win_rate_pct": 52.77777777777778,
+    "fees_paid": 38.693207608809665,
+    "liquidations": 0,
+    "segments": [
+     60.09,
+     66.52,
+     184.23,
+     -34.02
+    ],
+    "score": -0.398875,
+    "stress2x_net_pct": 339.2578658007176,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 19,
+     "filled_limit": 0,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -25.534943555436335,
+     "avg_wait_sub_bars": 18.88888888888889,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 160.0933343551826,
+    "profit_factor": 1.283015616170444,
+    "max_dd_pct": -54.58344382307425,
+    "sharpe": 0.637,
+    "trades": 25,
+    "win_rate_pct": 56.00000000000001,
+    "fees_paid": 13.615940978940777,
+    "liquidations": 0,
+    "segments": [
+     107.58,
+     -32.2,
+     154.21,
+     -27.3
+    ],
+    "score": -0.7345833333333334,
+    "stress2x_net_pct": 136.99088881660424,
+    "entry": {
+     "signals": 44,
+     "filled": 25,
+     "filled_close": 0,
+     "filled_pullback": 25,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 15,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.5681818181818182,
+     "avg_improvement_bps": 250.82428198342978,
+     "avg_wait_sub_bars": 10.88,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m0.5-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 811.6800628170976,
+    "profit_factor": 1.2857694160706017,
+    "max_dd_pct": -61.461618553439045,
+    "sharpe": 0.9706,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 73.63390094490127,
+    "liquidations": 0,
+    "segments": [
+     307.1,
+     31.09,
+     178.72,
+     -38.71
+    ],
+    "score": -0.27205,
+    "stress2x_net_pct": 700.0071306675133,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 23,
+     "filled_limit": 0,
+     "filled_timeout": 14,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": 17.750938213036303,
+     "avg_wait_sub_bars": 30.83783783783784,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -26.662872120882387,
+    "profit_factor": 0.359661552674245,
+    "max_dd_pct": -50.44266128719783,
+    "sharpe": -0.0094,
+    "trades": 5,
+    "win_rate_pct": 40.0,
+    "fees_paid": 1.0780117115819126,
+    "liquidations": 0,
+    "segments": [
+     0.81,
+     0.0,
+     13.64,
+     -35.99
+    ],
+    "score": -1.8427333333333333,
+    "stress2x_net_pct": -28.039149919430074,
+    "entry": {
+     "signals": 48,
+     "filled": 5,
+     "filled_close": 0,
+     "filled_pullback": 5,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 43,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.10416666666666667,
+     "avg_improvement_bps": 530.2046362141452,
+     "avg_wait_sub_bars": 6.6,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 145.1103770405528,
+    "profit_factor": 1.4139252831252374,
+    "max_dd_pct": -57.465614128962116,
+    "sharpe": 0.6034,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 11.809653057645352,
+    "liquidations": 0,
+    "segments": [
+     9.91,
+     -35.15,
+     132.63,
+     47.82
+    ],
+    "score": -0.54745,
+    "stress2x_net_pct": 115.77630379987652,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 3,
+     "filled_limit": 0,
+     "filled_timeout": 33,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -75.51977702696837,
+     "avg_wait_sub_bars": 15.25,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -34.07636503096367,
+    "profit_factor": 0.5200880045760664,
+    "max_dd_pct": -60.54787115687319,
+    "sharpe": 0.0293,
+    "trades": 10,
+    "win_rate_pct": 40.0,
+    "fees_paid": 1.950914455347919,
+    "liquidations": 0,
+    "segments": [
+     0.57,
+     0.0,
+     -10.28,
+     -26.94
+    ],
+    "score": -0.9975583333333333,
+    "stress2x_net_pct": -36.48631323561591,
+    "entry": {
+     "signals": 46,
+     "filled": 10,
+     "filled_close": 0,
+     "filled_pullback": 10,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 33,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.21739130434782608,
+     "avg_improvement_bps": 517.8697891109125,
+     "avg_wait_sub_bars": 16.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 330.58329255478174,
+    "profit_factor": 1.213739402825059,
+    "max_dd_pct": -64.82334357355295,
+    "sharpe": 0.7598,
+    "trades": 36,
+    "win_rate_pct": 50.0,
+    "fees_paid": 37.095741532050695,
+    "liquidations": 0,
+    "segments": [
+     46.83,
+     107.33,
+     190.73,
+     -51.35
+    ],
+    "score": -0.43015000000000003,
+    "stress2x_net_pct": 278.19440356441964,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 7,
+     "filled_limit": 0,
+     "filled_timeout": 29,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -83.69710929643004,
+     "avg_wait_sub_bars": 29.333333333333332,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -60.5488400527172,
+    "profit_factor": 0.5012810164647371,
+    "max_dd_pct": -76.39037583437191,
+    "sharpe": -0.1595,
+    "trades": 15,
+    "win_rate_pct": 33.33333333333333,
+    "fees_paid": 2.8384400473871647,
+    "liquidations": 0,
+    "segments": [
+     0.57,
+     24.59,
+     -16.37,
+     -62.35
+    ],
+    "score": -1.6595,
+    "stress2x_net_pct": -62.83899382890227,
+    "entry": {
+     "signals": 46,
+     "filled": 15,
+     "filled_close": 0,
+     "filled_pullback": 15,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 26,
+     "replaced": 5,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.32608695652173914,
+     "avg_improvement_bps": 496.9411099691864,
+     "avg_wait_sub_bars": 25.466666666666665,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-atr-15m-m1.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "15m",
+    "entry_band": "atr",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 457.4392197548975,
+    "profit_factor": 1.178876554227956,
+    "max_dd_pct": -68.20587054201438,
+    "sharpe": 0.831,
+    "trades": 37,
+    "win_rate_pct": 56.75675675675676,
+    "fees_paid": 58.30475170555645,
+    "liquidations": 0,
+    "segments": [
+     263.7,
+     61.71,
+     130.92,
+     -58.95
+    ],
+    "score": -0.37675000000000003,
+    "stress2x_net_pct": 388.0194652940046,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 13,
+     "filled_limit": 0,
+     "filled_timeout": 24,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -6.46513324629463,
+     "avg_wait_sub_bars": 49.5945945945946,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -0.3915256505290614,
+    "profit_factor": 0.0,
+    "max_dd_pct": -28.03146544037782,
+    "sharpe": 0.1078,
+    "trades": 1,
+    "win_rate_pct": 0.0,
+    "fees_paid": 0.20014990000000002,
+    "liquidations": 0,
+    "segments": [
+     -0.39,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "score": 0.0,
+    "stress2x_net_pct": -0.6915300079963487,
+    "entry": {
+     "signals": 49,
+     "filled": 1,
+     "filled_close": 0,
+     "filled_pullback": 1,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 48,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.02040816326530612,
+     "avg_improvement_bps": 365.3992630257115,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 139.30173683509534,
+    "profit_factor": 1.4044414315492981,
+    "max_dd_pct": -57.45876392689261,
+    "sharpe": 0.5969,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 11.602952314745862,
+    "liquidations": 0,
+    "segments": [
+     9.95,
+     -35.15,
+     127.03,
+     47.82
+    ],
+    "score": -0.552325,
+    "stress2x_net_pct": 110.65154060901025,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 1,
+     "filled_limit": 0,
+     "filled_timeout": 35,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -82.58289237295546,
+     "avg_wait_sub_bars": 3.9166666666666665,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -53.404115351777946,
+    "profit_factor": 0.032420568180507287,
+    "max_dd_pct": -66.58441537803611,
+    "sharpe": -0.2956,
+    "trades": 7,
+    "win_rate_pct": 28.57142857142857,
+    "fees_paid": 1.1688299481144262,
+    "liquidations": 0,
+    "segments": [
+     0.36,
+     0.0,
+     -21.05,
+     -41.19
+    ],
+    "score": -2.0622666666666665,
+    "stress2x_net_pct": -54.81670999550834,
+    "entry": {
+     "signals": 49,
+     "filled": 7,
+     "filled_close": 0,
+     "filled_pullback": 7,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 39,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.14285714285714285,
+     "avg_improvement_bps": 664.8106553233681,
+     "avg_wait_sub_bars": 5.285714285714286,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 397.0842360363889,
+    "profit_factor": 1.2802846557186658,
+    "max_dd_pct": -57.87140910533062,
+    "sharpe": 0.8,
+    "trades": 35,
+    "win_rate_pct": 51.42857142857142,
+    "fees_paid": 35.37035536412234,
+    "liquidations": 0,
+    "segments": [
+     46.86,
+     107.33,
+     181.92,
+     -42.09
+    ],
+    "score": -0.3999999999999999,
+    "stress2x_net_pct": 338.80196854053656,
+    "entry": {
+     "signals": 37,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 4,
+     "filled_limit": 0,
+     "filled_timeout": 31,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9459459459459459,
+     "avg_improvement_bps": -102.47153130291566,
+     "avg_wait_sub_bars": 7.685714285714286,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -60.266687913094465,
+    "profit_factor": 0.5351985234341745,
+    "max_dd_pct": -82.36097282353212,
+    "sharpe": -0.1016,
+    "trades": 19,
+    "win_rate_pct": 36.84210526315789,
+    "fees_paid": 3.491502524473802,
+    "liquidations": 0,
+    "segments": [
+     19.4,
+     -16.04,
+     -20.8,
+     -49.96
+    ],
+    "score": -1.4682666666666666,
+    "stress2x_net_pct": -63.17113906762387,
+    "entry": {
+     "signals": 47,
+     "filled": 19,
+     "filled_close": 0,
+     "filled_pullback": 19,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 23,
+     "replaced": 5,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.40425531914893614,
+     "avg_improvement_bps": 431.115149232783,
+     "avg_wait_sub_bars": 10.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 453.00938825444143,
+    "profit_factor": 1.1897653305684215,
+    "max_dd_pct": -72.41012615933289,
+    "sharpe": 0.828,
+    "trades": 37,
+    "win_rate_pct": 51.35135135135135,
+    "fees_paid": 55.46316290846565,
+    "liquidations": 0,
+    "segments": [
+     278.05,
+     61.7,
+     102.22,
+     -55.27
+    ],
+    "score": -0.379,
+    "stress2x_net_pct": 383.62818773064004,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 15,
+     "filled_limit": 0,
+     "filled_timeout": 22,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -47.48402873603072,
+     "avg_wait_sub_bars": 13.621621621621621,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -0.4822569976062994,
+    "profit_factor": 0.0,
+    "max_dd_pct": -36.09751450217633,
+    "sharpe": 0.1079,
+    "trades": 1,
+    "win_rate_pct": 0.0,
+    "fees_paid": 0.20014990000000002,
+    "liquidations": 0,
+    "segments": [
+     -0.48,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "score": 0.0,
+    "stress2x_net_pct": -0.7822160347204202,
+    "entry": {
+     "signals": 49,
+     "filled": 1,
+     "filled_close": 0,
+     "filled_pullback": 1,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 48,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.02040816326530612,
+     "avg_improvement_bps": 1017.9714679786732,
+     "avg_wait_sub_bars": 3.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 139.08376171718726,
+    "profit_factor": 1.4040671340533633,
+    "max_dd_pct": -58.806258682301205,
+    "sharpe": 0.5975,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 11.593483476138912,
+    "liquidations": 0,
+    "segments": [
+     9.85,
+     -35.15,
+     127.03,
+     47.82
+    ],
+    "score": -0.551875,
+    "stress2x_net_pct": 110.45917885736236,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 1,
+     "filled_limit": 0,
+     "filled_timeout": 35,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -64.45588667981764,
+     "avg_wait_sub_bars": 3.9722222222222223,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -23.57123009936916,
+    "profit_factor": 0.030835538575755217,
+    "max_dd_pct": -51.28875460525059,
+    "sharpe": -0.0284,
+    "trades": 3,
+    "win_rate_pct": 33.33333333333333,
+    "fees_paid": 0.6140866669113232,
+    "liquidations": 0,
+    "segments": [
+     0.26,
+     0.0,
+     0.0,
+     -23.77
+    ],
+    "score": -1.9284,
+    "stress2x_net_pct": -24.463028461670163,
+    "entry": {
+     "signals": 49,
+     "filled": 3,
+     "filled_close": 0,
+     "filled_pullback": 3,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 43,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.061224489795918366,
+     "avg_improvement_bps": 1101.8150964809274,
+     "avg_wait_sub_bars": 4.666666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 353.09495170956166,
+    "profit_factor": 1.255970040614249,
+    "max_dd_pct": -58.22546627314363,
+    "sharpe": 0.7751,
+    "trades": 35,
+    "win_rate_pct": 51.42857142857142,
+    "fees_paid": 33.28812142723566,
+    "liquidations": 0,
+    "segments": [
+     46.72,
+     107.33,
+     159.39,
+     -42.58
+    ],
+    "score": -0.418675,
+    "stress2x_net_pct": 299.704654000093,
+    "entry": {
+     "signals": 37,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 1,
+     "filled_limit": 0,
+     "filled_timeout": 34,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.9459459459459459,
+     "avg_improvement_bps": -93.0840483821489,
+     "avg_wait_sub_bars": 7.857142857142857,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -68.60129507830209,
+    "profit_factor": 0.4619618416906496,
+    "max_dd_pct": -86.06100069864931,
+    "sharpe": -0.2309,
+    "trades": 17,
+    "win_rate_pct": 35.294117647058826,
+    "fees_paid": 3.1365316804520487,
+    "liquidations": 0,
+    "segments": [
+     19.29,
+     -15.99,
+     -20.61,
+     -60.54
+    ],
+    "score": -1.6642333333333332,
+    "stress2x_net_pct": -70.75072836803595,
+    "entry": {
+     "signals": 48,
+     "filled": 17,
+     "filled_close": 0,
+     "filled_pullback": 17,
+     "filled_limit": 0,
+     "filled_timeout": 0,
+     "missed": 26,
+     "replaced": 5,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.3541666666666667,
+     "avg_improvement_bps": 624.0665422640553,
+     "avg_wait_sub_bars": 10.941176470588236,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "pb-ema20-1h-m0.25-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_pullback",
+    "entry_tf": "1h",
+    "entry_band": "ema",
+    "entry_ema_len": 20,
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 426.6232548375727,
+    "profit_factor": 1.177539723710514,
+    "max_dd_pct": -73.91320272800424,
+    "sharpe": 0.8161,
+    "trades": 37,
+    "win_rate_pct": 51.35135135135135,
+    "fees_paid": 55.5173077854581,
+    "liquidations": 0,
+    "segments": [
+     277.7,
+     61.79,
+     103.26,
+     -57.6
+    ],
+    "score": -0.38792499999999996,
+    "stress2x_net_pct": 360.4011799503416,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 13,
+     "filled_limit": 0,
+     "filled_timeout": 24,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_pullback",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -7.026280329543898,
+     "avg_wait_sub_bars": 14.135135135135135,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 659.7644190104248,
+    "profit_factor": 1.7253303082257356,
+    "max_dd_pct": -49.47156360021597,
+    "sharpe": 0.9848,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 21.10589108197697,
+    "liquidations": 0,
+    "segments": [
+     1.45,
+     137.28,
+     81.86,
+     73.55
+    ],
+    "score": 0.9848,
+    "stress2x_net_pct": 598.8205440496602,
+    "entry": {
+     "signals": 39,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 3,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9230769230769231,
+     "avg_improvement_bps": 0.9261068166651305,
+     "avg_wait_sub_bars": 1.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 721.0255426131916,
+    "profit_factor": 1.7516922239352992,
+    "max_dd_pct": -53.26276789483878,
+    "sharpe": 0.9464,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 22.79150864036704,
+    "liquidations": 0,
+    "segments": [
+     0.81,
+     137.28,
+     97.78,
+     73.55
+    ],
+    "score": -0.05359999999999998,
+    "stress2x_net_pct": 652.403109959433,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 33,
+     "filled_timeout": 3,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -33.63357121406564,
+     "avg_wait_sub_bars": 1.25,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 773.3497168815479,
+    "profit_factor": 1.7396284919126503,
+    "max_dd_pct": -49.47156360021598,
+    "sharpe": 1.0242,
+    "trades": 37,
+    "win_rate_pct": 67.56756756756756,
+    "fees_paid": 24.408787015945023,
+    "liquidations": 0,
+    "segments": [
+     16.61,
+     137.28,
+     81.86,
+     73.55
+    ],
+    "score": 1.0242,
+    "stress2x_net_pct": 701.5123640351825,
+    "entry": {
+     "signals": 39,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 37,
+     "filled_timeout": 0,
+     "missed": 2,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9487179487179487,
+     "avg_improvement_bps": 1.4499286264876667,
+     "avg_wait_sub_bars": 1.1081081081081081,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 817.3152921998619,
+    "profit_factor": 1.7588086224552861,
+    "max_dd_pct": -53.48964799035119,
+    "sharpe": 0.9769,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 25.455821664268328,
+    "liquidations": 0,
+    "segments": [
+     14.5,
+     137.28,
+     94.54,
+     73.55
+    ],
+    "score": -0.02310000000000001,
+    "stress2x_net_pct": 742.0376975517186,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 2,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -17.617412683890425,
+     "avg_wait_sub_bars": 1.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 2069.035796775887,
+    "profit_factor": 1.8395560966943814,
+    "max_dd_pct": -49.471563600215966,
+    "sharpe": 1.2329,
+    "trades": 36,
+    "win_rate_pct": 69.44444444444444,
+    "fees_paid": 58.6806514458324,
+    "liquidations": 0,
+    "segments": [
+     159.27,
+     137.28,
+     103.15,
+     73.55
+    ],
+    "score": 1.2329,
+    "stress2x_net_pct": 1897.7740879105506,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.335296841656301,
+     "avg_wait_sub_bars": 1.6944444444444444,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 2069.035796775887,
+    "profit_factor": 1.8395560966943814,
+    "max_dd_pct": -49.471563600215966,
+    "sharpe": 1.2329,
+    "trades": 36,
+    "win_rate_pct": 69.44444444444444,
+    "fees_paid": 58.6806514458324,
+    "liquidations": 0,
+    "segments": [
+     159.27,
+     137.28,
+     103.15,
+     73.55
+    ],
+    "score": 1.2329,
+    "stress2x_net_pct": 1897.7740879105506,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.335296841656301,
+     "avg_wait_sub_bars": 1.6944444444444444,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 277.38232274373615,
+    "profit_factor": 1.6138536045987544,
+    "max_dd_pct": -48.43966254470245,
+    "sharpe": 0.7525,
+    "trades": 34,
+    "win_rate_pct": 61.76470588235294,
+    "fees_paid": 10.443520199502148,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     53.37,
+     92.09,
+     81.9
+    ],
+    "score": 0.564375,
+    "stress2x_net_pct": 247.97218275438394,
+    "entry": {
+     "signals": 41,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 7,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8292682926829268,
+     "avg_improvement_bps": 42.90928866482744,
+     "avg_wait_sub_bars": 1.1176470588235294,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 198.35072300470648,
+    "profit_factor": 1.508593743333828,
+    "max_dd_pct": -51.128286947613056,
+    "sharpe": 0.6525,
+    "trades": 36,
+    "win_rate_pct": 61.111111111111114,
+    "fees_paid": 9.186147984763316,
+    "liquidations": 0,
+    "segments": [
+     -14.77,
+     -7.22,
+     107.42,
+     81.9
+    ],
+    "score": -0.6737500000000001,
+    "stress2x_net_pct": 171.51118140934403,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -47.374737553479115,
+     "avg_wait_sub_bars": 1.6111111111111112,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 277.38232274373615,
+    "profit_factor": 1.6138536045987544,
+    "max_dd_pct": -48.43966254470245,
+    "sharpe": 0.7525,
+    "trades": 34,
+    "win_rate_pct": 61.76470588235294,
+    "fees_paid": 10.443520199502148,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     53.37,
+     92.09,
+     81.9
+    ],
+    "score": 0.564375,
+    "stress2x_net_pct": 247.97218275438394,
+    "entry": {
+     "signals": 41,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 6,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8292682926829268,
+     "avg_improvement_bps": 42.90928866482744,
+     "avg_wait_sub_bars": 1.1176470588235294,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 804.3593136337078,
+    "profit_factor": 1.8046427464471284,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 0.9869,
+    "trades": 35,
+    "win_rate_pct": 62.857142857142854,
+    "fees_paid": 25.069264056545794,
+    "liquidations": 0,
+    "segments": [
+     49.02,
+     63.52,
+     104.03,
+     81.9
+    ],
+    "score": 0.9869,
+    "stress2x_net_pct": 728.0109239510732,
+    "entry": {
+     "signals": 36,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 29,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9722222222222222,
+     "avg_improvement_bps": -38.07999748404629,
+     "avg_wait_sub_bars": 2.3142857142857145,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 183.64166325177194,
+    "profit_factor": 1.4865571073575625,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 0.6549,
+    "trades": 35,
+    "win_rate_pct": 60.0,
+    "fees_paid": 8.294214653521664,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     3.45,
+     114.04,
+     81.9
+    ],
+    "score": 0.49117500000000003,
+    "stress2x_net_pct": 160.5879920763793,
+    "entry": {
+     "signals": 40,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 35,
+     "filled_timeout": 0,
+     "missed": 4,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.875,
+     "avg_improvement_bps": 42.54328148587407,
+     "avg_wait_sub_bars": 1.8571428571428572,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.1-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 1206.863456322079,
+    "profit_factor": 1.7736009561892807,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 1.0833,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 36.30788187712353,
+    "liquidations": 0,
+    "segments": [
+     160.39,
+     28.9,
+     114.04,
+     81.9
+    ],
+    "score": 1.0833,
+    "stress2x_net_pct": 1098.0495356001275,
+    "entry": {
+     "signals": 37,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 32,
+     "filled_timeout": 4,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.972972972972973,
+     "avg_improvement_bps": 4.310319065733584,
+     "avg_wait_sub_bars": 3.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 206.3816926487192,
+    "profit_factor": 1.4097246266719432,
+    "max_dd_pct": -46.05311798359274,
+    "sharpe": 0.6792,
+    "trades": 30,
+    "win_rate_pct": 56.666666666666664,
+    "fees_paid": 9.211585684555496,
+    "liquidations": 0,
+    "segments": [
+     -0.74,
+     24.12,
+     103.77,
+     22.04
+    ],
+    "score": 0.5094000000000001,
+    "stress2x_net_pct": 184.92162364575813,
+    "entry": {
+     "signals": 42,
+     "filled": 30,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 0,
+     "missed": 12,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.7142857142857143,
+     "avg_improvement_bps": 99.87243148979002,
+     "avg_wait_sub_bars": 1.2333333333333334,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 279.05760762314435,
+    "profit_factor": 1.6162896510959024,
+    "max_dd_pct": -54.3182182309099,
+    "sharpe": 0.7194,
+    "trades": 36,
+    "win_rate_pct": 55.55555555555556,
+    "fees_paid": 11.875155991277829,
+    "liquidations": 0,
+    "segments": [
+     -2.99,
+     -6.55,
+     118.2,
+     91.63
+    ],
+    "score": -0.6403,
+    "stress2x_net_pct": 243.69102100775467,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 25,
+     "filled_timeout": 11,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -49.21996844493594,
+     "avg_wait_sub_bars": 2.0555555555555554,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 229.5043620386809,
+    "profit_factor": 1.3416134538976434,
+    "max_dd_pct": -53.2258710319754,
+    "sharpe": 0.7031,
+    "trades": 32,
+    "win_rate_pct": 56.25,
+    "fees_paid": 11.901351665733776,
+    "liquidations": 0,
+    "segments": [
+     -0.74,
+     54.56,
+     103.77,
+     5.41
+    ],
+    "score": -0.47267500000000007,
+    "stress2x_net_pct": 204.99707770988823,
+    "entry": {
+     "signals": 42,
+     "filled": 32,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 32,
+     "filled_timeout": 0,
+     "missed": 9,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.7619047619047619,
+     "avg_improvement_bps": 98.3381282744065,
+     "avg_wait_sub_bars": 1.53125,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 671.4622480396652,
+    "profit_factor": 1.4608084765198828,
+    "max_dd_pct": -58.141643419111425,
+    "sharpe": 0.9192,
+    "trades": 35,
+    "win_rate_pct": 54.285714285714285,
+    "fees_paid": 28.45408649761602,
+    "liquidations": 0,
+    "segments": [
+     65.92,
+     64.79,
+     114.63,
+     31.46
+    ],
+    "score": -0.08079999999999998,
+    "stress2x_net_pct": 604.130844043726,
+    "entry": {
+     "signals": 36,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 26,
+     "filled_timeout": 9,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9722222222222222,
+     "avg_improvement_bps": -29.3651380572965,
+     "avg_wait_sub_bars": 3.2,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 118.42691676150972,
+    "profit_factor": 1.234132510139427,
+    "max_dd_pct": -53.2258710319754,
+    "sharpe": 0.5741,
+    "trades": 34,
+    "win_rate_pct": 52.94117647058824,
+    "fees_paid": 8.67593807498834,
+    "liquidations": 0,
+    "segments": [
+     -2.45,
+     4.25,
+     103.77,
+     5.41
+    ],
+    "score": -0.569425,
+    "stress2x_net_pct": 100.87306952216109,
+    "entry": {
+     "signals": 42,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 6,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8095238095238095,
+     "avg_improvement_bps": 103.57463953835345,
+     "avg_wait_sub_bars": 2.1176470588235294,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.25-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 989.6305753685773,
+    "profit_factor": 1.4493015946867653,
+    "max_dd_pct": -53.225871031975394,
+    "sharpe": 1.0074,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 39.335963209130576,
+    "liquidations": 0,
+    "segments": [
+     195.56,
+     29.9,
+     115.77,
+     31.53
+    ],
+    "score": 0.007400000000000073,
+    "stress2x_net_pct": 895.3712731228302,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": 37.82927706398011,
+     "avg_wait_sub_bars": 4.5,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 112.44965101051825,
+    "profit_factor": 1.276956913570454,
+    "max_dd_pct": -43.658172626792805,
+    "sharpe": 0.5549,
+    "trades": 23,
+    "win_rate_pct": 52.17391304347826,
+    "fees_paid": 7.179091981983121,
+    "liquidations": 0,
+    "segments": [
+     55.81,
+     0.75,
+     96.21,
+     -31.03
+    ],
+    "score": 0.3190675,
+    "stress2x_net_pct": 100.71033956410864,
+    "entry": {
+     "signals": 43,
+     "filled": 23,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 23,
+     "filled_timeout": 0,
+     "missed": 20,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.5348837209302325,
+     "avg_improvement_bps": 192.0727942531073,
+     "avg_wait_sub_bars": 1.6956521739130435,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 351.6372843072009,
+    "profit_factor": 1.7488006975917176,
+    "max_dd_pct": -54.01892371951516,
+    "sharpe": 0.7668,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 13.915615371888453,
+    "liquidations": 0,
+    "segments": [
+     1.03,
+     -5.37,
+     122.38,
+     112.44
+    ],
+    "score": -0.42489999999999994,
+    "stress2x_net_pct": 307.73463789013897,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 19,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -44.713122656651855,
+     "avg_wait_sub_bars": 2.7777777777777777,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 287.66719756743646,
+    "profit_factor": 1.4270208946014733,
+    "max_dd_pct": -43.658172626792805,
+    "sharpe": 0.7743,
+    "trades": 27,
+    "win_rate_pct": 59.25925925925925,
+    "fees_paid": 12.63526585837297,
+    "liquidations": 0,
+    "segments": [
+     56.45,
+     25.46,
+     144.72,
+     -19.29
+    ],
+    "score": 0.5226525,
+    "stress2x_net_pct": 263.31070145150386,
+    "entry": {
+     "signals": 43,
+     "filled": 27,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 27,
+     "filled_timeout": 0,
+     "missed": 13,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.627906976744186,
+     "avg_improvement_bps": 188.19064178076005,
+     "avg_wait_sub_bars": 2.3333333333333335,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 534.9885090664669,
+    "profit_factor": 1.403504938069647,
+    "max_dd_pct": -56.80461894852251,
+    "sharpe": 0.8703,
+    "trades": 35,
+    "win_rate_pct": 54.285714285714285,
+    "fees_paid": 30.637843744584817,
+    "liquidations": 0,
+    "segments": [
+     67.86,
+     66.87,
+     173.29,
+     -17.05
+    ],
+    "score": -0.347275,
+    "stress2x_net_pct": 476.3408066859764,
+    "entry": {
+     "signals": 37,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 22,
+     "filled_timeout": 13,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9459459459459459,
+     "avg_improvement_bps": -19.697136896492328,
+     "avg_wait_sub_bars": 4.428571428571429,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 129.91977794410207,
+    "profit_factor": 1.232536144847857,
+    "max_dd_pct": -50.46169582233047,
+    "sharpe": 0.5861,
+    "trades": 29,
+    "win_rate_pct": 55.172413793103445,
+    "fees_paid": 9.744529207526295,
+    "liquidations": 0,
+    "segments": [
+     56.45,
+     -15.37,
+     144.72,
+     -29.04
+    ],
+    "score": -0.7167183333333333,
+    "stress2x_net_pct": 113.98965932129784,
+    "entry": {
+     "signals": 43,
+     "filled": 29,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 29,
+     "filled_timeout": 0,
+     "missed": 10,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.6744186046511628,
+     "avg_improvement_bps": 186.35023177806428,
+     "avg_wait_sub_bars": 3.0689655172413794,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m0.5-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 712.0852856955113,
+    "profit_factor": 1.3434299468542839,
+    "max_dd_pct": -57.153425082267816,
+    "sharpe": 0.9344,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 41.31445419102881,
+    "liquidations": 0,
+    "segments": [
+     209.27,
+     31.35,
+     167.99,
+     -25.41
+    ],
+    "score": -0.2992,
+    "stress2x_net_pct": 638.1299894918923,
+    "entry": {
+     "signals": 39,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 26,
+     "filled_timeout": 10,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9230769230769231,
+     "avg_improvement_bps": 28.677022527562585,
+     "avg_wait_sub_bars": 6.666666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -25.75398391641956,
+    "profit_factor": 0.6099386452597643,
+    "max_dd_pct": -43.44587395892687,
+    "sharpe": 0.0044,
+    "trades": 10,
+    "win_rate_pct": 50.0,
+    "fees_paid": 1.4580030767287309,
+    "liquidations": 0,
+    "segments": [
+     1.14,
+     3.3,
+     -11.19,
+     -19.99
+    ],
+    "score": 0.0007333333333333333,
+    "stress2x_net_pct": -27.64999510443107,
+    "entry": {
+     "signals": 46,
+     "filled": 10,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 10,
+     "filled_timeout": 0,
+     "missed": 36,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.21739130434782608,
+     "avg_improvement_bps": 408.81416593214834,
+     "avg_wait_sub_bars": 1.8,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 4,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 291.356601089322,
+    "profit_factor": 1.6170701578141287,
+    "max_dd_pct": -48.99123706295618,
+    "sharpe": 0.7261,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 17.771423635731683,
+    "liquidations": 0,
+    "segments": [
+     10.27,
+     -2.98,
+     146.94,
+     48.14
+    ],
+    "score": 0.544575,
+    "stress2x_net_pct": 247.4474481158964,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 8,
+     "filled_timeout": 29,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -46.72544737472362,
+     "avg_wait_sub_bars": 3.5675675675675675,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -45.91585452804069,
+    "profit_factor": 0.47190083735184996,
+    "max_dd_pct": -66.71721617026854,
+    "sharpe": -0.0874,
+    "trades": 15,
+    "win_rate_pct": 46.666666666666664,
+    "fees_paid": 2.007216310494802,
+    "liquidations": 0,
+    "segments": [
+     1.02,
+     3.3,
+     -11.19,
+     -41.65
+    ],
+    "score": -1.5874000000000001,
+    "stress2x_net_pct": -47.97672417117257,
+    "entry": {
+     "signals": 44,
+     "filled": 15,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 15,
+     "filled_timeout": 0,
+     "missed": 26,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.3409090909090909,
+     "avg_improvement_bps": 414.8534316515404,
+     "avg_wait_sub_bars": 3.8,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 8,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 278.3798542676131,
+    "profit_factor": 1.2119583926973259,
+    "max_dd_pct": -64.12790385217217,
+    "sharpe": 0.722,
+    "trades": 36,
+    "win_rate_pct": 52.77777777777778,
+    "fees_paid": 29.21145240445381,
+    "liquidations": 0,
+    "segments": [
+     47.32,
+     71.0,
+     203.29,
+     -50.48
+    ],
+    "score": -0.4585,
+    "stress2x_net_pct": 237.67146169170493,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 12,
+     "filled_timeout": 24,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -60.48248011957979,
+     "avg_wait_sub_bars": 6.694444444444445,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -66.91433660612147,
+    "profit_factor": 0.3254984115029837,
+    "max_dd_pct": -79.63944936187183,
+    "sharpe": -0.2976,
+    "trades": 17,
+    "win_rate_pct": 41.17647058823529,
+    "fees_paid": 2.0440173400746855,
+    "liquidations": 0,
+    "segments": [
+     1.02,
+     3.3,
+     -19.79,
+     -60.47
+    ],
+    "score": -1.7309333333333332,
+    "stress2x_net_pct": -68.39049166486386,
+    "entry": {
+     "signals": 44,
+     "filled": 17,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 17,
+     "filled_timeout": 0,
+     "missed": 23,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.38636363636363635,
+     "avg_improvement_bps": 414.5257355685835,
+     "avg_wait_sub_bars": 5.0588235294117645,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-1h-m1.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "1h",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 405.3561343139576,
+    "profit_factor": 1.1900750925708925,
+    "max_dd_pct": -65.56649799679744,
+    "sharpe": 0.8035,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 44.15570568177231,
+    "liquidations": 0,
+    "segments": [
+     265.08,
+     34.62,
+     138.6,
+     -56.91
+    ],
+    "score": -0.39737500000000003,
+    "stress2x_net_pct": 351.4430482533948,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 15,
+     "filled_timeout": 22,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 4,
+     "mode": "ltf_limit",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -12.982368600882698,
+     "avg_wait_sub_bars": 11.27027027027027,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 659.7644190104248,
+    "profit_factor": 1.7253303082257356,
+    "max_dd_pct": -49.47156360021597,
+    "sharpe": 0.9848,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 21.10589108197697,
+    "liquidations": 0,
+    "segments": [
+     1.45,
+     137.28,
+     81.86,
+     73.55
+    ],
+    "score": 0.9848,
+    "stress2x_net_pct": 598.8205440496602,
+    "entry": {
+     "signals": 39,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 3,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9230769230769231,
+     "avg_improvement_bps": 0.9261068166651305,
+     "avg_wait_sub_bars": 1.0555555555555556,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 721.0255426131916,
+    "profit_factor": 1.7516922239352992,
+    "max_dd_pct": -53.26276789483878,
+    "sharpe": 0.9464,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 22.79150864036704,
+    "liquidations": 0,
+    "segments": [
+     0.81,
+     137.28,
+     97.78,
+     73.55
+    ],
+    "score": -0.05359999999999998,
+    "stress2x_net_pct": 652.403109959433,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 33,
+     "filled_timeout": 3,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -33.63357121406564,
+     "avg_wait_sub_bars": 2.3055555555555554,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 773.3497168815479,
+    "profit_factor": 1.7396284919126503,
+    "max_dd_pct": -49.47156360021598,
+    "sharpe": 1.0242,
+    "trades": 37,
+    "win_rate_pct": 67.56756756756756,
+    "fees_paid": 24.408787015945023,
+    "liquidations": 0,
+    "segments": [
+     16.61,
+     137.28,
+     81.86,
+     73.55
+    ],
+    "score": 1.0242,
+    "stress2x_net_pct": 701.5123640351825,
+    "entry": {
+     "signals": 39,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 37,
+     "filled_timeout": 0,
+     "missed": 2,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9487179487179487,
+     "avg_improvement_bps": 1.4499286264876667,
+     "avg_wait_sub_bars": 1.5135135135135136,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 817.3152921998619,
+    "profit_factor": 1.7588086224552861,
+    "max_dd_pct": -53.48964799035119,
+    "sharpe": 0.9769,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 25.455821664268328,
+    "liquidations": 0,
+    "segments": [
+     14.5,
+     137.28,
+     94.54,
+     73.55
+    ],
+    "score": -0.02310000000000001,
+    "stress2x_net_pct": 742.0376975517186,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 2,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -17.617412683890425,
+     "avg_wait_sub_bars": 3.25,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 2069.035796775887,
+    "profit_factor": 1.8395560966943814,
+    "max_dd_pct": -49.471563600215966,
+    "sharpe": 1.2329,
+    "trades": 36,
+    "win_rate_pct": 69.44444444444444,
+    "fees_paid": 58.6806514458324,
+    "liquidations": 0,
+    "segments": [
+     159.27,
+     137.28,
+     103.15,
+     73.55
+    ],
+    "score": 1.2329,
+    "stress2x_net_pct": 1897.7740879105506,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.335296841656301,
+     "avg_wait_sub_bars": 3.888888888888889,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 2069.035796775887,
+    "profit_factor": 1.8395560966943814,
+    "max_dd_pct": -49.471563600215966,
+    "sharpe": 1.2329,
+    "trades": 36,
+    "win_rate_pct": 69.44444444444444,
+    "fees_paid": 58.6806514458324,
+    "liquidations": 0,
+    "segments": [
+     159.27,
+     137.28,
+     103.15,
+     73.55
+    ],
+    "score": 1.2329,
+    "stress2x_net_pct": 1897.7740879105506,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 36,
+     "filled_timeout": 0,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": 1.335296841656301,
+     "avg_wait_sub_bars": 3.888888888888889,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 277.38232274373615,
+    "profit_factor": 1.6138536045987544,
+    "max_dd_pct": -48.43966254470245,
+    "sharpe": 0.7525,
+    "trades": 34,
+    "win_rate_pct": 61.76470588235294,
+    "fees_paid": 10.443520199502148,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     53.37,
+     92.09,
+     81.9
+    ],
+    "score": 0.564375,
+    "stress2x_net_pct": 247.97218275438394,
+    "entry": {
+     "signals": 41,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 7,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8292682926829268,
+     "avg_improvement_bps": 42.90928866482744,
+     "avg_wait_sub_bars": 1.9705882352941178,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 198.35072300470648,
+    "profit_factor": 1.508593743333828,
+    "max_dd_pct": -51.128286947613056,
+    "sharpe": 0.6525,
+    "trades": 36,
+    "win_rate_pct": 61.111111111111114,
+    "fees_paid": 9.186147984763316,
+    "liquidations": 0,
+    "segments": [
+     -14.77,
+     -7.22,
+     107.42,
+     81.9
+    ],
+    "score": -0.6737500000000001,
+    "stress2x_net_pct": 171.51118140934403,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -47.374737553479115,
+     "avg_wait_sub_bars": 4.305555555555555,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 277.38232274373615,
+    "profit_factor": 1.6138536045987544,
+    "max_dd_pct": -48.43966254470245,
+    "sharpe": 0.7525,
+    "trades": 34,
+    "win_rate_pct": 61.76470588235294,
+    "fees_paid": 10.443520199502148,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     53.37,
+     92.09,
+     81.9
+    ],
+    "score": 0.564375,
+    "stress2x_net_pct": 247.97218275438394,
+    "entry": {
+     "signals": 41,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 6,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8292682926829268,
+     "avg_improvement_bps": 42.90928866482744,
+     "avg_wait_sub_bars": 1.9705882352941178,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 804.3593136337078,
+    "profit_factor": 1.8046427464471284,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 0.9869,
+    "trades": 35,
+    "win_rate_pct": 62.857142857142854,
+    "fees_paid": 25.069264056545794,
+    "liquidations": 0,
+    "segments": [
+     49.02,
+     63.52,
+     104.03,
+     81.9
+    ],
+    "score": 0.9869,
+    "stress2x_net_pct": 728.0109239510732,
+    "entry": {
+     "signals": 36,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 29,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9722222222222222,
+     "avg_improvement_bps": -38.07999748404629,
+     "avg_wait_sub_bars": 7.085714285714285,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 183.64166325177194,
+    "profit_factor": 1.4865571073575625,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 0.6549,
+    "trades": 35,
+    "win_rate_pct": 60.0,
+    "fees_paid": 8.294214653521664,
+    "liquidations": 0,
+    "segments": [
+     -29.58,
+     3.45,
+     114.04,
+     81.9
+    ],
+    "score": 0.49117500000000003,
+    "stress2x_net_pct": 160.5879920763793,
+    "entry": {
+     "signals": 40,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 35,
+     "filled_timeout": 0,
+     "missed": 4,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.875,
+     "avg_improvement_bps": 42.54328148587407,
+     "avg_wait_sub_bars": 5.0285714285714285,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.1-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.1,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 1206.863456322079,
+    "profit_factor": 1.7736009561892807,
+    "max_dd_pct": -48.43966254470246,
+    "sharpe": 1.0833,
+    "trades": 36,
+    "win_rate_pct": 66.66666666666666,
+    "fees_paid": 36.30788187712353,
+    "liquidations": 0,
+    "segments": [
+     160.39,
+     28.9,
+     114.04,
+     81.9
+    ],
+    "score": 1.0833,
+    "stress2x_net_pct": 1098.0495356001275,
+    "entry": {
+     "signals": 37,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 32,
+     "filled_timeout": 4,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.972972972972973,
+     "avg_improvement_bps": 4.310319065733584,
+     "avg_wait_sub_bars": 11.805555555555555,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 206.3816926487192,
+    "profit_factor": 1.4097246266719432,
+    "max_dd_pct": -46.05311798359274,
+    "sharpe": 0.6792,
+    "trades": 30,
+    "win_rate_pct": 56.666666666666664,
+    "fees_paid": 9.211585684555496,
+    "liquidations": 0,
+    "segments": [
+     -0.74,
+     24.12,
+     103.77,
+     22.04
+    ],
+    "score": 0.5094000000000001,
+    "stress2x_net_pct": 184.92162364575813,
+    "entry": {
+     "signals": 42,
+     "filled": 30,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 0,
+     "missed": 12,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.7142857142857143,
+     "avg_improvement_bps": 99.87243148979002,
+     "avg_wait_sub_bars": 2.8,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 279.05760762314435,
+    "profit_factor": 1.6162896510959024,
+    "max_dd_pct": -54.3182182309099,
+    "sharpe": 0.7194,
+    "trades": 36,
+    "win_rate_pct": 55.55555555555556,
+    "fees_paid": 11.875155991277829,
+    "liquidations": 0,
+    "segments": [
+     -2.99,
+     -6.55,
+     118.2,
+     91.63
+    ],
+    "score": -0.6403,
+    "stress2x_net_pct": 243.69102100775467,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 25,
+     "filled_timeout": 11,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -49.21996844493594,
+     "avg_wait_sub_bars": 6.666666666666667,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 229.5043620386809,
+    "profit_factor": 1.3416134538976434,
+    "max_dd_pct": -53.2258710319754,
+    "sharpe": 0.7031,
+    "trades": 32,
+    "win_rate_pct": 56.25,
+    "fees_paid": 11.901351665733776,
+    "liquidations": 0,
+    "segments": [
+     -0.74,
+     54.56,
+     103.77,
+     5.41
+    ],
+    "score": -0.47267500000000007,
+    "stress2x_net_pct": 204.99707770988823,
+    "entry": {
+     "signals": 42,
+     "filled": 32,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 32,
+     "filled_timeout": 0,
+     "missed": 9,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.7619047619047619,
+     "avg_improvement_bps": 98.3381282744065,
+     "avg_wait_sub_bars": 4.0,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 671.4622480396652,
+    "profit_factor": 1.4608084765198828,
+    "max_dd_pct": -58.141643419111425,
+    "sharpe": 0.9192,
+    "trades": 35,
+    "win_rate_pct": 54.285714285714285,
+    "fees_paid": 28.45408649761602,
+    "liquidations": 0,
+    "segments": [
+     65.92,
+     64.79,
+     114.63,
+     31.46
+    ],
+    "score": -0.08079999999999998,
+    "stress2x_net_pct": 604.130844043726,
+    "entry": {
+     "signals": 36,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 26,
+     "filled_timeout": 9,
+     "missed": 0,
+     "replaced": 1,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9722222222222222,
+     "avg_improvement_bps": -29.3651380572965,
+     "avg_wait_sub_bars": 11.17142857142857,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 118.42691676150972,
+    "profit_factor": 1.234132510139427,
+    "max_dd_pct": -53.2258710319754,
+    "sharpe": 0.5741,
+    "trades": 34,
+    "win_rate_pct": 52.94117647058824,
+    "fees_paid": 8.67593807498834,
+    "liquidations": 0,
+    "segments": [
+     -2.45,
+     4.25,
+     103.77,
+     5.41
+    ],
+    "score": -0.569425,
+    "stress2x_net_pct": 100.87306952216109,
+    "entry": {
+     "signals": 42,
+     "filled": 34,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 34,
+     "filled_timeout": 0,
+     "missed": 6,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.8095238095238095,
+     "avg_improvement_bps": 103.57463953835345,
+     "avg_wait_sub_bars": 6.411764705882353,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.25-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.25,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 989.6305753685773,
+    "profit_factor": 1.4493015946867653,
+    "max_dd_pct": -53.225871031975394,
+    "sharpe": 1.0074,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 39.335963209130576,
+    "liquidations": 0,
+    "segments": [
+     195.56,
+     29.9,
+     115.77,
+     31.53
+    ],
+    "score": 0.007400000000000073,
+    "stress2x_net_pct": 895.3712731228302,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 30,
+     "filled_timeout": 6,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": 37.82927706398011,
+     "avg_wait_sub_bars": 16.194444444444443,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 112.44965101051825,
+    "profit_factor": 1.276956913570454,
+    "max_dd_pct": -43.658172626792805,
+    "sharpe": 0.5549,
+    "trades": 23,
+    "win_rate_pct": 52.17391304347826,
+    "fees_paid": 7.179091981983121,
+    "liquidations": 0,
+    "segments": [
+     55.81,
+     0.75,
+     96.21,
+     -31.03
+    ],
+    "score": 0.3190675,
+    "stress2x_net_pct": 100.71033956410864,
+    "entry": {
+     "signals": 43,
+     "filled": 23,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 23,
+     "filled_timeout": 0,
+     "missed": 20,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.5348837209302325,
+     "avg_improvement_bps": 192.0727942531073,
+     "avg_wait_sub_bars": 4.695652173913044,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 351.6372843072009,
+    "profit_factor": 1.7488006975917176,
+    "max_dd_pct": -54.01892371951516,
+    "sharpe": 0.7668,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 13.915615371888453,
+    "liquidations": 0,
+    "segments": [
+     1.03,
+     -5.37,
+     122.38,
+     112.44
+    ],
+    "score": -0.42489999999999994,
+    "stress2x_net_pct": 307.73463789013897,
+    "entry": {
+     "signals": 36,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 19,
+     "filled_timeout": 17,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -44.713122656651855,
+     "avg_wait_sub_bars": 9.916666666666666,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 287.66719756743646,
+    "profit_factor": 1.4270208946014733,
+    "max_dd_pct": -43.658172626792805,
+    "sharpe": 0.7743,
+    "trades": 27,
+    "win_rate_pct": 59.25925925925925,
+    "fees_paid": 12.63526585837297,
+    "liquidations": 0,
+    "segments": [
+     56.45,
+     25.46,
+     144.72,
+     -19.29
+    ],
+    "score": 0.5226525,
+    "stress2x_net_pct": 263.31070145150386,
+    "entry": {
+     "signals": 43,
+     "filled": 27,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 27,
+     "filled_timeout": 0,
+     "missed": 13,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.627906976744186,
+     "avg_improvement_bps": 188.19064178076005,
+     "avg_wait_sub_bars": 7.222222222222222,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 534.9885090664669,
+    "profit_factor": 1.403504938069647,
+    "max_dd_pct": -56.80461894852251,
+    "sharpe": 0.8703,
+    "trades": 35,
+    "win_rate_pct": 54.285714285714285,
+    "fees_paid": 30.637843744584817,
+    "liquidations": 0,
+    "segments": [
+     67.86,
+     66.87,
+     173.29,
+     -17.05
+    ],
+    "score": -0.347275,
+    "stress2x_net_pct": 476.3408066859764,
+    "entry": {
+     "signals": 37,
+     "filled": 35,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 22,
+     "filled_timeout": 13,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9459459459459459,
+     "avg_improvement_bps": -19.697136896492328,
+     "avg_wait_sub_bars": 16.285714285714285,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": 129.91977794410207,
+    "profit_factor": 1.232536144847857,
+    "max_dd_pct": -50.46169582233047,
+    "sharpe": 0.5861,
+    "trades": 29,
+    "win_rate_pct": 55.172413793103445,
+    "fees_paid": 9.744529207526295,
+    "liquidations": 0,
+    "segments": [
+     56.45,
+     -15.37,
+     144.72,
+     -29.04
+    ],
+    "score": -0.7167183333333333,
+    "stress2x_net_pct": 113.98965932129784,
+    "entry": {
+     "signals": 43,
+     "filled": 29,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 29,
+     "filled_timeout": 0,
+     "missed": 10,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.6744186046511628,
+     "avg_improvement_bps": 186.35023177806428,
+     "avg_wait_sub_bars": 10.172413793103448,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m0.5-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 0.5,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 712.0852856955113,
+    "profit_factor": 1.3434299468542839,
+    "max_dd_pct": -57.153425082267816,
+    "sharpe": 0.9344,
+    "trades": 36,
+    "win_rate_pct": 58.333333333333336,
+    "fees_paid": 41.31445419102881,
+    "liquidations": 0,
+    "segments": [
+     209.27,
+     31.35,
+     167.99,
+     -25.41
+    ],
+    "score": -0.2992,
+    "stress2x_net_pct": 638.1299894918923,
+    "entry": {
+     "signals": 39,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 26,
+     "filled_timeout": 10,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9230769230769231,
+     "avg_improvement_bps": 28.677022527562585,
+     "avg_wait_sub_bars": 25.055555555555557,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w4h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -25.75398391641956,
+    "profit_factor": 0.6099386452597643,
+    "max_dd_pct": -43.44587395892687,
+    "sharpe": 0.0044,
+    "trades": 10,
+    "win_rate_pct": 50.0,
+    "fees_paid": 1.4580030767287309,
+    "liquidations": 0,
+    "segments": [
+     1.14,
+     3.3,
+     -11.19,
+     -19.99
+    ],
+    "score": 0.0007333333333333333,
+    "stress2x_net_pct": -27.64999510443107,
+    "entry": {
+     "signals": 46,
+     "filled": 10,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 10,
+     "filled_timeout": 0,
+     "missed": 36,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.21739130434782608,
+     "avg_improvement_bps": 408.81416593214834,
+     "avg_wait_sub_bars": 5.6,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w4h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 16,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 291.356601089322,
+    "profit_factor": 1.6170701578141287,
+    "max_dd_pct": -48.99123706295618,
+    "sharpe": 0.7261,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 17.771423635731683,
+    "liquidations": 0,
+    "segments": [
+     10.27,
+     -2.98,
+     146.94,
+     48.14
+    ],
+    "score": 0.544575,
+    "stress2x_net_pct": 247.4474481158964,
+    "entry": {
+     "signals": 37,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 8,
+     "filled_timeout": 29,
+     "missed": 0,
+     "replaced": 0,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 1.0,
+     "avg_improvement_bps": -46.72544737472362,
+     "avg_wait_sub_bars": 13.891891891891891,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w8h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -45.91585452804069,
+    "profit_factor": 0.47190083735184996,
+    "max_dd_pct": -66.71721617026854,
+    "sharpe": -0.0874,
+    "trades": 15,
+    "win_rate_pct": 46.666666666666664,
+    "fees_paid": 2.007216310494802,
+    "liquidations": 0,
+    "segments": [
+     1.02,
+     3.3,
+     -11.19,
+     -41.65
+    ],
+    "score": -1.5874000000000001,
+    "stress2x_net_pct": -47.97672417117257,
+    "entry": {
+     "signals": 44,
+     "filled": 15,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 15,
+     "filled_timeout": 0,
+     "missed": 26,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.3409090909090909,
+     "avg_improvement_bps": 414.8534316515404,
+     "avg_wait_sub_bars": 13.733333333333333,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w8h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 32,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 278.3798542676131,
+    "profit_factor": 1.2119583926973259,
+    "max_dd_pct": -64.12790385217217,
+    "sharpe": 0.722,
+    "trades": 36,
+    "win_rate_pct": 52.77777777777778,
+    "fees_paid": 29.21145240445381,
+    "liquidations": 0,
+    "segments": [
+     47.32,
+     71.0,
+     203.29,
+     -50.48
+    ],
+    "score": -0.4585,
+    "stress2x_net_pct": 237.67146169170493,
+    "entry": {
+     "signals": 38,
+     "filled": 36,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 12,
+     "filled_timeout": 24,
+     "missed": 0,
+     "replaced": 2,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.9473684210526315,
+     "avg_improvement_bps": -60.48248011957979,
+     "avg_wait_sub_bars": 26.22222222222222,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w16h-skip",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "skip"
+   },
+   "dev": {
+    "net_return_pct": -66.91433660612147,
+    "profit_factor": 0.3254984115029837,
+    "max_dd_pct": -79.63944936187183,
+    "sharpe": -0.2976,
+    "trades": 17,
+    "win_rate_pct": 41.17647058823529,
+    "fees_paid": 2.0440173400746855,
+    "liquidations": 0,
+    "segments": [
+     1.02,
+     3.3,
+     -19.79,
+     -60.47
+    ],
+    "score": -1.7309333333333332,
+    "stress2x_net_pct": -68.39049166486386,
+    "entry": {
+     "signals": 44,
+     "filled": 17,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 17,
+     "filled_timeout": 0,
+     "missed": 23,
+     "replaced": 4,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.38636363636363635,
+     "avg_improvement_bps": 414.5257355685835,
+     "avg_wait_sub_bars": 18.647058823529413,
+     "pending_at_end": false
+    }
+   }
+  },
+  {
+   "label": "lim-15m-m1.0-w16h-market",
+   "mtf": {
+    "entry_mode": "ltf_limit",
+    "entry_tf": "15m",
+    "entry_atr_mult": 1.0,
+    "entry_wait_bars": 64,
+    "entry_timeout": "market"
+   },
+   "dev": {
+    "net_return_pct": 405.3561343139576,
+    "profit_factor": 1.1900750925708925,
+    "max_dd_pct": -65.56649799679744,
+    "sharpe": 0.8035,
+    "trades": 37,
+    "win_rate_pct": 62.16216216216216,
+    "fees_paid": 44.15570568177231,
+    "liquidations": 0,
+    "segments": [
+     265.08,
+     34.62,
+     138.6,
+     -56.91
+    ],
+    "score": -0.39737500000000003,
+    "stress2x_net_pct": 351.4430482533948,
+    "entry": {
+     "signals": 40,
+     "filled": 37,
+     "filled_close": 0,
+     "filled_pullback": 0,
+     "filled_limit": 15,
+     "filled_timeout": 22,
+     "missed": 0,
+     "replaced": 3,
+     "no_atr": 0,
+     "ltf_stopped": 0,
+     "tick_size": 0.01,
+     "sub_bars_per_bar": 16,
+     "mode": "ltf_limit",
+     "fill_rate": 0.925,
+     "avg_improvement_bps": -12.982368600882698,
+     "avg_wait_sub_bars": 44.4054054054054,
+     "pending_at_end": false
+    }
+   }
+  }
+ ],
+ "holdout_start": "2025-08-26T12:00:00Z"
+}
