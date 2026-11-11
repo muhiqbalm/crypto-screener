@@ -215,6 +215,7 @@ class Scheduler:
                 arena_tick(conn, self.s, now)
             except Exception:  # noqa: BLE001
                 log.exception("arena snapshot scheduling failed")
+            try:
                 from .livecheck.schedule import tick as livecheck_tick
                 livecheck_tick(conn, self.s, now)
             except Exception:  # noqa: BLE001
