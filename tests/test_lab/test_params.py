@@ -45,7 +45,7 @@ def test_defaults_equal_live_eth_4h_preset():
         assert k in d, k
         assert d[k] == v, (k, d[k], v)
     assert d["warmup_bars"] == eng["warmup_period"]
-    strategy_keys = set(d) - T.ENGINE_KEYS
+    strategy_keys = set(d) - T.ENGINE_KEYS - T.MTF_KEYS
     assert strategy_keys == set(strat) - {"initial_capital", "base_timeframe"}
 
 

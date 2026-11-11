@@ -52,6 +52,13 @@ G_DIR, G_TPSL, G_TPC, G_EXIT, G_TRAIL, G_REGIME = (
 G_ENTRY, G_CHOP, G_SHORT, G_BE, G_OB, G_RISK, G_ENGINE = (
     "Entry filters", "Anti-sideways", "Short filters", "Breakeven lock",
     "Order blocks", "Risk & sizing", "Engine")
+G_MTF = "Entry timing (MTF)"
+
+# MTF entry timing (research only). "bar_close" = the live behaviour: fill at the
+# close of the signal bar. Other modes keep the signal / trend / exits on the run's
+# timeframe and time the entry on a LOWER timeframe (see engine strategy/mtf_entry.py).
+ENTRY_MODES = ["bar_close", "ltf_close", "ltf_pullback", "ltf_limit"]
+ENTRY_TFS = ["15m", "30m", "1h"]
 
 PARAMS: list[dict] = [
     _b("enable_long", "Enable long", True, G_DIR),
@@ -175,13 +182,43 @@ PARAMS: list[dict] = [
     _b("use_cooldown", "Cooldown after loss", True, G_RISK),
     _i("cooldown_bars", "Cooldown bars", 3, 0, 50, G_RISK, tunable=True),
 
+    _p("entry_mode", "Mode entry", "choice", "bar_close", group=G_MTF, choices=ENTRY_MODES),
+    _p("entry_tf", "Timeframe entry", "choice", "1h", group=G_MTF, choices=ENTRY_TFS),
+    _i("entry_wait_bars", "Maks. tunggu (bar TF entry)", 4, 1, 96, G_MTF),
+    _p("entry_band", "Patokan pullback", "choice", "atr", group=G_MTF, choices=["atr", "ema"]),
+    _f("entry_atr_mult", "Jarak pullback/limit (x ATR)", 0.5, 0.0, 3.0, 0.05, G_MTF),
+    _i("entry_atr_len", "Panjang ATR entry", 14, 2, 100, G_MTF),
+    _i("entry_ema_len", "EMA TF entry", 20, 2, 200, G_MTF),
+    _p("entry_timeout", "Jika tidak terisi", "choice", "skip", group=G_MTF, choices=["skip", "market"]),
+    _i("limit_through_ticks", "Limit tembus (tick)", 1, 1, 20, G_MTF),
+    _f("tick_size", "Tick size (0 = otomatis)", 0.0, 0.0, 100.0, 0.0001, G_MTF),
+    _f("maker_fee_pct", "Fee maker % (limit)", 0.02, 0.0, 0.2, 0.005, G_MTF),
+    _b("ltf_stop_check", "Cek SL di TF entry setelah fill", True, G_MTF),
+
     _i("warmup_bars", "Warm-up bars", 300, 100, 1000, G_ENGINE, step=50),
     _f("maintenance_margin_pct", "Maintenance margin %", 0.5, 0.1, 5.0, 0.05, G_ENGINE),
 ]
 
 PARAM_INDEX = {p["key"]: p for p in PARAMS}
 # Keys that live on the engine's EngineConfig rather than StrategyConfig.
-ENGINE_KEYS = {"warmup_bars", "maintenance_margin_pct"}
+ENGINE_KEYS = {"warmup_bars", "maintenance_margin_pct", "maker_fee_pct"}
+
+MTF_KEYS = {p["key"] for p in PARAMS if p["group"] == G_MTF}
+
+_TF_SEC = {"15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400}
+
+
+def is_mtf(p: dict) -> bool:
+    return p.get("entry_mode", "bar_close") != "bar_close"
+
+
+def validate_for_timeframe(p: dict, tf: str) -> None:
+    """Cross-check params against the run's (signal) timeframe."""
+    if is_mtf(p):
+        e = p["entry_tf"]
+        if tf not in _TF_SEC or _TF_SEC[e] >= _TF_SEC[tf] or _TF_SEC[tf] % _TF_SEC[e]:
+            raise ParamError(f"entry_tf {e} must be a lower timeframe that divides {tf} "
+                             f"(entry_mode {p['entry_mode']})")
 
 
 def defaults() -> dict[str, Any]:

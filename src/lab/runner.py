@@ -130,12 +130,20 @@ def execute_run(conn, job: dict) -> None:
     ohlcv, fund = dc.ensure(symbol, tf, funding=bool(costs.get("funding", True)), offline=offline,
                             progress=lambda d: prog(d.get("stage", "data"), d.get("done", 0), d.get("total", 0)))
     cfg, ecfg = ea.build_configs(params, tf, costs)
+    if ea.T.is_mtf(ea.T.validate_params(params)):
+        # MTF entry timing: embed the entry-timeframe sub-bars in the signal-TF rows
+        etf = cfg.entry_tf
+        prog(f"data {etf}", force=True)
+        ltf, _ = dc.ensure(symbol, etf, funding=False, offline=offline)
+        ohlcv = ea.attach_entry_bars(ohlcv, ltf, tf, etf)
     warm = ecfg.warmup_period
     df, eval_start, eval_end, _ = ea.prepare_frame(
         ohlcv, fund, tf, run["start_date"], run["end_date"], warm, bool(costs.get("funding", True)))
     data_info = {"timeframe": tf, "eval_start": honesty.iso(eval_start), "eval_end": honesty.iso(eval_end),
                  "bars": int(len(df) - warm),
-                 "warmup_bars": warm, "funding_attached": "funding_rate" in df.columns}
+                 "warmup_bars": warm, "funding_attached": "funding_rate" in df.columns,
+                 **({"entry_tf": cfg.entry_tf, "entry_mode": cfg.entry_mode}
+                    if getattr(cfg, "entry_mode", "bar_close") != "bar_close" else {})}
     out_dir = artifacts_dir(run_id)
 
     if mode == "backtest":
@@ -215,8 +223,7 @@ def execute_run(conn, job: dict) -> None:
     touches = honesty.touch_holdout(conn, run["template_id"], symbol, tf)
     m_oos = ea.metrics(res_oos)
     mult = honesty.THRESHOLDS["cost_stress_mult"]
-    stress_ecfg = replace(ecfg, warmup_period=pre, commission_pct=ecfg.commission_pct * mult,
-                          slippage_pct=ecfg.slippage_pct * mult, slippage_bps=None)
+    stress_ecfg = ea.scaled_costs(ecfg, mult, warmup_period=pre)
     res_stress, _ = ea.run(hold_df, cfg, stress_ecfg, indicators=ind_oos)
     m_stress = ea.metrics(res_stress)
     cost_oos = ea.cost_profile(hold_df, pre, cfg, ecfg, m_oos, indicators=ind_oos)

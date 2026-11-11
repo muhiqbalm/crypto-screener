@@ -60,7 +60,10 @@ def _validate(t, timeframe: str, params: dict) -> dict:
     if timeframe not in t.TIMEFRAMES:
         raise HTTPException(422, f"timeframe must be one of {t.TIMEFRAMES}")
     try:
-        return t.validate_params(params)
+        p = t.validate_params(params)
+        if hasattr(t, "validate_for_timeframe"):
+            t.validate_for_timeframe(p, timeframe)
+        return p
     except ParamError as e:
         raise HTTPException(422, f"invalid params: {e}")
 
@@ -625,6 +628,8 @@ def _watch_out(conn, w) -> dict:
 def _insert_watch(conn, template_id: str, symbol: str, timeframe: str, params: dict, costs: dict) -> int:
     t = _template_or_422(template_id)
     params = _validate(t, timeframe, params)
+    if hasattr(t, "is_mtf") and t.is_mtf(params):
+        raise HTTPException(422, "Mode entry MTF hanya untuk riset (backtest/validasi), belum bisa dipantau live")
     n_active = conn.execute("SELECT COUNT(*) FROM watches WHERE active=1").fetchone()[0]
     if n_active >= get_lab_settings().watch_max_active:
         raise HTTPException(422, f"too many active watches ({n_active}); delete one first")
