@@ -24,6 +24,7 @@ class Panel:
     present: np.ndarray       # T x N bool, a real bar exists at t (not forward-filled)
     funding: np.ndarray       # T x N, sum of funding rates settled in (open_t, close_t]
     first_idx: np.ndarray     # N, first bar index with data (T if none)
+    quote_volume: Optional[np.ndarray] = None  # T x N quote (USDT) volume per bar, NaN where no real bar
 
     @property
     def n(self) -> int:
@@ -42,11 +43,20 @@ def build_panel(ohlcv: dict, funding: Optional[dict] = None, end=None) -> Panel:
     syms = sorted(s for s, df in ohlcv.items() if df is not None and len(df))
     if not syms:
         raise ValueError("no price data for the universe")
-    series = {}
+    series, qvol = {}, {}
     for s in syms:
         df = ohlcv[s]
-        ts = pd.to_datetime(df["timestamp"], utc=True)
-        series[s] = pd.Series(df["close"].astype(float).to_numpy(), index=pd.DatetimeIndex(ts)).groupby(level=0).last()
+        ts = pd.DatetimeIndex(pd.to_datetime(df["timestamp"], utc=True))
+        px = df["close"].astype(float).to_numpy()
+        series[s] = pd.Series(px, index=ts).groupby(level=0).last()
+        if "quote_volume" in df.columns:
+            qv = df["quote_volume"].astype(float).to_numpy()
+        elif "volume" in df.columns:  # base volume x close is a close enough proxy for ranking
+            qv = df["volume"].astype(float).to_numpy() * px
+        else:
+            qv = None
+        if qv is not None:
+            qvol[s] = pd.Series(qv, index=ts).groupby(level=0).last()
     lo = min(x.index[0] for x in series.values())
     hi = max(x.index[-1] for x in series.values())
     if end is not None:
@@ -55,8 +65,11 @@ def build_panel(ohlcv: dict, funding: Optional[dict] = None, end=None) -> Panel:
     grid = pd.date_range(lo.floor("4h"), hi, freq="4h", tz="UTC")
     T, N = len(grid), len(syms)
     raw = np.full((T, N), np.nan)
+    qv = np.full((T, N), np.nan) if qvol else None
     for j, s in enumerate(syms):
         raw[:, j] = series[s].reindex(grid).to_numpy(dtype=float)
+        if qv is not None and s in qvol:
+            qv[:, j] = qvol[s].reindex(grid).to_numpy(dtype=float)
     present = np.isfinite(raw)
     close = pd.DataFrame(raw).ffill().to_numpy()
     first_idx = np.array([int(np.argmax(present[:, j])) if present[:, j].any() else T for j in range(N)])
@@ -73,14 +86,24 @@ def build_panel(ohlcv: dict, funding: Optional[dict] = None, end=None) -> Panel:
             rates = f["funding_rate"].astype(float).to_numpy()
             ok = (idx >= 0) & (idx < T) & np.isfinite(rates)
             np.add.at(fund[:, j], idx[ok], rates[ok])
-    return Panel(ts=grid, symbols=syms, close=close, present=present, funding=fund, first_idx=first_idx)
+    return Panel(ts=grid, symbols=syms, close=close, present=present, funding=fund, first_idx=first_idx,
+                 quote_volume=qv)
 
 
 def slice_panel(p: Panel, end_excl: int) -> Panel:
     """Bars [0, end_excl) only — used to make the development segment physically holdout-free."""
     return Panel(ts=p.ts[:end_excl], symbols=list(p.symbols), close=p.close[:end_excl],
                  present=p.present[:end_excl], funding=p.funding[:end_excl],
-                 first_idx=np.minimum(p.first_idx, end_excl))
+                 first_idx=np.minimum(p.first_idx, end_excl),
+                 quote_volume=None if p.quote_volume is None else p.quote_volume[:end_excl])
+
+
+def subset_panel(p: Panel, idx) -> Panel:
+    """Columns `idx` only (same bars)."""
+    idx = list(idx)
+    return Panel(ts=p.ts, symbols=[p.symbols[i] for i in idx], close=p.close[:, idx], present=p.present[:, idx],
+                 funding=p.funding[:, idx], first_idx=p.first_idx[idx],
+                 quote_volume=None if p.quote_volume is None else p.quote_volume[:, idx])
 
 
 @dataclass
@@ -94,6 +117,27 @@ class Features:
     eligible: np.ndarray
     logret: np.ndarray      # bar log returns (NaN where undefined)
     ret: np.ndarray         # bar simple returns (0 where undefined)
+    in_universe: Optional[np.ndarray] = None  # universe_mode=liquidity: T x N top-K by trailing quote volume
+
+
+def liquidity_universe(panel: Panel, base_ok: np.ndarray, days: int, k: int) -> np.ndarray:
+    """T x N bool: at each bar, the k coins with the largest trailing `days` quote volume among the
+    coins in `base_ok` (history/data requirements already met). Causal: uses bars <= t only.
+    A coin needs >= 80% of the window with real bars to be ranked at all."""
+    import pandas as pd
+    T, N = base_ok.shape
+    if panel.quote_volume is None:
+        raise ValueError("universe_mode=liquidity needs volume data in the panel")
+    w = int(days) * BARS_PER_DAY
+    qv = pd.DataFrame(np.where(panel.present, np.nan_to_num(panel.quote_volume, nan=0.0), np.nan))
+    liq = qv.rolling(w, min_periods=max(1, int(w * 0.8))).sum().to_numpy()
+    traded_now = np.nan_to_num(panel.quote_volume, nan=0.0) > 0  # zero-volume (halted/settled) bars don't count
+    ok = base_ok & traded_now & np.isfinite(liq) & (liq > 0)
+    key = np.where(ok, liq, -np.inf)
+    order = np.argsort(-key, axis=1, kind="stable")
+    rank = np.empty_like(order)
+    rank[np.arange(T)[:, None], order] = np.arange(N)[None, :]
+    return ok & (rank < int(k))
 
 
 def compute_features(panel: Panel, p: dict) -> Features:
@@ -124,10 +168,15 @@ def compute_features(panel: Panel, p: dict) -> Features:
     age = np.arange(T)[:, None] - panel.first_idx[None, :]
     eligible = ((age >= int(p["min_history_days"]) * BARS_PER_DAY) & np.isfinite(score) & np.isfinite(vol_ann)
                 & (vol_ann > 0) & panel.present)
+    in_univ = None
+    if p.get("universe_mode", "static") == "liquidity":
+        in_univ = liquidity_universe(panel, eligible, int(p.get("liquidity_days", 30)),
+                                     int(p.get("universe_size", 30)))
+        eligible = eligible & in_univ
     lrn = lr.to_numpy()
     ret = np.nan_to_num(np.expm1(lrn), nan=0.0, posinf=0.0, neginf=0.0)
     return Features(score=score, mom=moms, vol_ann=vol_ann, ema=ema, up=up, down=down, eligible=eligible,
-                    logret=lrn, ret=ret)
+                    logret=lrn, ret=ret, in_universe=in_univ)
 
 
 def rebalance_mask(panel: Panel, rebalance: str):

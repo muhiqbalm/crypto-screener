@@ -169,8 +169,7 @@ def subset_panel(panel: S.Panel, symbols: list[str]) -> S.Panel:
     idx = [panel.symbols.index(s) for s in symbols if s in panel.symbols]
     if not idx:
         raise ValueError("none of the watch's symbols have data")
-    return S.Panel(ts=panel.ts, symbols=[panel.symbols[i] for i in idx], close=panel.close[:, idx],
-                   present=panel.present[:, idx], funding=panel.funding[:, idx], first_idx=panel.first_idx[idx])
+    return S.subset_panel(panel, idx)
 
 
 def _targets_list(panel: S.Panel, feat: S.Features, t: int, w: np.ndarray) -> list[dict]:
