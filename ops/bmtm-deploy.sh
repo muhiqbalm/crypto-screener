@@ -63,7 +63,7 @@ health() { for _ in $(seq 1 30); do curl -fs -m 3 -o /dev/null "$1" && return 0;
 if [ "$cmd" = be ]; then
   # 2. Jaga jalur trading live.
   if ! diff -rq --exclude=__pycache__ $SRC/src/trading $BE_LIVE/src/trading >/dev/null; then
-    diff -rq --exclude=__pycache__ $SRC/src/trading $BE_LIVE/src/trading | sed 's/^/   /' | tee -a "$LOG"
+    diff -rq --exclude=__pycache__ $SRC/src/trading $BE_LIVE/src/trading | sed 's/^/   /' | tee -a "$LOG" || true
     [ $ALLOW_TRADING = 1 ] || die "src/trading berubah (jalur trading LIVE). Butuh review + --allow-trading."
     say "PERINGATAN: src/trading ikut berubah (--allow-trading)"
   fi
