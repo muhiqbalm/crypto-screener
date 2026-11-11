@@ -133,14 +133,16 @@ def execute_run(conn, job: dict) -> None:
     warm = ecfg.warmup_period
     df, eval_start, eval_end, _ = ea.prepare_frame(
         ohlcv, fund, tf, run["start_date"], run["end_date"], warm, bool(costs.get("funding", True)))
-    data_info = {"eval_start": honesty.iso(eval_start), "eval_end": honesty.iso(eval_end), "bars": int(len(df) - warm),
+    data_info = {"timeframe": tf, "eval_start": honesty.iso(eval_start), "eval_end": honesty.iso(eval_end),
+                 "bars": int(len(df) - warm),
                  "warmup_bars": warm, "funding_attached": "funding_rate" in df.columns}
     out_dir = artifacts_dir(run_id)
 
     if mode == "backtest":
         prog("backtest", force=True)
-        res, _ = ea.run(df, cfg, ecfg)
+        res, ind = ea.run(df, cfg, ecfg)
         m = ea.metrics(res)
+        m["costs"] = ea.cost_profile(df, warm, cfg, ecfg, m, indicators=ind)
         _write_json(out_dir / "equity.json", ea.equity_out(res))
         _write_json(out_dir / "trades.json", ea.trades_out(res))
         conn.execute(
@@ -217,6 +219,7 @@ def execute_run(conn, job: dict) -> None:
                           slippage_pct=ecfg.slippage_pct * mult, slippage_bps=None)
     res_stress, _ = ea.run(hold_df, cfg, stress_ecfg, indicators=ind_oos)
     m_stress = ea.metrics(res_stress)
+    cost_oos = ea.cost_profile(hold_df, pre, cfg, ecfg, m_oos, indicators=ind_oos)
 
     prog("full range + Monte Carlo", base_units + sens_units + 2, total, force=True)
     res_full, _ = ea.run(df, cfg, ecfg)
@@ -242,7 +245,7 @@ def execute_run(conn, job: dict) -> None:
                "sensitivity": {"unstable": sens["unstable"], "tested": len(sens["params"])},
                "walk_forward": wf}
     oos = {**m_oos, "start": hs, "end": honesty.iso(eval_end), "stress_net_return_pct": m_stress["net_return_pct"],
-           "stress_multiplier": mult}
+           "stress_multiplier": mult, "costs": cost_oos}
     extra = {"sensitivity": sens, "optimizer": best_info and {k: v for k, v in best_info.items()
                                                               if k != "best_params"}}
     prog("saving", total, total, force=True)

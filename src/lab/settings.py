@@ -62,6 +62,7 @@ class LabSettings:
     trading_db_path: str = ""
     bot_import_interval_s: int = 300
     watch_delay_s: int = 30
+    watch_max_active: int = 100            # hard cap on active watches (all timeframes)
     klines_cache_s: int = 30
     fast_lane: bool = True                 # one extra slot for watch_eval/universe_refresh jobs
     strength_refresh: bool = True          # universe_refresh job after every 4H close
@@ -107,6 +108,7 @@ def get_lab_settings() -> LabSettings:
         ),
         bot_import_interval_s=int(_get(env, "LAB_BOT_IMPORT_INTERVAL_S", "300")),
         watch_delay_s=int(_get(env, "LAB_WATCH_DELAY_S", "30")),
+        watch_max_active=int(_get(env, "LAB_WATCH_MAX_ACTIVE", "100")),
         klines_cache_s=max(30, int(_get(env, "LAB_KLINES_CACHE_S", "30"))),
         fast_lane=_get(env, "LAB_FAST_LANE", "1") != "0",
         strength_refresh=_get(env, "LAB_STRENGTH_REFRESH", "1") != "0",

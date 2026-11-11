@@ -119,7 +119,7 @@ def test_run_lifecycle_contract(client_for):
 
 @pytest.mark.parametrize("patch", [
     {"template_id": "nope"},
-    {"timeframe": "15m"},
+    {"timeframe": "5m"},
     {"symbol": "ETH"},
     {"params": {"long_sl_pct": 500}},
     {"params": {"unknown": 1}},

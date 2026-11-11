@@ -86,16 +86,11 @@ def _autopaper(conn, watch: dict, prev_signal: Optional[dict], state: dict) -> N
             log.warning("autopaper open skipped for watch %s: %s", watch["id"], e)
 
 
-def execute_watch(conn, job: dict) -> None:
-    import os
-    w = conn.execute("SELECT * FROM watches WHERE id=?", (job["ref_id"],)).fetchone()
-    if w is None:
-        return  # deleted meanwhile
-    w = dict(w)
+def _evaluate_one(conn, w: dict, offline: bool) -> None:
     prev = conn.execute("SELECT * FROM watch_state WHERE watch_id=?", (w["id"],)).fetchone()
     prev_signal = loads(prev["last_signal_json"]) if prev else None
     try:
-        state = evaluate(w, offline=os.environ.get("LAB_DATA_OFFLINE") == "1")
+        state = evaluate(w, offline=offline)
     except Exception as e:
         conn.execute(
             "INSERT INTO watch_state (watch_id, computed_at, error) VALUES (?, ?, ?) "
@@ -112,3 +107,29 @@ def execute_watch(conn, job: dict) -> None:
          dumps(state["last_signal"])))
     conn.commit()
     _autopaper(conn, w, prev_signal, labdb.loads(dumps(state)))
+
+
+def execute_watch(conn, job: dict) -> None:
+    """One watch (ref_id) or a batch (payload.watch_ids, same timeframe/bar).
+
+    A batch runs in one engine child: watches are grouped by symbol so each
+    symbol's cache is refreshed once (later watches find it fresh, no network),
+    and the process-wide ccxt instance rate-limits every tail fetch. One failing
+    watch records its error in watch_state and does not stop the others; the
+    job errors only when every watch in it failed."""
+    import os
+    payload = loads(job.get("payload_json"), {}) or {}
+    ids = [int(i) for i in (payload.get("watch_ids") or [job["ref_id"]])]
+    marks = ",".join("?" * len(ids))
+    rows = [dict(r) for r in conn.execute(f"SELECT * FROM watches WHERE id IN ({marks})", ids)]
+    rows.sort(key=lambda w: (w["symbol"], w["timeframe"], w["id"]))
+    offline = os.environ.get("LAB_DATA_OFFLINE") == "1"
+    errors = []
+    for w in rows:  # deleted watches are simply absent
+        try:
+            _evaluate_one(conn, w, offline)
+        except Exception as e:  # noqa: BLE001
+            log.warning("watch %s evaluation failed: %s", w["id"], e)
+            errors.append(e)
+    if errors and len(errors) == len(rows):
+        raise errors[0]

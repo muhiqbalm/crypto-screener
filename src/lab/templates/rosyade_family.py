@@ -18,10 +18,12 @@ DESCRIPTION = (
     "order-block trail, EMA cross, RSI extreme and breakeven lock. Defaults equal the "
     "live ETH 4H Rosyade preset; every parameter is adjustable."
 )
-TIMEFRAMES = ["1h", "4h", "1d"]
+TIMEFRAMES = ["15m", "30m", "1h", "4h", "1d"]
 
 # HTF choices: "same" = the run's own timeframe (live preset: 4H EMA on a 4H chart).
-HTF_CHOICES = ["same", "4h", "1d", "1w"]
+# A choice at or below the run's timeframe falls back to "same". A true higher
+# timeframe (e.g. 4h on a 15m run) is an EMA over CLOSED higher-timeframe bars.
+HTF_CHOICES = ["same", "1h", "4h", "1d", "1w"]
 
 
 def _p(key, label, type_, default, min_=None, max_=None, step=None, group="General",

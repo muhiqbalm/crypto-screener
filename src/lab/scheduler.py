@@ -1,6 +1,9 @@
 """Scheduler hooks run inside the lab worker's main loop (never in the API).
 
-  * watches: enqueue a watch_eval job ~LAB_WATCH_DELAY_S after every candle close
+  * watches: ~LAB_WATCH_DELAY_S after every candle close of a watch's own timeframe
+             (15m/30m/1h/4h/1d), ONE batched watch_eval job per (timeframe, bar) for
+             all due watches (chunks of WATCH_BATCH_MAX); a watch whose previous job
+             is still queued/running is skipped and picked up on the next tick
   * paper:   every minute, check open paper positions against closed 1m candles
              (SL/TP, engine intrabar rule), charge funding settlements, refresh marks
   * universe: one universe_refresh job per closed 4H bar (Koin Terkuat + Universal watches)
@@ -20,13 +23,14 @@ from typing import Optional
 
 from . import paper
 from . import queue as q
-from .db import dumps, utcnow
+from .data_cache import TF_SECONDS
+from .db import dumps, loads, utcnow
 from .settings import LabSettings
 
 log = logging.getLogger("lab.scheduler")
 
-TF_SECONDS = {"1h": 3600, "4h": 14400, "1d": 86400}
 PAPER_TF = "1m"
+WATCH_BATCH_MAX = 25   # watches per watch_eval job (one engine child, one data refresh per symbol)
 
 
 def _iso(epoch: float) -> str:
@@ -41,21 +45,39 @@ def last_closed_bar_open(tf: str, now: float, delay_s: int) -> Optional[str]:
     return _iso(last_close - step)
 
 
+def _busy_watch_ids(conn) -> set[int]:
+    """Watches covered by a queued/running watch_eval job (single or batched)."""
+    busy: set[int] = set()
+    for j in conn.execute("SELECT ref_id, payload_json FROM lab_jobs WHERE kind='watch_eval' "
+                          "AND status IN ('queued','running')"):
+        ids = (loads(j["payload_json"], {}) or {}).get("watch_ids")
+        if ids:
+            busy.update(int(i) for i in ids)
+        else:
+            busy.add(j["ref_id"])
+    return busy
+
+
 def schedule_watches(conn, s: LabSettings, now: Optional[float] = None) -> list[int]:
     now = now or time.time()
-    queued = []
-    for w in conn.execute("SELECT * FROM watches WHERE active=1").fetchall():
+    busy = _busy_watch_ids(conn)
+    due: dict[tuple[str, str], list[int]] = {}
+    for w in conn.execute("SELECT id, timeframe, last_bar_scheduled FROM watches WHERE active=1 ORDER BY id"):
+        if w["timeframe"] not in TF_SECONDS:
+            continue
         bar = last_closed_bar_open(w["timeframe"], now, s.watch_delay_s)
-        if w["last_bar_scheduled"] == bar:
+        if w["last_bar_scheduled"] == bar or w["id"] in busy:
             continue
-        busy = conn.execute("SELECT 1 FROM lab_jobs WHERE kind='watch_eval' AND ref_id=? AND status IN "
-                            "('queued','running')", (w["id"],)).fetchone()
-        if busy:
-            continue
-        jid = q.enqueue(conn, "watch_eval", w["id"], {"bar": bar}, priority=10)
-        conn.execute("UPDATE watches SET last_bar_scheduled=? WHERE id=?", (bar, w["id"]))
-        conn.commit()
-        queued.append(jid)
+        due.setdefault((w["timeframe"], bar), []).append(w["id"])
+    queued = []
+    for (tf, bar), ids in due.items():
+        for k in range(0, len(ids), WATCH_BATCH_MAX):
+            chunk = ids[k:k + WATCH_BATCH_MAX]
+            jid = q.enqueue(conn, "watch_eval", chunk[0], {"bar": bar, "timeframe": tf, "watch_ids": chunk},
+                            priority=10)
+            conn.executemany("UPDATE watches SET last_bar_scheduled=? WHERE id=?", [(bar, i) for i in chunk])
+            conn.commit()
+            queued.append(jid)
     return queued
 
 
