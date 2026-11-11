@@ -109,7 +109,9 @@ def open_position(conn, *, account_id: int, symbol: str, side: str, price: float
         (account_id, symbol, side, qty, fill, now, sl, tp, fee, qty * dist, source, watch_id, note, fill, now,
          utcnow()))
     conn.commit()
-    return dict(conn.execute("SELECT * FROM paper_positions WHERE id=?", (cur.lastrowid,)).fetchone())
+    out = dict(conn.execute("SELECT * FROM paper_positions WHERE id=?", (cur.lastrowid,)).fetchone())
+    _notify(conn, out, "open")
+    return out
 
 
 def close_position(conn, position_id: int, price: float, reason: str, *, when: Optional[str] = None,
@@ -142,7 +144,15 @@ def close_position(conn, position_id: int, price: float, reason: str, *, when: O
          p["note"], dumps([]), utcnow())).lastrowid
     conn.execute("UPDATE paper_positions SET journal_id=? WHERE id=?", (jid, position_id))
     conn.commit()
-    return dict(conn.execute("SELECT * FROM paper_positions WHERE id=?", (position_id,)).fetchone())
+    out = dict(conn.execute("SELECT * FROM paper_positions WHERE id=?", (position_id,)).fetchone())
+    _notify(conn, out, "close")
+    return out
+
+
+def _notify(conn, pos: dict, event: str) -> None:
+    """In-web notification for preset paper mirrors (src.lab.notify_events); never raises."""
+    from .notify_events import paper_position
+    paper_position(conn, pos, event)
 
 
 # ── intrabar rule (mirrors bmtm-v2 order_manager) ─────────────────────────

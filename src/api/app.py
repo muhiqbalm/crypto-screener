@@ -487,5 +487,6 @@ Configure via environment variables:
     from src.api.ledger_routes import router as ledger_router; app.include_router(ledger_router)
     from src.api.ledger_routes import screener_router as ledger_screener_router; app.include_router(ledger_screener_router)
     from src.api.shadow_routes import router as shadow_router; app.include_router(shadow_router)
+    from src.api.report_routes import router as report_router, notifications_router; app.include_router(report_router); app.include_router(notifications_router)
 
     return app

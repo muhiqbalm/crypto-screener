@@ -10,6 +10,7 @@
   * alerts:  every 30 s, deliver pending Telegram alerts (rate-limited, see universal/alerts.py)
   * ledger:  one ledger_cycle job per closed hour + a one-off ledger_backfill (Catatan Sinyal)
   * shadow:  shadow_cycle when trade_logs changes / a signal is due / hourly (Kualitas eksekusi)
+  * weekly:  Laporan Mingguan snapshot each Monday 00:30 UTC + deploy-log notifications (weekly/schedule.py)
   * bot:     every LAB_BOT_IMPORT_INTERVAL_S, import the live bot's CLOSED trades from
              bmtm_trading.db (opened read-only, mode=ro, short queries) into the journal
 """
@@ -222,3 +223,10 @@ class Scheduler:
                     log.info("imported %d bot trades into the journal", n)
             except Exception:  # noqa: BLE001
                 log.exception("bot trade import failed")
+        if now - getattr(self, "_last_weekly", 0.0) >= 60:
+            self._last_weekly = now
+            try:  # Laporan Mingguan snapshot (Mon 00:30 UTC) + deploy-log notifications
+                from .weekly.schedule import tick as weekly_tick
+                weekly_tick(conn, self.s, now)
+            except Exception:  # noqa: BLE001
+                log.exception("weekly report hook failed")
