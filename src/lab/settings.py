@@ -72,10 +72,45 @@ class LabSettings:
     telegram_min_interval_s: int = 300
     telegram_max_per_hour: int = 12
     telegram_max_age_s: int = 6 * 3600
+    # Per job-type wall-clock limits. Keys: a run mode (backtest|validate|optimize)
+    # or a job kind (run|watch_eval|universe_refresh|ledger_cycle|ledger_backfill).
+    # Anything not listed falls back to job_timeout_s. Env: LAB_JOB_TIMEOUTS.
+    job_timeouts: dict = field(default_factory=dict)
+    scan_max_concurrent: int = 1           # scan cells running at once (<= max_concurrent_jobs)
+    max_load_per_cpu: float = 0.75         # don't start an EXTRA heavy job above this 1-min load/cpu
+
+    def timeout_for(self, kind: str, mode: str | None = None) -> int:
+        """Wall-clock limit for one job: run mode, then job kind, then the global default."""
+        for key in (mode, kind):
+            if key and key in self.job_timeouts:
+                return int(self.job_timeouts[key])
+        return int(self.job_timeout_s)
 
     @property
     def admin_set(self) -> set[str]:
         return {a.lower() for a in self.admin_emails}
+
+
+# Built-in per-type limits. Optimize on 15m/30m can legitimately need > 3 h
+# (15m since 2020 x 60 trials is ~3.4 h measured); a backtest never should.
+DEFAULT_JOB_TIMEOUTS = {"backtest": 3600, "optimize": 5 * 3600}
+
+
+def parse_timeouts(raw: str) -> dict[str, int]:
+    """'optimize=18000,validate=10800' -> {'optimize': 18000, 'validate': 10800} (bad items skipped)."""
+    out: dict[str, int] = {}
+    for item in (raw or "").split(","):
+        k, _, v = item.partition("=")
+        k, v = k.strip(), v.strip()
+        if not k or not v:
+            continue
+        try:
+            n = int(float(v))
+        except ValueError:
+            continue
+        if n > 0:
+            out[k] = n
+    return out
 
 
 @lru_cache(maxsize=1)
@@ -118,4 +153,7 @@ def get_lab_settings() -> LabSettings:
         telegram_min_interval_s=int(_get(env, "LAB_TELEGRAM_MIN_INTERVAL_S", "300")),
         telegram_max_per_hour=int(_get(env, "LAB_TELEGRAM_MAX_PER_HOUR", "12")),
         telegram_max_age_s=int(_get(env, "LAB_TELEGRAM_MAX_AGE_S", str(6 * 3600))),
+        job_timeouts={**DEFAULT_JOB_TIMEOUTS, **parse_timeouts(_get(env, "LAB_JOB_TIMEOUTS", ""))},
+        scan_max_concurrent=max(1, int(_get(env, "LAB_SCAN_MAX_CONCURRENT", "1"))),
+        max_load_per_cpu=float(_get(env, "LAB_MAX_LOAD_PER_CPU", "0.75")),
     )

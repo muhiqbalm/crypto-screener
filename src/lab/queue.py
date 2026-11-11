@@ -21,8 +21,11 @@ def enqueue(conn: sqlite3.Connection, kind: str, ref_id: Optional[int] = None,
     return int(cur.lastrowid)
 
 
+_SCAN_CELL_SQL = "(kind='run' AND ref_id IN (SELECT id FROM lab_runs WHERE scan_id IS NOT NULL))"
+
+
 def claim(conn: sqlite3.Connection, worker_id: str,
-          kinds: Optional[tuple[str, ...]] = None) -> Optional[dict]:
+          kinds: Optional[tuple[str, ...]] = None, exclude_scan_cells: bool = False) -> Optional[dict]:
     """Atomically move the next queued job to 'running'.
 
     The UPDATE ... WHERE id=(subselect) AND status='queued' pattern means two
@@ -34,6 +37,8 @@ def claim(conn: sqlite3.Connection, worker_id: str,
     if kinds:
         kind_sql = f" AND kind IN ({','.join('?' * len(kinds))})"
         args = list(kinds)
+    if exclude_scan_cells:
+        kind_sql += f" AND NOT {_SCAN_CELL_SQL}"
     if conn.in_transaction:
         conn.commit()
     conn.execute("BEGIN IMMEDIATE")
@@ -104,13 +109,38 @@ def request_cancel(conn: sqlite3.Connection, job_id: int) -> Optional[str]:
     if row is None:
         return None
     if row["status"] == "queued":
-        conn.execute("UPDATE lab_jobs SET status='cancelled', cancel_requested=1, finished_at=? "
-                     "WHERE id=? AND status='queued'", (utcnow(), job_id))
-        _sync_run_status(conn, dict(row), "cancelled")
+        cur = conn.execute("UPDATE lab_jobs SET status='cancelled', cancel_requested=1, finished_at=? "
+                           "WHERE id=? AND status='queued'", (utcnow(), job_id))
+        if cur.rowcount:
+            _sync_run_status(conn, dict(row), "cancelled")
+        else:  # claimed by a worker in the meantime: flag it like a running job
+            conn.execute("UPDATE lab_jobs SET cancel_requested=1 WHERE id=? AND status='running'", (job_id,))
     elif row["status"] == "running":
         conn.execute("UPDATE lab_jobs SET cancel_requested=1 WHERE id=?", (job_id,))
     conn.commit()
     return conn.execute("SELECT status FROM lab_jobs WHERE id=?", (job_id,)).fetchone()["status"]
+
+
+def is_scan_cell(conn: sqlite3.Connection, job: dict) -> bool:
+    if job.get("kind") != "run" or job.get("ref_id") is None:
+        return False
+    row = conn.execute("SELECT scan_id FROM lab_runs WHERE id=?", (job["ref_id"],)).fetchone()
+    return bool(row and row["scan_id"] is not None)
+
+
+def cancel_scan(conn: sqlite3.Connection, scan_id: int) -> dict:
+    """Cancel every unfinished cell of a scan: queued at once, running flagged for the worker."""
+    jobs = conn.execute(
+        "SELECT j.id, j.status FROM lab_jobs j JOIN lab_runs r ON r.id = j.ref_id "
+        "WHERE j.kind='run' AND r.scan_id=? AND j.status IN ('queued','running')", (scan_id,)).fetchall()
+    out = {"cancelled": 0, "cancelling": 0}
+    for j in jobs:
+        st = request_cancel(conn, j["id"])
+        if st == "cancelled":
+            out["cancelled"] += 1
+        elif st == "running":
+            out["cancelling"] += 1
+    return out
 
 
 def reap(conn: sqlite3.Connection, stale_after_s: int, now: Optional[datetime] = None) -> list[int]:
