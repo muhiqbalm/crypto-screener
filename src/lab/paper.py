@@ -129,10 +129,17 @@ def close_position(conn, position_id: int, price: float, reason: str, *, when: O
     pnl = gross - fees - p["funding"]
     now = when or utcnow()
     r_mult = pnl / p["risk_amount"] if p["risk_amount"] else None
-    # one transaction: position close + balance + journal
-    conn.execute(
+    # one transaction: position close + balance + journal. The worker's stop check and a
+    # watch job (another process) can both get here for the same position; the guarded
+    # UPDATE takes the write lock, so only one of them changes a row and goes on.
+    own_tx = not conn.in_transaction
+    claimed = conn.execute(
         "UPDATE paper_positions SET status='closed', exit_price=?, exit_time=?, exit_reason=?, pnl=?, fees=? "
-        "WHERE id=? AND status='open'", (exit_px, now, reason, pnl, fees, position_id))
+        "WHERE id=? AND status='open'", (exit_px, now, reason, pnl, fees, position_id)).rowcount
+    if claimed != 1:
+        if own_tx:
+            conn.rollback()  # nothing was changed; only releases the write lock
+        raise PaperError("position already closed")
     conn.execute("UPDATE paper_accounts SET balance=balance+?, realized_pnl=realized_pnl+? WHERE id=?",
                  (pnl, pnl, p["account_id"]))
     jid = conn.execute(

@@ -249,6 +249,8 @@ class Worker:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    from .universal.alerts import quiet_http_loggers
+    quiet_http_loggers()  # before anything can send: request URLs carry the Telegram token
     w = Worker()
 
     def _stop(*_):

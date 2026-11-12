@@ -60,6 +60,14 @@ def evaluate(watch: dict, offline: bool = False) -> dict:
             "last_signal": _signal(position, trades)}
 
 
+def _close_mirror(conn, position_id: int, px: float, reason: str) -> None:
+    """Close the paper mirror; if the worker's stop check closed it first, that close stands."""
+    try:
+        paper.close_position(conn, position_id, px, reason)
+    except paper.PaperError as e:
+        log.info("paper mirror %s not closed by the watch (%s): %s", position_id, reason, e)
+
+
 def _autopaper(conn, watch: dict, prev_signal: Optional[dict], state: dict) -> None:
     acct = watch["autopaper_account_id"]
     if not (watch["autopaper_enabled"] and acct):
@@ -73,13 +81,12 @@ def _autopaper(conn, watch: dict, prev_signal: Optional[dict], state: dict) -> N
     if open_auto is not None and pos is None:
         # strategy is flat -> close the mirror (signal or stop handled by the engine)
         px = market.last_price(watch["symbol"])
-        paper.close_position(conn, open_auto["id"], px,
-                             f"strategy_exit:{(sig or {}).get('reason', 'flat')}")
+        _close_mirror(conn, open_auto["id"], px, f"strategy_exit:{(sig or {}).get('reason', 'flat')}")
         return
     if open_auto is not None and pos is not None:
         if pos["side"] != open_auto["side"]:
             px = market.last_price(watch["symbol"])
-            paper.close_position(conn, open_auto["id"], px, "strategy_reverse")
+            _close_mirror(conn, open_auto["id"], px, "strategy_reverse")
         else:
             paper.update_stops(conn, open_auto["id"], pos["sl"], pos["tp"])  # follow trailing stop
             return
