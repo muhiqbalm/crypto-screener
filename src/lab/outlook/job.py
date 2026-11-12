@@ -37,6 +37,7 @@ from ..db import utcnow
 from . import logic as L
 from . import mtf as M
 from . import sources as SRC
+from . import quality as Q
 from . import store as S
 from .evaluate import evaluate_call
 
@@ -342,6 +343,7 @@ def build_row(conn, symbol: str, runner: Runner, presets: list[dict], ctx_common
                    "screener": sc, "oi": ctx_common["oi"].get(symbol), "headline_count": len(heads or [])},
     }
     row["peluang"] = L.peluang(row)
+    row["kualitas"] = Q.safe_grade(row, ctx_common.get("live_groups"))
     call = {
         "symbol": symbol, "bar": row["last_bar"], "bar_close": row["last_bar_close"], "computed_at": now,
         "side": side, "keyakinan": bias.get("keyakinan"), "keyakinan_basis": bias.get("basis"), "cls": cls,
@@ -354,6 +356,7 @@ def build_row(conn, symbol: str, runner: Runner, presets: list[dict], ctx_common
                       "mean_r": ((bias.get("calib") or {}).get("stats") or {}).get("mean_r"),
                       "n_pos": ((bias.get("calib") or {}).get("stats") or {}).get("n_pos"),
                       "action": pl.get("action")},
+        "kualitas": Q.letter(row["kualitas"]), "kualitas_json": Q.compact(row["kualitas"]),
     }
     prev = S.prev_call(conn, symbol, call["bar"])
     row["changes"] = L.changes(call, prev)
@@ -500,7 +503,7 @@ def execute(conn, job: Optional[dict] = None, symbols: Optional[list[str]] = Non
             time.sleep(0.1)
     common = {"regime": btc_now, "regime_index": idx, "strength": strength, "screener": screener,
               "screener_bar": screener_bar, "track": track, "headlines": headlines, "fear_greed": fear_greed, "oi": oi,
-              "calibration": calibration}
+              "calibration": calibration, "live_groups": Q.live_groups_safe(conn)}
     runner = Runner(offline)
     errors: dict[str, str] = {}
     last_bars, n_calls = [], 0
@@ -518,6 +521,11 @@ def execute(conn, job: Optional[dict] = None, symbols: Optional[list[str]] = Non
             S.save_row(conn, sym, None, None, errors[sym])
         conn.commit()
     prog("rekam jejak", len(syms), len(syms))
+    try:
+        graded_late = Q.backfill(conn, calibration)
+    except Exception as e:  # noqa: BLE001 - grading old calls must never block the refresh
+        log.exception("outlook grade backfill failed")
+        graded_late = f"{type(e).__name__}: {e}"
     try:
         track_eval = evaluate_open_calls(conn, runner, set(syms))
     except Exception as e:  # noqa: BLE001
@@ -540,7 +548,7 @@ def execute(conn, job: Optional[dict] = None, symbols: Optional[list[str]] = Non
         {k: btc_now.get(k) for k in ("label", "label_text", "as_of", "days_in_label")},
         "oi_available": len(oi), "offline": offline, "schema_version": L.SCHEMA_VERSION,
         "calibration": calibration and {k: calibration.get(k) for k in ("computed_at", "counts", "version")},
-        "calls": n_calls, "call_evaluation": track_eval,
+        "calls": n_calls, "call_evaluation": track_eval, "kualitas_backfill": graded_late,
     }
     S.kv_set(conn, S.META_KEY, meta)
     conn.commit()

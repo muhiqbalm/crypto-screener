@@ -26,6 +26,7 @@ from src.lab import queue as q
 from src.lab import regime as R
 from src.lab.outlook import JOB_KIND
 from src.lab.outlook import logic as L
+from src.lab.outlook import quality as Q
 from src.lab.outlook import store as S
 from src.lab.outlook.replay import JOB_KIND as CALIB_KIND
 from src.lab.outlook.replay import load as load_calibration
@@ -46,7 +47,9 @@ RiskPct = Annotated[float, Query(gt=0, le=10)]
 Arah = Annotated[Optional[Literal["long", "short", "netral"]], Query(description="filter arah")]
 Keyakinan = Annotated[Optional[Literal["tinggi", "sedang", "rendah"]], Query(description="filter keyakinan")]
 Posisi = Annotated[Optional[Literal["ada", "tidak"]], Query(description="filter: sudah ada posisi (paper/live) di koin ini")]
-Sort = Annotated[Literal["peluang", "symbol"], Query(description="peluang = Peluang terbaik; symbol = A-Z")]
+Sort = Annotated[Literal["peluang", "symbol", "kualitas"],
+                 Query(description="peluang = Peluang terbaik; symbol = A-Z; kualitas = skor A-D, lalu peluang")]
+Kualitas = Annotated[Optional[str], Query(pattern=r"^[ABCD](,[ABCD]){0,3}$", description="filter skor, mis. A,B")]
 
 _DISCLAIMER = ("Bukan saran investasi; strategi bisa salah; preset GAGAL/belum diuji = keyakinan rendah. "
                "Angka proyeksi adalah hitungan, bukan jaminan.")
@@ -79,7 +82,7 @@ def _positions(conn) -> tuple[dict, dict]:
 
 
 def _decorate(row: dict, now: str, capital: float, leverage: float, sizing: str, risk_pct: float,
-              positions: Optional[dict] = None) -> dict:
+              positions: Optional[dict] = None, live: Optional[dict] = None) -> dict:
     if row.get("unavailable"):
         return row
     age = L.hours_between(row.get("last_bar_close"), now)
@@ -90,6 +93,7 @@ def _decorate(row: dict, now: str, capital: float, leverage: float, sizing: str,
         out["plan"] = {**out["plan"], "freshness": fr}
     out["projection"] = L.project(out, capital, leverage, sizing, risk_pct)
     out["peluang"] = L.peluang(out)
+    out["kualitas"] = Q.safe_grade(out, live)
     if positions is not None:
         out["positions"] = positions.get(row.get("symbol"), [])
     return out
@@ -106,9 +110,11 @@ def _side_of(r: dict) -> str:
     return (r.get("strategy") or {}).get("side") or "netral"
 
 
-def _match(r: dict, arah, keyakinan, posisi) -> bool:
+def _match(r: dict, arah, keyakinan, posisi, kualitas: Optional[set] = None) -> bool:
     if r.get("unavailable"):
-        return arah is None and keyakinan is None and posisi is None
+        return arah is None and keyakinan is None and posisi is None and not kualitas
+    if kualitas and (r.get("kualitas") or {}).get("grade") not in kualitas:
+        return False
     if arah and _side_of(r) != arah:
         return False
     if keyakinan and (r.get("bias") or {}).get("keyakinan") != keyakinan:
@@ -129,6 +135,7 @@ def _counts(rows: list[dict]) -> dict:
         "posisi": {"ada": sum(1 for r in ok if r.get("positions")), "tidak": sum(1 for r in ok if not r.get("positions"))},
         "peluang_positif": sum(1 for r in ok if (r.get("peluang") or {}).get("label") == "positif"),
         "sinyal_baru": sum(1 for r in ok if (r.get("strategy") or {}).get("fresh")),
+        "kualitas": {k: sum(1 for r in ok if (r.get("kualitas") or {}).get("grade") == k) for k in Q.GRADES},
     }
 
 
@@ -160,36 +167,43 @@ def _track_brief(conn) -> dict:
 @router.get("/outlook")
 def outlook(user: User, conn: Conn, capital: Capital = 1000.0, leverage: Leverage = 1.0, sizing: Sizing = "notional",
             risk_pct: RiskPct = 1.0, arah: Arah = None, keyakinan: Keyakinan = None, posisi: Posisi = None,
-            sort: Sort = "peluang") -> dict:
+            sort: Sort = "peluang", kualitas: Kualitas = None) -> dict:
     S.ensure_schema(conn)
     now = _now_iso()
     admin = bool(user["is_admin"])
     pos, pos_avail = _positions(conn) if admin else (None, None)
     if not admin:
         posisi = None   # the position filter needs data a non-admin cannot see
-    rows = [_decorate(r, now, capital, leverage, sizing, risk_pct, pos) for r in S.read_rows(conn)]
+    live = Q.live_groups(conn)
+    rows = [_decorate(r, now, capital, leverage, sizing, risk_pct, pos, live) for r in S.read_rows(conn)]
     counts = _counts(rows)
-    ranked = L.rank_rows(rows) if sort == "peluang" else sorted(rows, key=lambda r: r.get("symbol") or "")
-    if sort != "peluang":  # ranks still describe the Peluang order
+    if sort == "peluang":
+        ranked = L.rank_rows(rows)
+    elif sort == "kualitas":   # skor first; inside one letter the Peluang order (stable sort)
+        ranked = sorted(L.rank_rows(rows), key=Q.sort_key)
+    else:
+        ranked = sorted(rows, key=lambda r: r.get("symbol") or "")
+    if sort == "symbol":  # ranks still describe the Peluang order
         order = {r["symbol"]: (r.get("peluang") or {}).get("rank") for r in L.rank_rows([dict(x) for x in rows])}
         for r in ranked:
             if r.get("peluang") and order.get(r["symbol"]):
                 r["peluang"] = {**r["peluang"], "rank": order[r["symbol"]]}
-    shown = [_lite(r) for r in ranked if _match(r, arah, keyakinan, posisi)]
+    grades = set(kualitas.split(",")) if kualitas else None
+    shown = [_lite(r) for r in ranked if _match(r, arah, keyakinan, posisi, grades)]
     reg = R.load(conn) or {}
     cal = load_calibration(conn)
     return {
         "schema_version": L.SCHEMA_VERSION, "can_refresh": admin,
         "meta": S.kv_get(conn, S.META_KEY), "refresh": _job(conn), "calibrate": _job(conn, CALIB_KIND), "now": now,
         "inputs": {"capital": capital, "leverage": leverage, "sizing": sizing, "risk_pct": risk_pct},
-        "filters": {"arah": arah, "keyakinan": keyakinan, "posisi": posisi, "sort": sort},
+        "filters": {"arah": arah, "keyakinan": keyakinan, "posisi": posisi, "sort": sort, "kualitas": kualitas},
         "counts": counts, "positions_available": pos_avail,
         "ranking": [r["symbol"] for r in ranked if (r.get("peluang") or {}).get("eligible")],
         "regime": {k: reg.get(k) and {x: reg[k].get(x) for x in ("label", "label_text", "as_of", "days_in_label",
                                                                   "dist_ema_slow_pct", "slope_pct", "available")}
                    for k in ("btc", "eth")},
         "calibration": _calib_brief(cal), "track_record": _track_brief(conn),
-        "method": L.method(), "disclaimer": _DISCLAIMER, "rows": shown,
+        "method": L.method(), "kualitas_rule": Q.rule_text(), "disclaimer": _DISCLAIMER, "rows": shown,
     }
 
 
@@ -226,6 +240,13 @@ def outlook_track_record(_: User, conn: Conn, limit: Annotated[int, Query(ge=0, 
                     "close bila strategi menutup/membalik posisi, atau setelah horizon. R bersih setelah biaya 0.2%."}
 
 
+@router.get("/outlook/rekam-skor")
+def outlook_rekam_skor(_: User, conn: Conn, recent: Annotated[int, Query(ge=0, le=100)] = 20) -> dict:
+    """Rekam jejak skor: how the stored live calls of each quality letter turned out, plus the rule's
+    consistency check on the simulation (labelled as simulation, never mixed into the live numbers)."""
+    return Q.scoreboard(conn, load_calibration(conn), recent)
+
+
 @router.get("/outlook/calibration")
 def outlook_calibration(_: User, conn: Conn, full: bool = False) -> dict:
     cal = load_calibration(conn)
@@ -249,7 +270,7 @@ def outlook_detail(symbol: str, user: User, conn: Conn, capital: Capital = 1000.
     reg = R.load(conn) or {}
     admin = bool(user["is_admin"])
     pos, pos_avail = _positions(conn) if admin else (None, None)
-    row = _decorate(got["row"], now, capital, leverage, sizing, risk_pct, pos)
+    row = _decorate(got["row"], now, capital, leverage, sizing, risk_pct, pos, Q.live_groups(conn))
     cal = load_calibration(conn)
     return {**row, "error": got["error"], "detail": got["detail"], "now": now, "can_refresh": admin,
             "inputs": {"capital": capital, "leverage": leverage, "sizing": sizing, "risk_pct": risk_pct},
@@ -257,7 +278,7 @@ def outlook_detail(symbol: str, user: User, conn: Conn, capital: Capital = 1000.
             "calls": S.calls_for(conn, sym, 30),
             "coin_calibration_all": ((cal or {}).get("per_coin") or {}).get(sym),
             "regime": {"btc": reg.get("btc"), "eth": reg.get("eth"), "rule": reg.get("rule")},
-            "method": L.method(), "disclaimer": _DISCLAIMER}
+            "method": L.method(), "kualitas_rule": Q.rule_text(), "disclaimer": _DISCLAIMER}
 
 
 @router.get("/regime")
