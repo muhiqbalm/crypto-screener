@@ -434,7 +434,7 @@ def method_text() -> list[str]:
         "yang sedang terpasang, faktor 1D/1H/BTC dari candle yang SUDAH close. Tanpa melihat masa depan.",
         "Panggilan dinilai seperti instruksi halaman: masuk di harga close, SL & TP terpasang, batal (keluar di "
         "close) jika strategi menutup/membalik posisi, habis waktu setelah horizon. SL & TP di candle yang sama "
-        "dihitung SL (konservatif). R bersih sudah dipotong biaya 0,2% pulang-pergi; funding tidak dihitung.",
+        "dihitung SL (konservatif). R bersih sudah dipotong biaya 0.2% pulang-pergi; funding tidak dihitung.",
         "Preset LOLOS/GAGAL hanya dihitung di periode holdout-nya (out-of-sample). Setting default di ETH "
         "dirancang di ETH 4H (in-sample) sehingga tidak masuk kelompok gabungan.",
         "Panggilan berurutan dari satu posisi saling terkait: setiap angka disertai jumlah posisi berbeda; "

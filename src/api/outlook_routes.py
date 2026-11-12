@@ -223,7 +223,7 @@ def outlook_track_record(_: User, conn: Conn, limit: Annotated[int, Query(ge=0, 
             "statuses": {"tp": "kena TP dulu", "sl": "kena SL dulu", "batal": "dibatalkan (strategi keluar)",
                          "expired": "habis waktu", "open": "masih berjalan"},
             "note": "Setiap panggilan dinilai seperti instruksi halaman: masuk di close 4H, SL & TP terpasang, keluar di "
-                    "close bila strategi menutup/membalik posisi, atau setelah horizon. R bersih setelah biaya 0,2%."}
+                    "close bila strategi menutup/membalik posisi, atau setelah horizon. R bersih setelah biaya 0.2%."}
 
 
 @router.get("/outlook/calibration")

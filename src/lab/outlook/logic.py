@@ -833,7 +833,7 @@ def project(row: dict, capital: float, leverage: float = 1.0, sizing: str = "not
             "at_tp": res_tp, "at_tp1": res_tp1, "at_sl": res_sl, "at_typical": res_typ, "rr": rr,
             "rr_text": f"{fnum(rr, 2, False)} : 1" if rr else None,
             "expected": ev, "calibrated": calibrated, "warnings": warnings,
-            "note": "Biaya: komisi 0,05% + slippage 0,05% per sisi. Funding tidak termasuk dalam angka TP/SL. "
+            "note": "Biaya: komisi 0.05% + slippage 0.05% per sisi. Funding tidak termasuk dalam angka TP/SL. "
                     "TP adalah batas keras strategi; strategi biasanya keluar lebih awal (trailing/exit lain)."}
 
 
@@ -903,7 +903,7 @@ def method() -> dict:
             "Faktor 1D, 1H, kondisi BTC, funding, OI, screener dan berita ditampilkan sebagai konteks dengan label "
             "buktinya; tidak ada yang terbukti menambah keunggulan di simulasi, jadi tidak mengubah keyakinan.",
             "Peluang terbaik diurutkan dari nilai harapan kasus serupa (R, dikecilkan n/(n+20)), lalu keyakinan, "
-            "lalu R:R. R = kelipatan jarak SL; biaya 0,2% pulang-pergi sudah dipotong.",
+            "lalu R:R. R = kelipatan jarak SL; biaya 0.2% pulang-pergi sudah dipotong.",
             "Strategi FLAT → NETRAL (tunggu); jika ≥ 2 faktor konteks searah, ditulis 'condong naik/turun'.",
         ],
     }
