@@ -1,4 +1,6 @@
-"""/api/v1/lab — Universal v0 (multi-coin portfolio) + Koin Terkuat. Admin-only.
+"""/api/v1/lab — Universal v0 (multi-coin portfolio) + Koin Terkuat. Admin-only, except
+GET /strength (Koin Terkuat, "Peluang koin" -> Terkuat), which any logged-in user may read
+(CEO decision 12 Nov); its refresh stays admin-only.
 
 Like lab_routes: SQL against lab.db and JSON artifact reads only. Backtests,
 data refreshes and paper rebalances run in the lab worker. Paper only.
@@ -20,12 +22,13 @@ from src.lab.settings import get_lab_settings
 from src.lab.universal import BAR_TF, TEMPLATE_ID, UNIVERSE_SYMBOL
 from src.lab.universal import params as UP
 
-from .lab_auth import lab_admin
+from .lab_auth import lab_admin, lab_user
 from .lab_models import N_TRIALS_OPTIONS, Costs, SearchSpec, _check_date
 from .lab_routes import _conn, create_run
 
 router = APIRouter(prefix="/api/v1/lab", tags=["lab-universal"])
 Admin = Annotated[dict, Depends(lab_admin)]
+User = Annotated[dict, Depends(lab_user)]
 Conn = Annotated[Any, Depends(_conn)]
 
 
@@ -185,7 +188,7 @@ def universal_contrib(run_id: int, _: Admin, conn: Conn) -> dict:
 # ── Koin Terkuat ─────────────────────────────────────────────────────────
 
 @router.get("/strength")
-def strength(_: Admin, conn: Conn) -> dict:
+def strength(_: User, conn: Conn) -> dict:
     data = _artifact("strength.json")
     job = conn.execute("SELECT id, status, created_at FROM lab_jobs WHERE kind='universe_refresh' "
                        "ORDER BY id DESC LIMIT 1").fetchone()

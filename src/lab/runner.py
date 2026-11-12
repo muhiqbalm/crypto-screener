@@ -297,6 +297,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "outlook_refresh":
             from .outlook.job import execute as execute_outlook
             execute_outlook(conn, job)
+        elif job["kind"] == "outlook_calibrate":
+            from .outlook.replay import execute as execute_calibrate
+            execute_calibrate(conn, job)
         elif job["kind"] == "arena_snapshot":
             from .arena.jobs import execute as execute_arena
             execute_arena(conn, job)
