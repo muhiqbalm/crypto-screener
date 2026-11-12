@@ -87,6 +87,14 @@ def schedule_watches(conn, s: LabSettings, now: Optional[float] = None) -> list[
     return queued
 
 
+def kline_limit(since_ms: int, now_ms: Optional[int] = None) -> int:
+    """1m candles needed since ``since_ms`` (+2 spare), clamped to 5..1500. Binance weighs a klines
+    request by its limit (<100 -> 1, >1000 -> 10), not by the rows returned: with a basket's many
+    open symbols, the old fixed 1500 cost 10 weight per symbol per minute on the shared IP."""
+    now_ms = now_ms if now_ms is not None else int(time.time() * 1000)
+    return int(min(1500, max(5, (now_ms - since_ms) // 60_000 + 2)))
+
+
 def check_paper(conn, s: LabSettings, market=None) -> int:
     """SL/TP + funding for every open paper position. Returns positions closed."""
     if market is None:
@@ -100,7 +108,7 @@ def check_paper(conn, s: LabSettings, market=None) -> int:
         try:
             start = min((p["last_checked_bar"] or p["entry_time"]) for p in positions)
             since_ms = int(datetime.fromisoformat(start[:19]).replace(tzinfo=timezone.utc).timestamp() * 1000)
-            candles = market.closed_klines(sym, PAPER_TF, since_ms)
+            candles = market.closed_klines(sym, PAPER_TF, since_ms, limit=kline_limit(since_ms))
             fund_since = min((p["last_funding_at"] or p["entry_time"]) for p in positions)
             f_ms = int(datetime.fromisoformat(fund_since[:19]).replace(tzinfo=timezone.utc).timestamp() * 1000)
             events = [{**e, "t": _iso(e["ts"] / 1000)} for e in market.funding_history(sym, f_ms + 1)]

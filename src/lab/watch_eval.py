@@ -88,12 +88,46 @@ def _autopaper(conn, watch: dict, prev_signal: Optional[dict], state: dict) -> N
         qty = None
         if pos.get("notional_mult"):  # engine-sized preset: same notional multiple (capped by leverage_max)
             qty = paper.get_account(conn, acct)["balance"] * float(pos["notional_mult"]) / float(px)
+        basket = _basket_of(conn, watch)
+        if basket is not None:  # basket member: size on the shared account (src/lab/basket/sizing.py)
+            plan = _basket_plan(conn, basket, watch, pos, px)
+            if plan["skip"]:
+                return
+            qty = plan["qty"]
         try:
             paper.open_position(conn, account_id=acct, symbol=watch["symbol"], side=pos["side"], price=px,
                                 sl=pos["sl"], tp=pos["tp"], qty=qty, watch_id=watch["id"], source="paper_auto",
                                 note=f"auto from watch {watch['id']}")
         except paper.PaperError as e:
             log.warning("autopaper open skipped for watch %s: %s", watch["id"], e)
+            if basket is not None:
+                _basket_note(conn, basket, watch, pos, f"paper_error: {e}")
+
+
+def _basket_of(conn, watch: dict) -> Optional[dict]:
+    from .basket import store as bstore
+    b = bstore.basket_of_watch(conn, watch["id"])
+    return b if b is not None and b["account_id"] == watch["autopaper_account_id"] else None
+
+
+def _basket_plan(conn, basket: dict, watch: dict, pos: dict, px: float) -> dict:
+    """Basket sizing; fails closed (no entry, logged) rather than opening at single-coin size."""
+    from .basket import sizing
+    try:
+        return sizing.entry_plan(conn, basket, watch, pos, px)
+    except Exception as e:  # noqa: BLE001
+        log.exception("basket sizing failed for watch %s", watch["id"])
+        _basket_note(conn, basket, watch, pos, f"sizing_error: {type(e).__name__}")
+        return {"qty": None, "skip": "sizing_error"}
+
+
+def _basket_note(conn, basket: dict, watch: dict, pos: dict, reason: str) -> None:
+    from .basket import store as bstore
+    try:
+        bstore.log_event(conn, basket["id"], "skip", reason[:300], watch_id=watch["id"], symbol=watch["symbol"],
+                         bar=pos.get("entry_time"))
+    except Exception:  # noqa: BLE001
+        log.exception("basket event log failed for watch %s", watch["id"])
 
 
 def _evaluate_one(conn, w: dict, offline: bool) -> None:

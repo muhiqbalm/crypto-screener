@@ -350,4 +350,45 @@ modul yang dites sama persis dengan file itu.
 
 ## Lampiran B. Angka acuan beku
 
-Diisi setelah commit praregistrasi, oleh skrip di bagian 10. Lihat adendum di bawah.
+Diisi setelah commit praregistrasi, oleh skrip di bagian 10. Lihat Adendum 1 di bawah.
+
+## Adendum 1 (12 Nov 2026, ±15:40 UTC): angka acuan beku
+
+Dihitung **setelah** commit praregistrasi 52dccca, dengan prosedur bagian 10:
+- **Skrip:** `docs/research/basket/scripts/expectation.py`.
+- **Engine:** 6e2cc34, sama dengan `/root/bmtm-lab-engine`.
+- **Data:** cache perp Lab (snapshot riset; bar 4H terakhir 2026-11-11 20:00 UTC).
+- **Jendela:** 2025-07-06 → 2026-11-12.
+- **Hasil:** `docs/research/basket/expectation.json` dan manifest seed. Dijalankan dua kali, angkanya identik.
+
+Bagian 1–11 tidak diubah. Skrip hanya mengeluarkan angka gabungan basket dan jumlah transaksi per koin; hasil per koin
+tidak dihitung dan tidak dilihat.
+
+| | A. Donchian | B. Rosyade VT60 |
+|---|---|---|
+| Transaksi (16,2 bulan) | 851 | 1,829 |
+| Transaksi/bulan | 52.5 | 112.7 |
+| Lama pegang rata-rata | 4.9 hari | 1.7 hari |
+| Win rate | 36.5% | 32.5% |
+| PF | 1.12 | 1.21 |
+| Return bersih | +8.7% | +26.6% |
+| Max DD (kurva tertutup) | −10.4% | −14.3% |
+| MC DD95 | −7.9% | −6.6% |
+| Sharpe harian | 0.51 | 1.07 |
+| Notional total tertinggi | 1.07× (cap 1.5× tidak pernah kena) | 0.91× (cap 2× tidak pernah kena) |
+| Hari sampai 30 transaksi tertutup: median (p10–p90 dari 52 titik mulai) | 22 (15–32) | 10 (5–16) |
+| Hari sampai checkpoint 1: median (p90) | 29 (36) | 29 (29) |
+
+Akibat aturan yang sudah dikunci (dicatat apa adanya, tidak diubah):
+
+- **Batas DD di checkpoint** = min(−5%, −1,5 × max DD acuan): A −15.6%, B −21.5%.
+  - Keduanya lebih dalam dari rem darurat −15%.
+  - Jadi dalam praktik **rem darurat −15% yang menjadi batas drawdown** kedua basket.
+- **PF acuan A (1.12) di bawah ambang lulus 1.2.**
+  - Kalau paper A mirip masa lalunya, hasil paling mungkin di checkpoint 1 adalah LANJUT, bukan LULUS.
+  - PF acuan B (1.21) tepat di ambang, dan jendela B tidak bersih.
+- **Waktu.** Kalau mulai 13 Nov 2026, checkpoint 1 kemungkinan **Senin 14 Des 2026** untuk keduanya, karena syarat
+  28 hari yang menentukan. A paling lambat sekitar 21 Des (p90 36 hari). Bandingkan dengan 7–42 bulan untuk preset
+  satu koin.
+- **Rugi A bergerombol per rezim, bukan acak.** Max DD kurva tertutup A (−10.4%) lebih dalam dari MC DD95-nya
+  (−7.9%), jadi DD A perlu dipantau lebih ketat.

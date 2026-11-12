@@ -26,12 +26,18 @@ def collect_lab_watches(conn) -> int:
 
     watch_state holds the engine's re-computation over ~1000 bars before creation as well;
     those earlier trades are a backtest, not a recorded live signal, so they are skipped.
+    Basket member watches (src/lab/basket) are left out: a basket is its own pre-registered
+    test with its own page, and its 57 coins would change what the existing groups mean.
     """
+    from ..basket.store import member_watch_ids
+    basket_watches = member_watch_ids(conn)
     n = 0
     rows = conn.execute(
         "SELECT w.id, w.template_id, w.symbol, w.timeframe, w.created_at, s.recent_trades_json, s.position_json "
         "FROM watches w JOIN watch_state s ON s.watch_id = w.id").fetchall()
     for r in rows:
+        if r["id"] in basket_watches:
+            continue
         created = to_epoch(r["created_at"])
         stype = f"{r['template_id']}_{r['timeframe']}"
         entries = []
