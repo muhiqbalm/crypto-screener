@@ -441,7 +441,7 @@ def method_text() -> list[str]:
         "galat baku dikelompokkan per posisi; nilai harapan untuk peringkat dikecilkan n/(n+20).",
         f"Uji label keyakinan: kelompok dibuat dari data sebelum {SPLIT_ISO[:10]}, lalu dicek di data sesudahnya. "
         "Aturan awal (keselarasan faktor 1D/1H/BTC) GAGAL uji ini; aturan v2 memakai kelas strategi x arah x fase "
-        "(sinyal baru vs menyusul) yang konsisten di kedua periode.",
+        "(posisi baru vs menyusul) yang konsisten di kedua periode.",
         "Faktor 1D/1H/BTC/funding hanya disebut 'teruji' bila efeknya > 2 galat baku secara total DAN > 1 galat "
         "baku di masing-masing periode; selain itu 'belum terbukti'.",
         "Berita, open interest dan screener tidak diuji ulang (tidak ada riwayat yang jujur); di halaman "

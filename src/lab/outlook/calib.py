@@ -10,7 +10,7 @@ A case is one historical (replay) or stored (live) call that has been evaluated
   pool         lolos_uji + belum_diuji together (the honest out-of-sample classes)
 
 Bucket keys ``class|side|align|fase`` (``*`` = any). ``fase``: baru = the strategy entered
-at this close (sinyal baru), berjalan = joining a position that is already open.
+at this close (posisi baru), berjalan = joining a position that is already open.
 
 What the replay showed (docs/riset-2026-11-12/04-outlook-v2.md) and why keyakinan v2 uses
 class x side x fase and NOT the MTF alignment: the a-priori alignment buckets failed the
@@ -35,7 +35,7 @@ POOLED = ("lolos_uji", "belum_diuji")
 LEVELS = ("rendah", "sedang", "tinggi")
 CLASS_TEXT = {"lolos_uji": "strategi lolos uji (periode holdout)", "belum_diuji": "strategi default (belum diuji per koin)",
               "gagal_uji": "strategi gagal uji (periode holdout)", "pool": "semua strategi out-of-sample"}
-FASE_TEXT = {"baru": "sinyal baru", "berjalan": "menyusul posisi yang sudah berjalan"}
+FASE_TEXT = {"baru": "posisi baru", "berjalan": "menyusul posisi yang sudah berjalan"}
 DONE = ("tp", "sl", "batal", "expired")
 
 # compact case record (replay + live); dirs = (tren_1d, momentum_1h, regime_btc, funding) relative to the side

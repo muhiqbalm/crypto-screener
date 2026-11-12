@@ -237,7 +237,7 @@ def build_factors(ctx: dict) -> list[dict]:
             det = ("Belum ada preset yang lolos uji untuk koin ini; memakai setting default Rosyade 4H (aslinya "
                    "untuk ETH 4H). Belum diuji untuk koin ini.")
         if side:
-            det += " " + ("Sinyal baru di close terakhir." if st.get("fresh") else
+            det += " " + ("Posisi baru di close terakhir." if st.get("fresh") else
                           f"Posisi sudah berjalan sejak {fdate(st.get('entry_at'))}.")
         out.append(_factor("strategi", "Posisi strategi", SIDE_SIGN.get(side or "", 0), val, det, ev, "Strategy Lab",
                            "utama"))
@@ -482,7 +482,7 @@ def plan(strategy: dict, price: Optional[float], bias: dict, now_iso: Optional[s
         "target_typical": typical, "target_typical_r": mfe,
         "invalidation": inval, "batal_kalau": "Batal kalau " + "; atau ".join(inval) + ".", "warnings": warns,
         "saran": saran(out["fase"], bias.get("keyakinan"), rr),
-        "text": ("Sinyal baru: rencana masuk di zona entry." if out["fase"] == "baru" else
+        "text": ("Posisi baru: rencana masuk di zona entry." if out["fase"] == "baru" else
                  f"Posisi strategi sudah berjalan sejak {fdate(strategy.get('entry_at'))}; masuk sekarang = menyusul."),
     })
     return out
@@ -492,13 +492,13 @@ def saran(fase: str, keyakinan: Optional[str], rr: Optional[float]) -> str:
     """One evidence-based guidance line (the page's "what to do"), never a promise."""
     if fase == "baru":
         if keyakinan in ("sedang", "tinggi"):
-            s = "Sinyal baru dengan bukti historis positif: layak dipertimbangkan sesuai rencana di bawah."
+            s = "Posisi baru dengan bukti historis positif: layak dipertimbangkan sesuai rencana di bawah."
         else:
-            s = "Sinyal baru, tetapi bukti historisnya belum positif: hati-hati, ukuran kecil atau lewati."
+            s = "Posisi baru, tetapi bukti historisnya belum positif: hati-hati, ukuran kecil atau lewati."
     elif keyakinan in ("sedang", "tinggi"):
-        s = "Menyusul posisi yang sudah berjalan masih punya bukti positif, tetapi lebih lemah daripada sinyal baru."
+        s = "Menyusul posisi yang sudah berjalan masih punya bukti positif, tetapi lebih lemah daripada posisi baru."
     else:
-        s = ("Lebih baik tunggu sinyal baru: menyusul posisi yang sudah berjalan secara historis tidak punya "
+        s = ("Lebih baik tunggu posisi baru: menyusul posisi yang sudah berjalan secara historis tidak punya "
              "keunggulan.")
     if rr is not None and rr < 1:
         s += " R:R di bawah 1."
@@ -519,7 +519,7 @@ def changes(cur: dict, prev: Optional[dict]) -> list[str]:
     cs, ps = cur.get("side"), prev.get("side")
     if cs != ps:
         if cs and not ps:
-            out.append(f"Arah berubah: FLAT → {cs.upper()}" + (" (sinyal baru)." if cur.get("fase") == "baru" else "."))
+            out.append(f"Arah berubah: FLAT → {cs.upper()}" + (" (posisi baru)." if cur.get("fase") == "baru" else "."))
         elif ps and not cs:
             out.append(f"Arah berubah: {ps.upper()} → FLAT (strategi keluar posisi).")
         else:
@@ -539,7 +539,7 @@ def changes(cur: dict, prev: Optional[dict]) -> list[str]:
             elif (a is None) != (b is None):
                 out.append(f"{name}: {fprice(a)} → {fprice(b)}.")
         if prev.get("fase") == "baru" and cur.get("fase") == "berjalan":
-            out.append("Sinyal kemarin bukan lagi sinyal baru: masuk sekarang = menyusul.")
+            out.append("Posisi kemarin bukan lagi posisi baru: masuk sekarang = menyusul.")
     pdirs, cdirs = (prev.get("call") or {}).get("dirs") or {}, (cur.get("call") or {}).get("dirs") or {}
     names = {"tren_1d": "Tren 1D", "momentum_1h": "Momentum 1H", "regime_btc": "Kondisi pasar BTC"}
     word = {1: "naik", -1: "turun", 0: "campuran"}
@@ -596,7 +596,7 @@ def _strategy_sentence(st: dict, price: Optional[float]) -> str:
         return f"{head}: posisi tidak bisa dihitung ({st['error']})."
     if st.get("side"):
         s = (f"{head} sedang {st['side'].upper()} sejak {fdate(st.get('entry_at'))} di {fprice(st.get('entry_price'))}"
-             + (" (sinyal baru di close terakhir)" if st.get("fresh") else "") + f"; harga sekarang {fprice(price)}"
+             + (" (posisi baru di close terakhir)" if st.get("fresh") else "") + f"; harga sekarang {fprice(price)}"
              + (f" ({fpct(st.get('open_pnl_pct'))} dari entry strategi)" if st.get("open_pnl_pct") is not None else "")
              + ".")
         return s
@@ -712,7 +712,7 @@ def narrate_template(row: dict) -> dict:
     if side:
         cal = (bias.get("calib") or {}).get("stats") or {}
         summary = (f"{side.upper()} · keyakinan {bias.get('keyakinan')} · "
-                   + ("sinyal baru" if st.get("fresh") else f"menyusul (sejak {fdate(st.get('entry_at'), False)})")
+                   + ("posisi baru" if st.get("fresh") else f"menyusul (sejak {fdate(st.get('entry_at'), False)})")
                    + f" · {strategy_label(st).replace('Strategi ', '')} ({ {'lolos_uji': 'lolos uji', 'gagal_uji': 'gagal uji', 'belum_diuji': 'belum diuji'}[ev] })"
                    + (f" · kasus serupa {fr(cal.get('mean_r'))} ({fnum(cal.get('n_pos'), 0)} posisi)" if cal.get("n_pos") else "")
                    + ".")
@@ -895,7 +895,7 @@ def method() -> dict:
             "pun); kalau belum ada, setting default Rosyade 4H (belum diuji untuk koin itu). Faktor lain tidak "
             "pernah membalik arah.",
             "Keyakinan berasal dari hasil 'kasus serupa' di simulasi historis (setiap close 4H sejak 2020 dihitung "
-            "ulang tanpa melihat masa depan): kelas bukti strategi × arah × fase (sinyal baru atau menyusul).",
+            "ulang tanpa melihat masa depan): kelas bukti strategi × arah × fase (posisi baru atau menyusul).",
             "sedang = kasus serupa untung dengan batas bawah 95% di atas nol; tinggi = sama, untuk strategi itu "
             f"sendiri, rata-rata ≥ {fnum(C.TINGGI_MIN_R, 2, True)}R dan ≥ {C.TINGGI_MIN_POS} posisi; selain itu "
             "rendah. Maksimal sedang untuk strategi belum diuji, rendah untuk preset GAGAL, sedang untuk holdout "

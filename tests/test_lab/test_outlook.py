@@ -292,10 +292,10 @@ def test_narrative_leads_with_decision_and_is_deterministic():
     assert p[0].startswith("Keputusan: ETH cenderung SHORT, keyakinan sedang. Rencana: entry ")
     assert p[1].startswith("Kenapa: Strategi 4H-ETH-v2_1x (Rosyade 4H, LOLOS uji)")
     assert "1 strategi lain juga SHORT" in p[1] and "belum terbukti" in p[1]
-    assert p[2].startswith("Bukti: Kasus serupa — sinyal baru") and "Kesimpulan: keyakinan sedang" in p[2]
+    assert p[2].startswith("Bukti: Kasus serupa — posisi baru") and "Kesimpulan: keyakinan sedang" in p[2]
     assert any(x.startswith("Risiko:") and "Batal kalau" in x for x in p)
     assert p[-1] == "Ini informasi, bukan jaminan atau saran investasi."
-    assert e["summary"].startswith("SHORT · keyakinan sedang · sinyal baru")
+    assert e["summary"].startswith("SHORT · keyakinan sedang · posisi baru")
     assert L.narrate(row) == L.narrate(row)
     late = _row(_strategy("short"))["explanation"]["paragraphs"][0]
     assert "menyusul posisi yang sudah berjalan" in late
