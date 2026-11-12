@@ -26,6 +26,13 @@ log = logging.getLogger("lab.alerts")
 _notifier_cls = None
 
 
+def quiet_http_loggers() -> None:
+    """httpx logs every request URL at INFO and httpcore at DEBUG; the Telegram URL
+    contains the bot token, so both stay at WARNING in any process that can send."""
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def enqueue(conn, ref: str, text: str, channel: str = "telegram") -> int:
     cur = conn.execute("INSERT INTO lab_alerts (channel, ref, text, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
                        (channel, ref, text[:4000], utcnow()))
@@ -47,6 +54,7 @@ def _load_notifier():
 
 
 def default_sender(s: LabSettings) -> Callable[[str], None]:
+    quiet_http_loggers()
     notifier = _load_notifier()(s.telegram_bot_token)
 
     def send(text: str) -> None:
