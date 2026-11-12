@@ -34,3 +34,7 @@ requests==2.34.2
 
 # Supabase client
 supabase==2.4.2
+
+# Ringkasan AI (src/lab/ai): Claude Messages API, imported lazily by the lab worker job only;
+# the feature stays off until LAB_AI_ENABLED=1 and ANTHROPIC_API_KEY are in .env
+anthropic==2.8.0
