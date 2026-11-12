@@ -30,6 +30,14 @@ class OrderExecutionError(Exception):
         self.balance_info = balance_info
 
 
+class OrderOutcomeUnknownError(OrderExecutionError):
+    """Raised when an order was sent but no answer came back (timeout or
+    network error), so it may or may not have been filled on the exchange.
+
+    The order is never re-sent; the caller must ask the exchange what happened.
+    """
+
+
 class TradeExecutor:
     """Executes market orders on exchanges via CCXT.
 
@@ -208,13 +216,21 @@ class TradeExecutor:
             )
             quantity = self._max_notional / current_price
 
+        # The size above is in coins. OKX swap orders are sent in contracts,
+        # and one contract is not one coin, so convert before rounding.
+        # Binance USD-M (one contract = one coin) keeps the exact old path.
+        contract_size = self._okx_contract_size(exchange, symbol)
+        if contract_size is not None:
+            quantity = quantity / contract_size
+
         quantity = self._round_to_precision(exchange, symbol, quantity)
 
         # Enrich balance_info with order size details now that quantity is known
         leverage = payload.leverage or 1
+        coins = quantity if contract_size is None else quantity * contract_size
         balance_info["order_quantity"] = quantity
-        balance_info["order_notional"] = round(quantity * current_price, 6)
-        balance_info["margin_required"] = round((quantity * current_price) / leverage, 6)
+        balance_info["order_notional"] = round(coins * current_price, 6)
+        balance_info["margin_required"] = round((coins * current_price) / leverage, 6)
 
         try:
             self._validate_min_amount(exchange, symbol, quantity)
@@ -299,6 +315,27 @@ class TradeExecutor:
         return order, balance_info
 
     @staticmethod
+    def _okx_contract_size(exchange: ccxt_async.Exchange, symbol: str) -> float | None:
+        """Coins per contract for an OKX market; None for every other exchange.
+
+        Raises OrderExecutionError when OKX does not report a usable contract
+        size, because guessing would send an order of the wrong size.
+        """
+        if exchange.id.lower() != "okx":
+            return None
+        try:
+            contract_size = float(exchange.market(symbol).get("contractSize"))
+        except Exception as exc:
+            raise OrderExecutionError(
+                f"Contract size for {symbol} on OKX is unavailable: {exc}"
+            ) from exc
+        if not contract_size > 0:
+            raise OrderExecutionError(
+                f"Contract size for {symbol} on OKX is invalid: {contract_size}"
+            )
+        return contract_size
+
+    @staticmethod
     def _round_to_precision(
         exchange: ccxt_async.Exchange,
         symbol: str,
@@ -369,9 +406,15 @@ class TradeExecutor:
             return order
 
         except asyncio.TimeoutError as exc:
-            raise OrderExecutionError(
+            raise OrderOutcomeUnknownError(
                 f"Order submission timed out after {self.ORDER_TIMEOUT_SECONDS}s "
                 f"for {symbol} {side} {quantity}",
+                balance_info=balance_info,
+            ) from exc
+        except ccxt_async.NetworkError as exc:
+            # No answer from the exchange: the order may have been accepted.
+            raise OrderOutcomeUnknownError(
+                f"Exchange error placing {side} order for {symbol}: {exc}",
                 balance_info=balance_info,
             ) from exc
         except ccxt_async.BaseError as exc:

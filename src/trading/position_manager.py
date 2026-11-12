@@ -4,9 +4,9 @@ Checks open positions directly on the exchange (source of truth) and
 serialises concurrent requests for the same symbol via an in-process async
 lock (asyncio.Lock per user+symbol pair).
 
-The ``positions`` Supabase table is kept only as an audit trail — it is
-written to after a successful trade but is never read for position-state
-decisions.
+The ``positions`` table records what the bot itself opened. A "close" is
+executed only when such a record exists (``get_open_record``), so a failed
+write of that record is retried and then raised, never swallowed.
 """
 
 from __future__ import annotations
@@ -59,6 +59,14 @@ class LockTimeoutError(Exception):
     """Raised when the advisory lock cannot be acquired within the timeout."""
 
 
+class PositionRecordError(Exception):
+    """Raised when a position record could not be written after a retry.
+
+    The order behind it is already filled, so the caller must alert a human:
+    closes depend on this record (see ``get_open_record``).
+    """
+
+
 # ---------------------------------------------------------------------------
 # PositionManager
 # ---------------------------------------------------------------------------
@@ -72,11 +80,20 @@ class PositionManager:
     an in-process asyncio.Lock to prevent race conditions within a single
     worker process.
 
-    The Supabase ``positions`` table is written to for audit purposes only —
-    it is never queried to determine whether a position is currently open.
+    Whether a position is open is always decided by the exchange. The
+    ``positions`` table decides whether the bot opened it (closes are limited
+    to bot-opened positions).
     """
 
     LOCK_TIMEOUT_SECONDS: float = 5.0
+    # Checks after an open order got no answer: wait, then ask the exchange.
+    # Worst case 3 x (wait + 4 s) = 18 s, inside the 30 s shutdown drain.
+    OPEN_CONFIRM_DELAYS_SECONDS: tuple[float, ...] = (1.0, 2.0, 3.0)
+    OPEN_CONFIRM_CALL_TIMEOUT_SECONDS: float = 4.0
+    # One retry, like TradeLogger. The local SQLite client blocks for up to
+    # 10 s per attempt on a locked file, so more attempts would stall the app.
+    RECORD_WRITE_ATTEMPTS: int = 2
+    RECORD_RETRY_DELAY_SECONDS: float = 0.5
 
     def __init__(self, supabase: Any) -> None:
         self._supabase = supabase
@@ -159,6 +176,43 @@ class PositionManager:
                 )
             return open_position
 
+    async def confirm_unanswered_open(
+        self,
+        exchange: ccxt_async.Exchange,
+        symbol: str,
+        side: str,
+    ) -> tuple[str, dict | None, str]:
+        """Ask the exchange whether an open order that got no answer was filled.
+
+        Call only while the lock from ``check_and_lock("open")`` is still held:
+        that check saw no position, so a position that appears now comes from
+        the order that was just sent. The order itself is never sent again.
+
+        Returns ``(outcome, position, note)`` where outcome is
+          * ``"filled"``  - the exchange shows the position (returned);
+          * ``"flat"``    - every check answered and the last one showed no position;
+          * ``"unknown"`` - the exchange could not be read, or shows the other side.
+        """
+        note = "the exchange was not checked"
+        for delay in self.OPEN_CONFIRM_DELAYS_SECONDS:
+            await asyncio.sleep(delay)
+            try:
+                position = await asyncio.wait_for(
+                    _fetch_open_position(exchange, symbol),
+                    timeout=self.OPEN_CONFIRM_CALL_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:
+                note = f"the position check failed ({exc!r})"
+                continue
+            if position is None:
+                note = ""
+                continue
+            position_side = str(position.get("side") or "").lower()
+            if position_side and position_side != side:
+                return "unknown", None, f"the exchange shows a {position_side} position"
+            return "filled", position, ""
+        return ("unknown", None, note) if note else ("flat", None, "")
+
     def release_lock(self, user_id: str, symbol: str) -> None:
         """Release the lock left held by a successful check_and_lock()."""
         lock = _position_locks.get(f"{user_id}:{symbol}")
@@ -205,8 +259,32 @@ class PositionManager:
         except Exception as exc:
             logger.error("Failed to mark missing position user=%s symbol=%s: %s", user_id, symbol, exc)
 
+    async def _write_record(self, write: Any, what: str, user_id: str, symbol: str) -> Any:
+        """Run a position-record write, retrying briefly; raise if it keeps failing."""
+        last_exc: Exception | None = None
+        for attempt in range(1, self.RECORD_WRITE_ATTEMPTS + 1):
+            try:
+                return write()
+            except Exception as exc:
+                last_exc = exc
+                logger.error(
+                    "Failed to %s position record for user=%s symbol=%s (attempt %d/%d): %s",
+                    what,
+                    user_id,
+                    symbol,
+                    attempt,
+                    self.RECORD_WRITE_ATTEMPTS,
+                    exc,
+                )
+                if attempt < self.RECORD_WRITE_ATTEMPTS:
+                    await asyncio.sleep(self.RECORD_RETRY_DELAY_SECONDS)
+        raise PositionRecordError(
+            f"could not {what} the position record after "
+            f"{self.RECORD_WRITE_ATTEMPTS} attempts: {last_exc}"
+        ) from last_exc
+
     # ------------------------------------------------------------------
-    # open_position  (audit log write only)
+    # open_position
     # ------------------------------------------------------------------
 
     async def open_position(
@@ -218,9 +296,10 @@ class PositionManager:
         quantity: float,
         exchange: str = "",
     ) -> dict:
-        """Write an audit record to Supabase after a successful open order.
+        """Write the position record after a successful open order.
 
-        This is an audit trail only — it does not gate any trading decisions.
+        A later "close" is only executed when this record exists, so a write
+        that still fails after a retry raises ``PositionRecordError``.
         """
         record: dict = {
             "user_id": user_id,
@@ -232,21 +311,12 @@ class PositionManager:
             "exchange": exchange,
         }
 
-        try:
-            response = (
-                self._supabase.table("positions")
-                .insert(record)
-                .execute()
-            )
-        except Exception as exc:
-            # Non-fatal: audit write failure should not block the response.
-            logger.error(
-                "Failed to write open position audit record for user=%s symbol=%s: %s",
-                user_id,
-                symbol,
-                exc,
-            )
-            return record
+        response = await self._write_record(
+            lambda: self._supabase.table("positions").insert(record).execute(),
+            "write",
+            user_id,
+            symbol,
+        )
 
         rows: list[dict] = response.data if response.data else []
         if rows:
@@ -263,7 +333,7 @@ class PositionManager:
         return record
 
     # ------------------------------------------------------------------
-    # close_position  (audit log write only)
+    # close_position
     # ------------------------------------------------------------------
 
     async def close_position(
@@ -272,9 +342,11 @@ class PositionManager:
         symbol: str,
         exit_price: float,
     ) -> dict:
-        """Update the audit record in Supabase after a successful close order.
+        """Mark the position record closed after a successful close order.
 
-        This is an audit trail only — it does not gate any trading decisions.
+        A record left "open" would let a later close signal act on a position
+        the bot no longer owns, so a write that still fails after a retry
+        raises ``PositionRecordError``.
         """
         closed_at = datetime.now(tz=timezone.utc).isoformat()
 
@@ -284,24 +356,19 @@ class PositionManager:
             "closed_at": closed_at,
         }
 
-        try:
-            response = (
+        response = await self._write_record(
+            lambda: (
                 self._supabase.table("positions")
                 .update(update_data)
                 .eq("user_id", user_id)
                 .eq("symbol", symbol)
                 .eq("status", "open")
                 .execute()
-            )
-        except Exception as exc:
-            # Non-fatal: audit write failure should not block the response.
-            logger.error(
-                "Failed to update close position audit record for user=%s symbol=%s: %s",
-                user_id,
-                symbol,
-                exc,
-            )
-            return {"user_id": user_id, "symbol": symbol, **update_data}
+            ),
+            "close",
+            user_id,
+            symbol,
+        )
 
         rows: list[dict] = response.data if response.data else []
         if rows:
