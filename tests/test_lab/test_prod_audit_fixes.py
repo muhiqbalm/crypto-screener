@@ -415,3 +415,13 @@ def test_funding_7d_without_settlement_counts_falls_back_to_the_old_window():
     from src.lab.universal import strength
     p = replace(_panel_with_funding(8, False), funding_n=None)
     assert strength.funding_7d_apr_pct(p, len(p.ts) - 1, 0) == pytest.approx(21 * 0.0001 * 365.0 / 7.0 * 100.0)
+
+
+def test_outlook_evidence_never_says_terbukti_for_a_market_following_edge(conn):
+    from src.lab.outlook import logic as L
+    from src.lab.outlook import store as S
+    _short_signals(conn, 14, rekon_from=2)
+    track, _ = S.track_map(conn)
+    assert track == {"funding:-1": "searah_pasar"}
+    assert L.EVIDENCE_TEXT["searah_pasar"].startswith("Searah pasar") and "searah_pasar" in L.EVIDENCE_MULT
+    assert L._track(track, "funding", -1) == "searah_pasar"

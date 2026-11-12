@@ -327,13 +327,17 @@ def screener_snapshot(conn) -> tuple[dict[str, dict], Optional[str]]:
 
 
 def track_map(conn) -> tuple[dict[str, str], Optional[dict]]:
-    """{"type:dir": verdict code} from the screener track record (Signal Ledger)."""
+    """{"type:dir": verdict code} from the screener track record (Signal Ledger). Honest code
+    (audit 2026-11-13 P3): a raw "terbukti" whose BTC-relative interval includes zero is
+    "searah_pasar", so the Outlook never labels a market-following edge "Terbukti"."""
     from ..ledger import track_record as tr
+    from ..ledger.verdicts import honest_verdict
     try:
         rec = tr.compute(conn)
     except Exception:  # noqa: BLE001
         return {}, None
-    m = {f"{i['signal_type']}:{i['direction']}": i["verdict"] for i in rec.get("items", [])}
+    m = {f"{i['signal_type']}:{i['direction']}": honest_verdict(i["verdict"], i.get("verdict_rel_btc"))
+         for i in rec.get("items", [])}
     return m, {"period": rec.get("period"), "headline_horizon": rec.get("headline_horizon")}
 
 

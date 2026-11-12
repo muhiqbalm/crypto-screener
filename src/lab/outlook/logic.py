@@ -28,7 +28,7 @@ from . import calib as C
 SCHEMA_VERSION = 2
 # v1 weights, kept for the API shape: v2 factors no longer change keyakinan (used_weight = 0)
 WEIGHTS = {"screener": 0.0, "tren_1d": 0.0, "momentum_1h": 0.0, "regime": 0.0, "funding": 0.0, "oi": 0.0, "berita": 0.0}
-EVIDENCE_MULT = {"terbukti": 1.0, "belum_terbukti": 0.5, "belum_cukup_data": 0.5, "negatif": 0.0}
+EVIDENCE_MULT = {"terbukti": 1.0, "searah_pasar": 0.5, "belum_terbukti": 0.5, "belum_cukup_data": 0.5, "negatif": 0.0}
 LEAN_MIN = 2                       # FLAT: |MTF score| >= this -> "condong naik/turun"
 STALE_HOURS = 9.0                  # strategy bar older than this -> keyakinan rendah + warning
 MIN_SIDE_TRADES = 10               # EV per side needs at least this many backtest trades
@@ -43,6 +43,7 @@ EVIDENCE_TEXT = {
     "gagal_uji": "Gagal uji holdout",
     "belum_diuji": "Belum diuji",
     "terbukti": "Terbukti (Catatan Sinyal)",
+    "searah_pasar": "Searah pasar (Catatan Sinyal; belum terbukti dibanding BTC)",
     "negatif": "Rekam jejak negatif",
     "belum_terbukti": "Belum terbukti",
     "belum_cukup_data": "Belum cukup data",
