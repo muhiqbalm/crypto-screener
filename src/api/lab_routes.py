@@ -13,6 +13,8 @@ from typing import Annotated, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.lab import db as labdb
+from src.lab import honesty
+from src.lab import importance
 from src.lab import insights
 from src.lab import journal as jr
 from src.lab import market
@@ -182,6 +184,40 @@ def me(user: Annotated[dict, Depends(lab_user)]) -> dict:
 @router.get("/templates")
 def templates(_: Admin) -> list[dict]:
     return [t.public_schema() for t in TEMPLATES.values()]
+
+
+@router.get("/templates/{template_id}/importance")
+def template_importance(template_id: str, _: Admin, conn: Conn,
+                        timeframe: str = Query("4h", max_length=8)) -> dict:
+    """Which params matter for this template x timeframe (research file -> finished runs -> template
+    order). Advice for the form only: it never changes a parameter, preset, run or watch."""
+    t = get_template(template_id)
+    if t is None:
+        raise HTTPException(404, f"unknown template_id {template_id}")
+    if timeframe not in t.TIMEFRAMES:
+        raise HTTPException(422, f"timeframe must be one of {t.TIMEFRAMES}")
+    return importance.for_template(conn, t, timeframe)
+
+
+@router.get("/holdout-lock")
+def holdout_lock(_: Admin, conn: Conn, template_id: str = Query(..., max_length=64),
+                 symbol: str = Query(..., max_length=32), timeframe: str = Query(..., max_length=8)) -> dict:
+    """Read-only: the locked holdout of template x symbol x timeframe, shown before a run is queued.
+    Never creates or moves a lock (that only happens inside a validate / optimize run)."""
+    from .lab_models import norm_symbol
+    if get_template(template_id) is None:
+        raise HTTPException(404, f"unknown template_id {template_id}")
+    try:
+        sym = norm_symbol(symbol)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    lock = honesty.get_lock(conn, template_id, sym, timeframe)
+    return {"template_id": template_id, "symbol": sym, "timeframe": timeframe, "locked": lock is not None,
+            "holdout_start": lock["holdout_start"] if lock else None,
+            "touches": int(lock["touches"] or 0) if lock else 0,
+            "created_at": lock["created_at"] if lock else None,
+            "last_touch_at": lock["last_touch_at"] if lock else None,
+            "holdout_fraction": honesty.HOLDOUT_FRACTION}
 
 
 @router.get("/symbols")
