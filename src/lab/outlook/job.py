@@ -343,7 +343,7 @@ def build_row(conn, symbol: str, runner: Runner, presets: list[dict], ctx_common
                    "screener": sc, "oi": ctx_common["oi"].get(symbol), "headline_count": len(heads or [])},
     }
     row["peluang"] = L.peluang(row)
-    row["kualitas"] = Q.grade(row, ctx_common.get("live_groups"))
+    row["kualitas"] = Q.safe_grade(row, ctx_common.get("live_groups"))
     call = {
         "symbol": symbol, "bar": row["last_bar"], "bar_close": row["last_bar_close"], "computed_at": now,
         "side": side, "keyakinan": bias.get("keyakinan"), "keyakinan_basis": bias.get("basis"), "cls": cls,

@@ -93,7 +93,7 @@ def _decorate(row: dict, now: str, capital: float, leverage: float, sizing: str,
         out["plan"] = {**out["plan"], "freshness": fr}
     out["projection"] = L.project(out, capital, leverage, sizing, risk_pct)
     out["peluang"] = L.peluang(out)
-    out["kualitas"] = Q.grade(out, live)
+    out["kualitas"] = Q.safe_grade(out, live)
     if positions is not None:
         out["positions"] = positions.get(row.get("symbol"), [])
     return out

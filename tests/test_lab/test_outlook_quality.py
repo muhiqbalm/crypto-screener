@@ -107,6 +107,8 @@ def test_negative_live_record_lowers_and_steps_are_capped_at_two():
 def test_failed_preset_is_capped_at_C_and_no_letter_without_a_usable_call():
     q = Q.grade(_row(_strategy("short", fresh=True, verdict="FAIL"), calib=CAL_FRESH))
     assert q["base"] == "A" and q["grade"] == "C" and q["adjustments"][-1]["kind"] == "batas"
+    seen = Q.grade(_row(_strategy("short", fresh=True, contaminated=True), calib=CAL_FRESH))   # holdout seen in research
+    assert seen["base"] == "A" and seen["grade"] == "B" and "tercemar" in seen["adjustments"][-1]["text"]
     assert Q.grade(_row(_strategy(None, preset=False))) is None                       # FLAT: no call, no grade
     stale = Q.grade(_row(_strategy("short", fresh=True), calib=CAL_FRESH, now="2026-11-12T08:00:00Z"))
     assert stale["grade"] is None and "basi" in stale["why_none"] and stale["label"] == "Tidak dinilai"
@@ -171,6 +173,24 @@ def test_migration_adds_only_what_is_missing_and_a_read_only_reader_never_breaks
     sb = Q.scoreboard(ro)
     assert sb["n_calls"] == 1 and sb["n_ungraded"] == 1 and sb["by_grade"]["A"]["n_calls"] == 0
     ro.close()
+
+
+def test_a_grading_bug_never_hides_the_coin_and_an_unmigrated_table_still_records_calls(conn, monkeypatch):
+    def boom(*a, **k):
+        raise ValueError("bug")
+    monkeypatch.setattr(Q, "grade", boom)
+    assert Q.safe_grade(_row(_strategy("short", fresh=True), calib=CAL_FRESH)) is None
+    monkeypatch.undo()
+    conn.executescript("DROP TABLE IF EXISTS lab_outlook_calls;")
+    S._migrated.clear()
+    S.ensure_schema(conn)
+    conn.execute("ALTER TABLE lab_outlook_calls DROP COLUMN kualitas_json")
+    conn.execute("ALTER TABLE lab_outlook_calls DROP COLUMN kualitas")
+    conn.commit()
+    S._migrated.add(conn.execute("PRAGMA database_list").fetchone()[2])          # migration "already done" (stale cache)
+    S.save_call(conn, _call(kualitas="A", kualitas_json={"grade": "A"}))
+    conn.commit()
+    assert conn.execute("SELECT COUNT(*) FROM lab_outlook_calls").fetchone()[0] == 1
 
 
 def _resolve(conn, sym, status, r, bar):

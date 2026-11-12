@@ -175,13 +175,15 @@ def save_call(conn, call: dict) -> None:
     if not isinstance(call.get("kualitas_json"), str):
         vals["kualitas_json"] = dumps(call.get("kualitas_json"))
     vals["status"] = vals["status"] or ("open" if vals["side"] else "none")
-    cols = ", ".join(CALL_COLS)
-    marks = ", ".join("?" * len(CALL_COLS))
-    upd = ", ".join(f"{k}=excluded.{k}" for k in CALL_COLS if k not in ("symbol", "bar"))
+    have = {r[1] for r in conn.execute("PRAGMA table_info(lab_outlook_calls)")}
+    use = [k for k in CALL_COLS if k in have]   # a not-yet-migrated table still records the call
+    cols = ", ".join(use)
+    marks = ", ".join("?" * len(use))
+    upd = ", ".join(f"{k}=excluded.{k}" for k in use if k not in ("symbol", "bar"))
     conn.execute(
         f"INSERT INTO lab_outlook_calls ({cols}) VALUES ({marks}) ON CONFLICT(symbol, bar) DO UPDATE SET {upd}, "
         "r_net=NULL, r_gross=NULL, mfe_r=NULL, mae_r=NULL, exit_price=NULL, bars_to_resolve=NULL, ambiguous=NULL, "
-        "resolved_at=NULL, evaluated_at=NULL", [vals[k] for k in CALL_COLS])
+        "resolved_at=NULL, evaluated_at=NULL", [vals[k] for k in use])
 
 
 def _call_out(r) -> dict:

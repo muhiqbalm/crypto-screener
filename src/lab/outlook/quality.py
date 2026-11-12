@@ -18,13 +18,16 @@ Agreement with regime / track record can only LOWER the letter, one step each (m
     Unproven factors are shown but never counted (the replay found most add no edge).
   * the LIVE record of the same group (class x side x fase) is clearly negative: >= 20 resolved
     positions and the upper end of its 95% range < 0.
-Cap: preset GAGAL uji -> at best C. No letter for FLAT, stale data, price beyond SL or no calibration.
+Caps: preset GAGAL uji -> at best C; a PASS preset whose holdout was already seen during research
+("tercemar"), graded on its own similar cases -> at best B. No letter for FLAT, stale data, price
+beyond SL or no calibration.
 
 Calls store the letter they had when they were made (lab_outlook_calls.kualitas), so the grade
 itself is graded afterwards ("Rekam jejak skor"). Nothing here places or sizes an order.
 """
 from __future__ import annotations
 
+import logging
 import math
 from collections import namedtuple
 from typing import Any, Optional
@@ -52,6 +55,7 @@ FACTOR_LABEL = {"tren_1d": "Tren 1D", "momentum_1h": "Momentum 1H", "regime": "K
 DONE = C.DONE
 
 _Live = namedtuple("_Live", "pos status r_net mfe_r bars")
+log = logging.getLogger(__name__)
 
 
 def _num(x: Any) -> Optional[float]:
@@ -66,7 +70,8 @@ def rule_text() -> list[str]:
         "Turun satu tingkat bila faktor yang SUDAH terbukti (simulasi historis atau Catatan Sinyal) berlawanan arah, "
         "dan satu tingkat lagi bila rekam jejak live kelompok yang sama jelas negatif (≥ 20 posisi). "
         "Faktor yang belum terbukti ditampilkan tetapi tidak dihitung; skor tidak pernah dinaikkan.",
-        "Preset GAGAL uji maksimal C. Tanpa skor: strategi FLAT, data basi, harga sudah melewati SL, atau belum ada kalibrasi.",
+        "Preset GAGAL uji maksimal C; preset LOLOS dengan holdout tercemar maksimal B. Tanpa skor: strategi FLAT, data basi, "
+        "harga sudah melewati SL, atau belum ada kalibrasi.",
     ]
 
 
@@ -232,7 +237,7 @@ def _result(letter: Optional[str], base: Optional[str], base_reason: str, ev: Op
 
 
 def grade_parts(cal: Optional[dict], chk: list[dict], live: Optional[dict], cls: Optional[str],
-                why_none: Optional[str] = None, basis: str = "saat_panggilan") -> dict:
+                why_none: Optional[str] = None, basis: str = "saat_panggilan", contaminated: bool = False) -> dict:
     ev = evidence(cal)
     base, base_reason = base_grade((cal or {}).get("stats"))
     if why_none or base is None:
@@ -252,6 +257,10 @@ def grade_parts(cal: Optional[dict], chk: list[dict], live: Optional[dict], cls:
     if cls == "gagal_uji" and RANK[letter] > RANK["C"]:
         letter = "C"
         adjustments.append({"step": 0, "kind": "batas", "text": "Preset GAGAL uji: skor maksimal C."})
+    elif contaminated and (ev or {}).get("scope") == "strategi_ini" and RANK[letter] > RANK["B"]:
+        letter = "B"
+        adjustments.append({"step": 0, "kind": "batas",
+                            "text": "Holdout preset tercemar (sudah dilihat saat riset): skor maksimal B."})
     return _result(letter, base, base_reason, ev, chk, live, adjustments, None, basis)
 
 
@@ -273,7 +282,17 @@ def grade(row: dict, live: Optional[dict] = None) -> Optional[dict]:
         why_none = "Data strategi basi (lebih dari 9 jam): tidak dinilai sampai close 4H berikutnya."
     elif not bias.get("calib"):
         why_none = "Belum ada kalibrasi kasus serupa: skor belum bisa dihitung."
-    return grade_parts(bias.get("calib"), checks(row), lv, cls, why_none)
+    contaminated = bool((st.get("preset") or {}).get("contaminated"))
+    return grade_parts(bias.get("calib"), checks(row), lv, cls, why_none, contaminated=contaminated)
+
+
+def safe_grade(row: dict, live: Optional[dict] = None) -> Optional[dict]:
+    """grade() for the refresh job and the API: a grading bug must never hide the coin or break the page."""
+    try:
+        return grade(row, live)
+    except Exception:  # noqa: BLE001
+        log.exception("skor kualitas failed for %s", row.get("symbol"))
+        return None
 
 
 def letter(q: Optional[dict]) -> Optional[str]:
