@@ -208,6 +208,9 @@ def paper_position(conn, pos: dict, event: str) -> Optional[int]:
     manual paper orders are the admin's own action and Universal has its own rebalance log."""
     if not pos or pos.get("source") != "paper_auto" or pos.get("watch_id") is None:
         return None
+    basket = _basket_of(conn, int(pos["watch_id"]))
+    if basket is not None:
+        return _basket_progress(conn, basket, event)
     preset = _preset_of(conn, int(pos["watch_id"]))
     name = preset["name"] if preset else f"pantau #{pos['watch_id']}"
     side = (pos.get("side") or "").upper()
@@ -226,6 +229,45 @@ def paper_position(conn, pos: dict, event: str) -> Optional[int]:
         f" · {PAPER_NOTE}"
     link = f"/journal?account_id={pos['account_id']}" if pos.get("account_id") is not None else "/journal"
     return notify(conn, "paper", f"Paper {name}: tutup {side} {coin}", body, link, f"paper:{pos['id']}:close")
+
+
+# ── basket paper (src/lab/basket) ────────────────────────────────────────
+
+BASKET_MILESTONES = (1, 10, 20, 30, 60, 100)
+
+
+def _basket_of(conn, watch_id: int) -> Optional[dict]:
+    from .basket.store import basket_of_watch
+    return basket_of_watch(conn, watch_id)
+
+
+def _basket_progress(conn, basket: dict, event: str) -> Optional[int]:
+    """Basket members never notify per trade: dozens of coins would flood the bell and its
+    30-per-hour cap. One notification at 1, 10, 20, 30, 60 and 100 closed basket trades."""
+    if event != "close":
+        return None
+    n = conn.execute("SELECT COUNT(*) FROM journal_entries WHERE account_id=? AND source='paper_auto'",
+                     (basket["account_id"],)).fetchone()[0]
+    if n not in BASKET_MILESTONES:
+        return None
+    name = basket.get("title") or basket["name"]
+    body = (f"{n:,} transaksi tertutup dari {len(basket.get('symbols') or []):,} koin. "
+            + ("Penilaian mengikuti praregistrasi: minimal 28 hari, 8 koin, dan 10 hari entry. "
+               if n >= 30 else "Progres menuju 30 transaksi. ")
+            + PAPER_NOTE[:1].upper() + PAPER_NOTE[1:] + ".")
+    title = f"Paper {name}: {n}/30 transaksi" if n <= 30 else f"Paper {name}: {n:,} transaksi"
+    return notify(conn, "paper", title, body, f"/lab/arena?basket={basket['id']}", f"basket:{basket['id']}:n{n}")
+
+
+@_safe
+def basket_stopped(conn, basket: dict, dd_pct: float, limit_pct: float) -> Optional[int]:
+    """The kill switch fired (equity >= limit below its peak): no new entries, ever (praregistrasi §7)."""
+    name = basket.get("title") or basket["name"]
+    body = (f"Equity turun {_pct(dd_pct, 1)} dari puncak (batas {_pct(limit_pct, 1)}). Basket berhenti membuka posisi; "
+            f"posisi terbuka selesai lewat exit strategi. Hasil: GAGAL sesuai praregistrasi. {PAPER_NOTE[:1].upper()}"
+            f"{PAPER_NOTE[1:]}.")
+    return notify(conn, "paper", f"Paper {name}: rem darurat aktif", body, f"/lab/arena?basket={basket['id']}",
+                  f"basket:{basket['id']}:kill")
 
 
 # ── Signal Ledger (Rekam jejak sinyal) ────────────────────────────────────

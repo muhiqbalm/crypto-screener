@@ -692,9 +692,19 @@ def list_watches(_: Admin, conn: Conn) -> list[dict]:
     return [_watch_out(conn, w) for w in conn.execute("SELECT * FROM watches WHERE active=1 ORDER BY id DESC")]
 
 
+def _basket_guard(conn, watch_id: int) -> None:
+    """A basket member watch is part of a pre-registered test (src/lab/basket): no delete, no auto-paper switch."""
+    from src.lab.basket import store as bstore
+    b = bstore.basket_of_watch(conn, watch_id)
+    if b is not None:
+        raise HTTPException(409, f"watch ini bagian dari basket {b['name']} (uji yang sudah dipraregistrasi); "
+                                 "tidak bisa dihapus atau diubah satu per satu")
+
+
 @router.delete("/watches/{watch_id}")
 def delete_watch(watch_id: int, _: Admin, conn: Conn) -> dict:
     _get_watch(conn, watch_id)
+    _basket_guard(conn, watch_id)
     conn.execute("DELETE FROM watch_state WHERE watch_id=?", (watch_id,))
     conn.execute("DELETE FROM watches WHERE id=?", (watch_id,))
     # single-watch jobs only; a batched job (payload.watch_ids) just skips the deleted watch
@@ -714,6 +724,7 @@ def watch_state(watch_id: int, _: Admin, conn: Conn) -> dict:
 @router.post("/watches/{watch_id}/autopaper")
 def watch_autopaper(watch_id: int, body: AutoPaper, _: Admin, conn: Conn) -> dict:
     w = _get_watch(conn, watch_id)
+    _basket_guard(conn, watch_id)
     acct = body.account_id or w["autopaper_account_id"]
     if body.enabled:
         if not acct:
