@@ -40,7 +40,12 @@ from .auth import authenticate_by_passphrase
 from .config import TradingSettings, get_trading_settings
 from .connector import AuthenticationError, LeverageSetError, TradingConnector
 from .credentials import CredentialStore, DecryptionError, MissingCredentialsError
-from .executor import InsufficientBalanceError, OrderExecutionError, TradeExecutor
+from .executor import (
+    InsufficientBalanceError,
+    OrderExecutionError,
+    OrderOutcomeUnknownError,
+    TradeExecutor,
+)
 from .models import TradeAcceptedResponse, TradeErrorResponse, WebhookPayload
 from .notifier import TelegramNotifier
 from .position_manager import (
@@ -48,6 +53,7 @@ from .position_manager import (
     LockTimeoutError,
     NoPositionError,
     PositionManager,
+    PositionRecordError,
 )
 from .trade_logger import TradeLogger
 
@@ -563,6 +569,11 @@ async def _run_trade(
                     f"close skipped: exchange position is {exchange_side} but the bot "
                     f"opened {record.get('side')}"
                 )
+            elif payload.side != str(record.get("side")).lower():
+                rejection = (
+                    f"close skipped: the alert says close {payload.side} but the bot's "
+                    f"open position is {record.get('side')}; position left untouched"
+                )
             else:
                 contracts = float(position.get("contracts") or 0.0)
                 recorded = float(record.get("quantity") or 0.0)
@@ -627,12 +638,49 @@ async def _run_trade(
                 payload.symbol,
                 exc,
             )
-            await _log_failure(
-                trade_logger, user_id, payload, "failed", error_details
+            # An open order that got no answer may still have been filled.
+            # Ask the exchange (the lock is still held) before calling it failed.
+            outcome, found = "failed", None
+            if isinstance(exc, OrderOutcomeUnknownError) and payload.action == "open":
+                outcome, found, note = await position_manager.confirm_unanswered_open(
+                    exchange, payload.symbol, payload.side
+                )
+                logger.warning(
+                    "Unanswered open for user=%s symbol=%s side=%s resolved as %s %s",
+                    user_id,
+                    payload.symbol,
+                    payload.side,
+                    outcome,
+                    note,
+                )
+                if outcome == "flat":
+                    error_details += (
+                        ". Checked the exchange: no position was opened, nothing recorded"
+                    )
+                elif outcome == "unknown":
+                    error_details = (
+                        f"ORDER OUTCOME UNKNOWN for {payload.side.upper()} {payload.symbol}: "
+                        f"{error_details}; {note}. A real {payload.side} position may be "
+                        "open with no bot record, and the bot will not close it. "
+                        "Check the exchange now. The order was not re-sent."
+                    )
+            if outcome != "filled":
+                await _log_failure(
+                    trade_logger, user_id, payload, "failed", error_details
+                )
+                alert(error_details)
+                await _close_exchange_safe(exchange)
+                return
+            # Filled: carry on exactly as if the exchange had answered.
+            order = {
+                "id": "",
+                "average": found.get("entryPrice"),
+                "filled": found.get("contracts") or found.get("size"),
+            }
+            alert(
+                f"{error_details}, but the exchange shows the {payload.side} position "
+                "is open, so it was recorded as opened (order not re-sent)"
             )
-            alert(error_details)
-            await _close_exchange_safe(exchange)
-            return
 
         # Extract fill details from the CCXT order response
         order_id = str(order.get("id", ""))
@@ -644,21 +692,45 @@ async def _run_trade(
         # Step 8: Update position record
         # ------------------------------------------------------------------
 
-        if payload.action == "open":
-            await position_manager.open_position(
-                user_id=user_id,
-                symbol=payload.symbol,
-                side=payload.side,
-                entry_price=fill_price,
-                quantity=filled_quantity,
-                exchange=payload.exchange,
+        try:
+            if payload.action == "open":
+                await position_manager.open_position(
+                    user_id=user_id,
+                    symbol=payload.symbol,
+                    side=payload.side,
+                    entry_price=fill_price,
+                    quantity=filled_quantity,
+                    exchange=payload.exchange,
+                )
+            else:  # "close"
+                await position_manager.close_position(
+                    user_id=user_id,
+                    symbol=payload.symbol,
+                    exit_price=fill_price,
+                )
+        except PositionRecordError as exc:
+            # The order is already filled, so carry on, but a human must know.
+            logger.error(
+                "Position record write failed for user=%s symbol=%s order=%s: %s",
+                user_id,
+                payload.symbol,
+                order_id,
+                exc,
+                exc_info=True,
             )
-        else:  # "close"
-            await position_manager.close_position(
-                user_id=user_id,
-                symbol=payload.symbol,
-                exit_price=fill_price,
-            )
+            if payload.action == "open":
+                alert(
+                    f"REAL POSITION WITHOUT A RECORD: {payload.side} {filled_quantity} "
+                    f"{payload.symbol} at {fill_price} (order {order_id}) is open on the "
+                    f"exchange, but the bot {exc}. The bot will NOT close it on a close "
+                    "signal. Close it by hand on the exchange."
+                )
+            else:
+                alert(
+                    f"position closed on the exchange (order {order_id}), but the bot "
+                    f"{exc}. The record still says open; tell the admin before opening "
+                    "this symbol by hand"
+                )
     finally:
         position_manager.release_lock(user_id, payload.symbol)
 
