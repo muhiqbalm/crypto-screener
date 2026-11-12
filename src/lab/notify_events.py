@@ -5,6 +5,13 @@ one hook point with a single additive line and never raises:
   paper_position    src/lab/paper.py open_position() / close_position()   (preset paper watches)
   ledger_verdicts   src/lab/ledger/jobs.py execute_cycle()   (after scoring)
   deploy_log_scan   src/lab/weekly/schedule.py tick()   (worker scheduler; /var/log/bmtm-deploy.log)
+  report_ready      src/lab/weekly/schedule.py snapshot_week()   (weekly snapshot frozen)
+
+Copy rules (same as the web UI, glossary in docs/riset-2026-11-12/02-audit-ux.md §4):
+Indonesian, one name per concept (Uji jujur, Cari setting terbaik, Lolos / Gagal, Rekam jejak
+sinyal, Pembaruan sistem), exchange-style numbers ``1,234.56`` with a real minus sign, times
+in WIB with Indonesian month names, and every paper message says it is a simulation.
+Dedupe keys and links are part of the contract with the bell UI; titles and bodies are not.
 """
 from __future__ import annotations
 
@@ -12,6 +19,7 @@ import hashlib
 import logging
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -19,22 +27,95 @@ from .notify import notify
 
 log = logging.getLogger("lab.notify")
 
-MODE_LABEL = {"backtest": "Backtest", "validate": "Validasi", "optimize": "Optimasi"}
+MODE_LABEL = {"backtest": "Uji historis cepat", "validate": "Uji jujur", "optimize": "Cari setting terbaik"}
+RUN_VERDICT_LABEL = {"PASS": "Lolos", "FAIL": "Gagal"}
+TEMPLATE_LABEL = {"rosyade_family": "Rosyade", "donchian_breakout": "Donchian breakout",
+                  "mean_reversion_range": "Mean reversion (range)"}
+TF_LABEL = {"1m": "1 menit", "5m": "5 menit", "15m": "15 menit", "30m": "30 menit", "1h": "1 jam", "2h": "2 jam",
+            "4h": "4 jam", "6h": "6 jam", "12h": "12 jam", "1d": "1 hari", "1w": "1 minggu"}
 VERDICT_LABEL = {"terbukti": "terbukti", "negatif": "negatif", "belum_terbukti": "belum terbukti",
                  "belum_cukup_data": "belum cukup data"}
+SIGNAL_TYPE_LABEL = {"komposit": "Komposit", "komposit_high": "Komposit keyakinan tinggi", "tier_a": "Tier A",
+                     "tier_c": "Tier C", "momentum": "Momentum 30 hari", "funding": "Funding", "oi": "OI × harga",
+                     "tv_open": "Alert TradingView", "universal_v0": "Universal v0"}
+SIGNAL_SOURCE_LABEL = {"screener": "screener", "screener_rekon": "rekonstruksi screener", "lab_watch": "pantau Lab",
+                       "universal": "Universal, arsip", "webhook": "webhook"}
+EXIT_LABEL = {"hard_tp": "kena target (TP)", "hard_sl": "kena batal jika (SL)", "manual_close": "ditutup manual",
+              "strategy_reverse": "strategi berbalik arah", "universal_rebalance": "rebalance Universal"}
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
+WIB = timezone(timedelta(hours=7))
+MINUS = "−"
+PAPER_NOTE = "simulasi, bukan order sungguhan"
 STRONG = ("terbukti", "negatif")
 DEPLOY_LOG = "/var/log/bmtm-deploy.log"
 DEPLOY_RE = re.compile(r"\b(backend|frontend) live @ ([0-9a-f]{6,40})|GAGAL:")   # bmtm-deploy.sh: die() = "GAGAL: ..."
 _SECRET_RE = re.compile(r"(?i)(pass(phrase|word)?|secret|token|api[_-]?key|authorization)\s*[=:]\s*\S+")
 
 
+# ── formatting (pure) ─────────────────────────────────────────────────────
+
 def _coin(symbol: str) -> str:
     s = (symbol or "").upper()
     return s[:-4] if s.endswith("USDT") else s
 
 
-def _pct(v) -> str:
-    return "—" if v is None else f"{v:+.2f}%"
+def _tf(tf: str) -> str:
+    return TF_LABEL.get((tf or "").lower(), tf or "")
+
+
+def _strategy(template_id: str) -> str:
+    if template_id in TEMPLATE_LABEL:
+        return TEMPLATE_LABEL[template_id]
+    s = (template_id or "").replace("_", " ").strip()
+    return s[:1].upper() + s[1:]
+
+
+def _signed(v, digits: int = 2) -> str:
+    """+1,234.56 / −1,234.56 / 0.00 (exchange style, real minus sign)."""
+    x = round(float(v), digits)
+    body = f"{abs(x):,.{digits}f}"
+    return f"+{body}" if x > 0 else f"{MINUS}{body}" if x < 0 else body
+
+
+def _pct(v, digits: int = 2) -> str:
+    return "tidak tersedia" if v is None else f"{_signed(v, digits)}%"
+
+
+def _px(v) -> str:
+    """Price, exchange style: 2,000.00 / 1.50 / 0.00001234."""
+    if v is None:
+        return "tidak tersedia"
+    x = float(v)
+    if abs(x) >= 1000:
+        return f"{x:,.2f}"
+    s = (f"{x:,.4f}" if abs(x) >= 1 else f"{x:.8f}").rstrip("0")
+    whole, _, frac = s.partition(".")
+    return f"{whole}.{frac.ljust(2, '0')}"
+
+
+def _signal_type(t: str) -> str:
+    if t in SIGNAL_TYPE_LABEL:
+        return SIGNAL_TYPE_LABEL[t]
+    m = re.match(r"^(.*)_(\d+[mhdw])$", t or "")            # lab watch: "<template>_<tf>"
+    if m:
+        return f"{_strategy(m.group(1))} {_tf(m.group(2))}"
+    return _strategy(t)
+
+
+def _exit(reason: Optional[str]) -> Optional[str]:
+    if not reason:
+        return None
+    if reason in EXIT_LABEL:
+        return EXIT_LABEL[reason]
+    if reason.startswith("strategy_exit"):
+        why = reason.partition(":")[2]
+        return "strategi keluar (tidak lagi berposisi)" if why in ("", "flat") else f"strategi keluar ({why})"
+    return reason
+
+
+def _wib(iso_ts: str) -> tuple[datetime, str]:
+    dt = datetime.fromisoformat(iso_ts.replace("Z", "+00:00")).astimezone(WIB)
+    return dt, f"{dt.day} {MONTHS[dt.month - 1]} {dt:%H:%M} WIB"
 
 
 def _safe(fn):
@@ -67,21 +148,24 @@ def job_finished(conn, job: dict) -> Optional[int]:
     if status not in ("done", "error"):
         return None
     label = MODE_LABEL.get(r["mode"], r["mode"])
-    what = f"{r['timeframe'].upper()}-{_coin(r['symbol'])} {r['template_id']}"
+    what = f"{_coin(r['symbol'])} {_tf(r['timeframe'])} · {_strategy(r['template_id'])}"
     if status == "error":
         err = (job.get("error") or r["error"] or "").strip().splitlines()
-        return notify(conn, "job", f"{label} #{r['id']} gagal: {what}", (err[-1] if err else "")[:300] or None,
-                      f"/lab/runs/{r['id']}", f"job:{job['id']}:error")
+        detail = (err[-1] if err else "").strip()[:300]
+        return notify(conn, "job", f"{label} #{r['id']} gagal dijalankan · {what}",
+                      f"Detail teknis: {detail}" if detail else None, f"/lab/runs/{r['id']}", f"job:{job['id']}:error")
     bits = []
     if r["verdict"]:
-        bits.append(r["verdict"])
+        bits.append(RUN_VERDICT_LABEL.get(r["verdict"], r["verdict"]))
+    elif r["mode"] == "backtest":
+        bits.append("tanpa rapor")
     if r["net_return_pct"] is not None:
-        bits.append(f"return {_pct(r['net_return_pct'])}")
+        bits.append(f"hasil bersih {_pct(r['net_return_pct'])}")
     if r["max_dd_pct"] is not None:
-        bits.append(f"DD {abs(r['max_dd_pct']):.2f}%")
+        bits.append(f"turun terdalam {_pct(-abs(r['max_dd_pct']))}")
     if r["trades"] is not None:
-        bits.append(f"{r['trades']} trade")
-    return notify(conn, "job", f"{label} #{r['id']} selesai: {what}", " · ".join(bits) or None,
+        bits.append(f"{r['trades']:,} trade")
+    return notify(conn, "job", f"{label} #{r['id']} selesai · {what}", " · ".join(bits) or None,
                   f"/lab/runs/{r['id']}", f"job:{job['id']}:done")
 
 
@@ -92,34 +176,30 @@ def _scan_finished(conn, scan_id: int) -> Optional[int]:
         return None
     s = conn.execute("SELECT template_id, mode FROM lab_scans WHERE id=?", (scan_id,)).fetchone()
     c = conn.execute("SELECT COUNT(*) AS n, SUM(status='done') AS done, SUM(status='error') AS err, "
-                     "SUM(status='cancelled') AS canc, SUM(verdict='PASS') AS pass FROM lab_runs WHERE scan_id=?",
-                     (scan_id,)).fetchone()
-    body = f"{c['done'] or 0}/{c['n']} sel selesai"
+                     "SUM(status='cancelled') AS canc, SUM(verdict='PASS') AS pass, SUM(verdict='FAIL') AS fail "
+                     "FROM lab_runs WHERE scan_id=?", (scan_id,)).fetchone()
+    body = f"{c['done'] or 0} dari {c['n']} kombinasi koin × timeframe selesai"
     if s and s["mode"] != "backtest":
-        body += f" · {c['pass'] or 0} PASS"
+        body += f" · {c['pass'] or 0} lolos · {c['fail'] or 0} gagal"
     if c["err"]:
-        body += f" · {c['err']} gagal"
+        body += f" · {c['err']} error"
     if c["canc"]:
         body += f" · {c['canc']} dibatalkan"
-    tpl = f" {s['template_id']}" if s else ""
-    return notify(conn, "job", f"Scan #{scan_id} selesai:{tpl}", body, f"/lab/scan?id={scan_id}",
+    tpl = f" · {_strategy(s['template_id'])}" if s else ""
+    return notify(conn, "job", f"Uji banyak koin #{scan_id} selesai{tpl}", body, f"/lab/scan?id={scan_id}",
                   f"scan:{scan_id}:finished")
 
 
 # ── paper presets ─────────────────────────────────────────────────────────
 
-def _preset_name(conn, watch_id: int) -> Optional[str]:
+def _preset_of(conn, watch_id: int) -> Optional[dict]:
     have = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN "
                         "('lab_presets','lab_preset_links')").fetchone()[0]
     if have < 2:
         return None
-    r = conn.execute("SELECT p.name FROM lab_preset_links l JOIN lab_presets p ON p.id = l.preset_id "
+    r = conn.execute("SELECT p.id, p.name FROM lab_preset_links l JOIN lab_presets p ON p.id = l.preset_id "
                      "WHERE l.kind='watch' AND l.ref_id=?", (watch_id,)).fetchone()
-    return r["name"] if r else None
-
-
-def _px(v) -> str:
-    return "—" if v is None else f"{float(v):.6g}"
+    return {"id": r["id"], "name": r["name"]} if r else None
 
 
 @_safe
@@ -128,22 +208,27 @@ def paper_position(conn, pos: dict, event: str) -> Optional[int]:
     manual paper orders are the admin's own action and Universal has its own rebalance log."""
     if not pos or pos.get("source") != "paper_auto" or pos.get("watch_id") is None:
         return None
-    name = _preset_name(conn, int(pos["watch_id"])) or f"watch {pos['watch_id']}"
+    preset = _preset_of(conn, int(pos["watch_id"]))
+    name = preset["name"] if preset else f"pantau #{pos['watch_id']}"
     side = (pos.get("side") or "").upper()
+    coin = _coin(pos.get("symbol") or "")
     if event == "open":
-        body = f"{side} {pos['symbol']} @ {_px(pos.get('entry_price'))} · SL {_px(pos.get('sl'))}" + (
-            f" · TP {_px(pos.get('tp'))}" if pos.get("tp") else "")
-        return notify(conn, "paper", f"Paper {name}: buka {side}", body, "/lab/presets",
-                      f"paper:{pos['id']}:open")
+        body = f"Masuk di {_px(pos.get('entry_price'))} · batal jika (SL) {_px(pos.get('sl'))}" + (
+            f" · target (TP) {_px(pos.get('tp'))}" if pos.get("tp") else "") + f" · {PAPER_NOTE}"
+        link = f"/lab/arena?highlight={preset['id']}" if preset else "/lab/arena"
+        return notify(conn, "paper", f"Paper {name}: buka {side} {coin}", body, link, f"paper:{pos['id']}:open")
     pnl = pos.get("pnl")
     r_mult = (pnl / pos["risk_amount"]) if pnl is not None and pos.get("risk_amount") else None
-    body = f"{side} {pos['symbol']} ditutup @ {_px(pos.get('exit_price'))} · PnL " + (
-        "—" if pnl is None else f"{pnl:+,.2f} USDT") + (f" ({r_mult:+.2f}R)" if r_mult is not None else "") + (
-        f" · {pos['exit_reason']}" if pos.get("exit_reason") else "")
-    return notify(conn, "paper", f"Paper {name}: tutup {side}", body, "/journal", f"paper:{pos['id']}:close")
+    result = "hasil bersih tidak tersedia" if pnl is None else f"hasil bersih {_signed(pnl)} USDT" + (
+        f" ({_signed(r_mult)}R)" if r_mult is not None else "")
+    reason = _exit(pos.get("exit_reason"))
+    body = f"Keluar di {_px(pos.get('exit_price'))} · {result}" + (f" · {reason}" if reason else "") + \
+        f" · {PAPER_NOTE}"
+    link = f"/journal?account_id={pos['account_id']}" if pos.get("account_id") is not None else "/journal"
+    return notify(conn, "paper", f"Paper {name}: tutup {side} {coin}", body, link, f"paper:{pos['id']}:close")
 
 
-# ── Signal Ledger ─────────────────────────────────────────────────────────
+# ── Signal Ledger (Rekam jejak sinyal) ────────────────────────────────────
 
 KV_LEDGER = "notify_ledger_verdicts"
 
@@ -167,7 +252,11 @@ def ledger_verdicts(conn) -> list[int]:
         return []
 
     def name(v: dict) -> str:
-        return f"{v['signal_type']} {'long' if v['direction'] > 0 else 'short'} ({v['source']})"
+        src = SIGNAL_SOURCE_LABEL.get(v["source"], v["source"])
+        return f"{_signal_type(v['signal_type'])} {'long' if v['direction'] > 0 else 'short'} ({src})"
+
+    def was(old) -> str:
+        return VERDICT_LABEL.get(old, old) if old else "baru"
 
     def stamp(k, old, v) -> str:
         return hashlib.sha1(f"{k}|{old}|{v['verdict']}|{v['n']}".encode()).hexdigest()[:16]
@@ -175,19 +264,34 @@ def ledger_verdicts(conn) -> list[int]:
     ids = []
     if len(changes) <= 3:
         for k, old, v in changes:
-            body = (f"{VERDICT_LABEL.get(old, old or 'baru')} → {VERDICT_LABEL[v['verdict']]} · n={v['n']} "
-                    f"({v['days']} hari) · rata-rata 1 hari {_pct(v['mean_pct'])}")
-            i = notify(conn, "ledger", f"Catatan Sinyal: {name(v)} kini {VERDICT_LABEL[v['verdict']]}", body,
+            body = (f"{was(old)} → {VERDICT_LABEL[v['verdict']]} · {v['n']:,} sinyal dinilai di {v['days']} hari "
+                    f"· rata-rata gerak searah sinyal setelah 1 hari {_pct(v['mean_pct'])}")
+            i = notify(conn, "ledger", f"Rekam jejak sinyal: {name(v)} kini {VERDICT_LABEL[v['verdict']]}", body,
                        f"/lab/signals?type={v['signal_type']}", f"ledger:{stamp(k, old, v)}")
             if i:
                 ids.append(i)
         return ids
-    body = "; ".join(f"{name(v)}: {VERDICT_LABEL.get(old, old or 'baru')} → {VERDICT_LABEL[v['verdict']]}"
-                     for _, old, v in changes[:8]) + (f"; +{len(changes) - 8} lagi" if len(changes) > 8 else "")
+    body = "; ".join(f"{name(v)}: {was(old)} → {VERDICT_LABEL[v['verdict']]}"
+                     for _, old, v in changes[:8]) + (f"; dan {len(changes) - 8} lagi" if len(changes) > 8 else "")
     key = hashlib.sha1("|".join(stamp(*c) for c in changes).encode()).hexdigest()[:16]
-    i = notify(conn, "ledger", f"Catatan Sinyal: {len(changes)} vonis berubah", body, "/lab/signals",
+    i = notify(conn, "ledger", f"Rekam jejak sinyal: {len(changes)} vonis berubah", body, "/lab/signals",
                f"ledger:multi:{key}")
     return [i] if i else []
+
+
+# ── weekly report ─────────────────────────────────────────────────────────
+
+@_safe
+def report_ready(conn, week: str, start: str, end: str) -> Optional[int]:
+    """The worker froze the snapshot of ``week`` ([start, end) in UTC ISO)."""
+    a, a_txt = _wib(start)
+    b, b_txt = _wib(end)
+    span = f"{a.day}–{b.day} {MONTHS[b.month - 1]}" if a.month == b.month else \
+        f"{a.day} {MONTHS[a.month - 1]} – {b.day} {MONTHS[b.month - 1]}"
+    body = (f"Senin {a_txt} s/d Senin {b_txt} (minggu {week}). "
+            "Angkanya sudah dibekukan dan tidak berubah lagi.")
+    return notify(conn, "report", f"Laporan mingguan siap: {span}", body, f"/lab/report?week={week}",
+                  f"report:{week}")
 
 
 # ── deploys ───────────────────────────────────────────────────────────────
@@ -239,9 +343,9 @@ def deploy_log_scan(conn, path: Optional[str] = None, max_bytes: int = 65536) ->
         line = redact(raw.strip())
         msg = re.sub(r"^\[[^\]]+\]\s*", "", line)
         if m.group(1):
-            title = f"Deploy {m.group(1)} live @ {m.group(2)[:7]}"
+            title = f"Pembaruan sistem: {m.group(1)} terpasang @ {m.group(2)[:7]}"
         else:
-            title = "Deploy gagal: " + msg.replace("GAGAL:", "").strip()[:110]
+            title = "Pembaruan sistem gagal: " + msg.replace("GAGAL:", "").strip()[:100]
         i = notify(conn, "deploy", title, msg[:400], "/lab/report",
                    "deploy:" + hashlib.sha1(raw.encode()).hexdigest()[:20])
         if i:

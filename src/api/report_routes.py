@@ -1,4 +1,7 @@
-"""/api/v1/lab/report (Laporan Mingguan) + /api/v1/lab/notifications (in-web). Admin-only.
+"""/api/v1/lab/report (Laporan Mingguan) + /api/v1/lab/notifications (in-web).
+
+Access: the report is readable by every logged-in team account (``lab_user``, CEO decision
+2026-11-12); notifications stay admin-only. Nothing here writes data on behalf of a reader.
 
 The report is read-only: a frozen snapshot (written by the lab worker each Monday
 00:30 UTC) when the week has one, otherwise built on request from lab.db, the
@@ -17,12 +20,13 @@ from src.lab import notify as notif
 from src.lab.settings import get_lab_settings
 from src.lab.weekly import build, store
 
-from .lab_auth import lab_admin
+from .lab_auth import lab_admin, lab_user
 from .lab_routes import _conn
 
 router = APIRouter(prefix="/api/v1/lab/report", tags=["lab-report"])
 notifications_router = APIRouter(prefix="/api/v1/lab/notifications", tags=["lab-notifications"])
 Admin = Annotated[dict, Depends(lab_admin)]
+Team = Annotated[dict, Depends(lab_user)]          # any logged-in account (401 without a token)
 Conn = Annotated[Any, Depends(_conn)]
 WEEKS_BACK = 12
 
@@ -41,7 +45,7 @@ def _week_or_422(week: Optional[str], now: datetime) -> str:
 
 
 @router.get("/weeks")
-def weeks(_: Admin, conn: Conn) -> dict:
+def weeks(_: Team, conn: Conn) -> dict:
     """Weeks for the selector: the current week, the last WEEKS_BACK weeks, and every snapshot."""
     now = datetime.now(timezone.utc)
     cur = store.current_week(now)
@@ -57,7 +61,7 @@ def weeks(_: Admin, conn: Conn) -> dict:
 
 
 @router.get("/weekly")
-def weekly(_: Admin, conn: Conn, week: Optional[str] = None) -> dict:
+def weekly(_: Team, conn: Conn, week: Optional[str] = None) -> dict:
     now = datetime.now(timezone.utc)
     w = _week_or_422(week, now)
     return build.get_or_build(conn, w, get_lab_settings().trading_db_path, now=now)
