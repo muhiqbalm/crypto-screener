@@ -95,3 +95,13 @@ def read_one(notification_id: int, user: Admin, conn: Conn) -> dict:
     if not notif.mark_read(conn, key, notification_id):
         raise HTTPException(status_code=404, detail="notifikasi tidak ditemukan")
     return {"ok": True, "unread": notif.unread_count(conn, key)}
+
+
+@notifications_router.post("/{notification_id}/ack")
+def ack_one(notification_id: int, user: Admin, conn: Conn) -> dict:
+    """"Sudah dicek": a sticky notification (e.g. a rejected live order) stops being pinned for
+    every admin. Only the notification's own read/ack state changes; nothing else is written."""
+    key = _user_key(user)
+    if not notif.ack(conn, key, notification_id):
+        raise HTTPException(status_code=404, detail="notifikasi tidak ditemukan")
+    return {"ok": True, "unread": notif.unread_count(conn, key)}

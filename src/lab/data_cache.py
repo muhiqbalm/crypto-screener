@@ -86,21 +86,39 @@ def cached_datasets(path: Optional[Path] = None) -> dict:
     return out
 
 
+def _tmp(path: Path) -> Path:
+    """Per-process temp name: two lab jobs may refresh the same file at once (fast lane +
+    priority lane), and a shared ``.tmp`` would let one writer truncate the other's file."""
+    return path.with_name(f"{path.name}.{os.getpid()}.tmp")
+
+
 def _write_index_entry(symbol: str, tf: str, df) -> None:
-    idx = read_index(index_path())
     key = f"{symbol.upper()}_{tf}"
-    if df is None or len(df) == 0:
-        idx.pop(key, None)
-    else:
-        idx[key] = {
-            "symbol": symbol.upper(), "timeframe": tf,
-            "first": df["timestamp"].iloc[0].isoformat(),
-            "last": df["timestamp"].iloc[-1].isoformat(),
-            "rows": int(len(df)),
-        }
-    tmp = index_path().with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(idx, indent=1, sort_keys=True))
-    os.replace(tmp, index_path())
+    entry = None if df is None or len(df) == 0 else {
+        "symbol": symbol.upper(), "timeframe": tf,
+        "first": df["timestamp"].iloc[0].isoformat(),
+        "last": df["timestamp"].iloc[-1].isoformat(),
+        "rows": int(len(df)),
+    }
+    lock = None
+    try:  # read-modify-write under an exclusive lock so a concurrent writer's entry is not lost
+        import fcntl
+        lock = open(index_path().with_name("_index.lock"), "a")
+        fcntl.flock(lock, fcntl.LOCK_EX)
+    except (ImportError, OSError):
+        lock = None
+    try:
+        idx = read_index(index_path())
+        if entry is None:
+            idx.pop(key, None)
+        else:
+            idx[key] = entry
+        tmp = _tmp(index_path())
+        tmp.write_text(json.dumps(idx, indent=1, sort_keys=True))
+        os.replace(tmp, index_path())
+    finally:
+        if lock is not None:
+            lock.close()            # closing the file releases the flock
 
 
 def rebuild_index() -> dict:
@@ -140,9 +158,12 @@ def load_funding(symbol: str):
 
 
 def _save(df, path: Path) -> None:
-    tmp = path.with_suffix(".parquet.tmp")
-    df.to_parquet(tmp, index=False)
-    os.replace(tmp, path)
+    tmp = _tmp(path)
+    try:
+        df.to_parquet(tmp, index=False)
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 # ── data.binance.vision bulk ─────────────────────────────────────────────

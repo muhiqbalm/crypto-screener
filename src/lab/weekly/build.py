@@ -134,6 +134,10 @@ def paper_section(conn, start: str, end: str, partial: bool) -> dict:
 
 # ── Signal Ledger ─────────────────────────────────────────────────────────
 
+_LEDGER_KEYS = ("n_signals", "n", "days", "hit_rate", "mean_pct", "mean_ci", "verdict", "verdict_raw",
+                "verdict_rel_btc", "mean_rel_btc_pct", "rel_btc_ci", "n_rekon", "first_ts", "last_ts")
+
+
 def ledger_section(conn, start: str, end: str) -> dict:
     from ..ledger.verdicts import verdicts
     overall = {v["key"]: v for v in verdicts(conn, until=end)}
@@ -145,9 +149,8 @@ def ledger_section(conn, start: str, end: str) -> dict:
         w = week.get(k)
         groups.append({
             "key": k, "source": o["source"], "signal_type": o["signal_type"], "direction": o["direction"],
-            "overall": {x: o[x] for x in ("n_signals", "n", "days", "hit_rate", "mean_pct", "mean_ci", "verdict")},
-            "week": {x: w[x] for x in ("n_signals", "n", "days", "hit_rate", "mean_pct", "mean_ci", "verdict")}
-            if w else None,
+            "overall": {x: o.get(x) for x in _LEDGER_KEYS},
+            "week": {x: w.get(x) for x in _LEDGER_KEYS} if w else None,
         })
 
     def counts(vs) -> dict:
@@ -159,8 +162,10 @@ def ledger_section(conn, start: str, end: str) -> dict:
         "available": True, "horizon": "1d", "groups": groups,
         "counts_overall": counts(overall.values()), "counts_week": counts(week.values()),
         "signals_week": sum(v["n_signals"] for v in week.values()),
-        "note": "Vonis horizon 1 hari (CI 95% klaster per hari, minimal 10 sinyal di 5 hari). Sinyal hari terakhir "
-                "minggu ini belum punya hasil 1 hari saat laporan dibuat.",
+        "note": "Vonis horizon 1 hari (CI 95% klaster per hari, minimal 10 sinyal di 5 hari), sebelum biaya. "
+                "\"Terbukti\" hanya jika rentangnya di atas nol juga dibanding BTC; kalau dibanding BTC masih mencakup "
+                "nol, vonisnya \"searah pasar\". Sinyal hari terakhir minggu ini belum punya hasil 1 hari saat laporan "
+                "dibuat.",
     }
 
 

@@ -13,6 +13,11 @@ Abuse limits:
 
 Read state is per admin user (JWT ``sub``): a watermark ("everything up to id N is
 read", set by "tandai semua sudah dibaca") plus single reads above it.
+
+Sticky notifications (``notify(..., sticky=True)``, audit 2026-11-13 K1: a rejected live
+order nobody was asked to look at) stay unread and pinned for EVERY admin until one admin
+acknowledges them ("Sudah dicek", ``ack``): "tandai semua sudah dibaca" does not clear them
+and the retention prune keeps them. The ack is shared (who + when are stored).
 Tables are self-contained (CREATE IF NOT EXISTS), like the ledger / presets.
 """
 from __future__ import annotations
@@ -28,7 +33,7 @@ from .db import utcnow
 
 log = logging.getLogger("lab.notify")
 
-TYPES = ("job", "paper", "ledger", "deploy", "report")
+TYPES = ("job", "paper", "ledger", "deploy", "report", "live")
 MAX_PER_TYPE_PER_HOUR = 30
 RETENTION_DAYS = 90
 TITLE_MAX, BODY_MAX = 160, 600
@@ -59,15 +64,24 @@ CREATE TABLE IF NOT EXISTS notification_user_state (
     read_upto_id INTEGER NOT NULL DEFAULT 0,
     updated_at   TEXT NOT NULL
 );
+
+-- sticky notifications: unread for everyone until one admin acknowledges (acked_at set)
+CREATE TABLE IF NOT EXISTS notification_sticky (
+    notification_id INTEGER PRIMARY KEY,
+    acked_at        TEXT,
+    acked_by        TEXT
+);
 """
+TABLES = ("notifications", "notification_reads", "notification_user_state", "notification_sticky")
+PINNED_MAX = 20
 
 _lock = threading.Lock()
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    have = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN "
-                        "('notifications','notification_reads','notification_user_state')").fetchone()[0]
-    if have == 3:
+    have = conn.execute(f"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN "
+                        f"({','.join('?' * len(TABLES))})", TABLES).fetchone()[0]
+    if have == len(TABLES):
         return
     with _lock:
         if conn.in_transaction:
@@ -81,9 +95,10 @@ def _iso(dt: datetime) -> str:
 
 
 def notify(conn: sqlite3.Connection, type: str, title: str, body: Optional[str] = None,  # noqa: A002
-           link: Optional[str] = None, dedupe_key: Optional[str] = None) -> Optional[int]:
+           link: Optional[str] = None, dedupe_key: Optional[str] = None, sticky: bool = False) -> Optional[int]:
     """Store one notification. Returns its id, or None (duplicate, rate-limited, error). Never raises.
 
+    ``sticky``: stays unread and pinned for every admin until acknowledged (``ack``).
     Commits its own write; call it after the caller's own commit."""
     try:
         ensure_schema(conn)
@@ -102,10 +117,13 @@ def notify(conn: sqlite3.Connection, type: str, title: str, body: Optional[str] 
             "VALUES (?, ?, ?, ?, ?, ?)",
             (type, (title or "")[:TITLE_MAX], (body or None) and body[:BODY_MAX],
              link if (link or "").startswith("/") else None, dedupe_key, utcnow()))
+        new_id = int(cur.lastrowid) if cur.rowcount else None
+        if new_id and sticky:
+            conn.execute("INSERT OR IGNORE INTO notification_sticky (notification_id) VALUES (?)", (new_id,))
         if random.random() < 0.02:
             prune(conn, now)
         conn.commit()
-        return int(cur.lastrowid) if cur.rowcount else None
+        return new_id
     except Exception:  # noqa: BLE001
         log.exception("notify failed (%s: %s)", type, (title or "")[:80])
         try:
@@ -115,11 +133,16 @@ def notify(conn: sqlite3.Connection, type: str, title: str, body: Optional[str] 
         return None
 
 
+_OPEN_STICKY = "SELECT notification_id FROM notification_sticky WHERE acked_at IS NULL"
+
+
 def prune(conn: sqlite3.Connection, now: Optional[datetime] = None) -> None:
+    """Drop rows older than RETENTION_DAYS, except sticky ones nobody has acknowledged yet."""
     cutoff = _iso((now or datetime.now(timezone.utc)) - timedelta(days=RETENTION_DAYS))
-    conn.execute("DELETE FROM notification_reads WHERE notification_id IN "
-                 "(SELECT id FROM notifications WHERE created_at < ?)", (cutoff,))
-    conn.execute("DELETE FROM notifications WHERE created_at < ?", (cutoff,))
+    old = f"SELECT id FROM notifications WHERE created_at < ? AND id NOT IN ({_OPEN_STICKY})"
+    conn.execute(f"DELETE FROM notification_reads WHERE notification_id IN ({old})", (cutoff,))
+    conn.execute(f"DELETE FROM notification_sticky WHERE notification_id IN ({old})", (cutoff,))
+    conn.execute(f"DELETE FROM notifications WHERE id IN ({old})", (cutoff,))
 
 
 # ── read side (API) ───────────────────────────────────────────────────────
@@ -129,8 +152,11 @@ def _watermark(conn, user_key: str) -> int:
     return int(r[0]) if r else 0
 
 
-_UNREAD_SQL = ("n.id > ? AND NOT EXISTS (SELECT 1 FROM notification_reads r "
-               "WHERE r.notification_id = n.id AND r.user_key = ?)")
+_STICKY_OPEN_SQL = ("EXISTS (SELECT 1 FROM notification_sticky s WHERE s.notification_id = n.id "
+                    "AND s.acked_at IS NULL)")
+# unread = above the watermark and not read one by one, OR sticky and not acknowledged yet
+_UNREAD_SQL = ("((n.id > ? AND NOT EXISTS (SELECT 1 FROM notification_reads r "
+               f"WHERE r.notification_id = n.id AND r.user_key = ?)) OR {_STICKY_OPEN_SQL})")
 
 
 def unread_count(conn, user_key: str) -> int:
@@ -152,20 +178,47 @@ def list_for(conn, user_key: str, limit: int = 30, unread_only: bool = False,
         where.append("n.id < ?")
         args.append(int(before_id))
     rows = conn.execute(
-        "SELECT n.id, n.type, n.title, n.body, n.link, n.created_at, "
-        "(n.id <= ? OR EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id "
-        "AND r.user_key = ?)) AS is_read "
-        f"FROM notifications n WHERE {' AND '.join(where)} ORDER BY n.id DESC LIMIT ?",
+        f"{_ITEM_SQL} WHERE {' AND '.join(where)} ORDER BY n.id DESC LIMIT ?",
         [wm, user_key, *args, int(limit)]).fetchall()
-    items = [{"id": r["id"], "type": r["type"], "title": r["title"], "body": r["body"], "link": r["link"],
-              "created_at": r["created_at"], "read": bool(r["is_read"])} for r in rows]
-    return {"items": items, "unread": unread_count(conn, user_key)}
+    pinned = conn.execute(f"{_ITEM_SQL} WHERE {_STICKY_OPEN_SQL} ORDER BY n.id DESC LIMIT ?",
+                          [wm, user_key, PINNED_MAX]).fetchall()
+    return {"items": [_item(r) for r in rows], "pinned": [_item(r) for r in pinned],
+            "unread": unread_count(conn, user_key)}
+
+
+_ITEM_SQL = (
+    "SELECT n.id, n.type, n.title, n.body, n.link, n.created_at, "
+    "(n.id <= ? OR EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id "
+    "AND r.user_key = ?)) AS is_read, s.notification_id AS sticky_id, s.acked_at "
+    "FROM notifications n LEFT JOIN notification_sticky s ON s.notification_id = n.id")
+
+
+def _item(r) -> dict:
+    sticky = r["sticky_id"] is not None
+    open_sticky = sticky and r["acked_at"] is None
+    return {"id": r["id"], "type": r["type"], "title": r["title"], "body": r["body"], "link": r["link"],
+            "created_at": r["created_at"], "read": bool(r["is_read"]) and not open_sticky,
+            "sticky": sticky, "acked_at": r["acked_at"]}
 
 
 def mark_read(conn, user_key: str, notification_id: int) -> bool:
     ensure_schema(conn)
     if not conn.execute("SELECT 1 FROM notifications WHERE id=?", (notification_id,)).fetchone():
         return False
+    conn.execute("INSERT OR IGNORE INTO notification_reads (notification_id, user_key, read_at) VALUES (?, ?, ?)",
+                 (notification_id, user_key, utcnow()))
+    conn.commit()
+    return True
+
+
+def ack(conn, user_key: str, notification_id: int) -> bool:
+    """Acknowledge a notification for everyone ("Sudah dicek") and mark it read for this admin.
+    Non-sticky ids are just marked read. False when the id does not exist. Idempotent."""
+    ensure_schema(conn)
+    if not conn.execute("SELECT 1 FROM notifications WHERE id=?", (notification_id,)).fetchone():
+        return False
+    conn.execute("UPDATE notification_sticky SET acked_at=?, acked_by=? WHERE notification_id=? AND acked_at IS NULL",
+                 (utcnow(), user_key[:120], notification_id))
     conn.execute("INSERT OR IGNORE INTO notification_reads (notification_id, user_key, read_at) VALUES (?, ?, ?)",
                  (notification_id, user_key, utcnow()))
     conn.commit()

@@ -34,6 +34,24 @@ def _pct(a: float, b: float) -> Optional[float]:
     return float((a / b - 1.0) * 100.0)
 
 
+def funding_7d_apr_pct(panel: S.Panel, t: int, j: int) -> Optional[float]:
+    """Last 7 days of funding settlements actually in the data, summed and annualised.
+
+    The window (42 bars) ends at the newest bar <= t that holds a settlement, not at t: the
+    funding cache refreshes only when its newest settlement is > 9 h old, so right after a
+    4H close the settlement at that close is usually not cached yet and a window ending at
+    t summed 20 of the 21 settlements while annualising as 7 days (audit 2026-11-13 S1).
+    Works for 8 h and 4 h funding intervals alike (21 or 42 settlements)."""
+    end = t
+    if panel.funding_n is not None:
+        have = np.flatnonzero(panel.funding_n[: t + 1, j] > 0)
+        if not len(have):
+            return None
+        end = int(have[-1])
+    f7 = panel.funding[max(0, end - 7 * S.BARS_PER_DAY + 1): end + 1, j]
+    return B._f(float(f7.sum()) * 365.0 / 7.0 * 100.0) if len(f7) else None
+
+
 def compute(panel: S.Panel, p: Optional[dict] = None, now_iso: Optional[str] = None) -> dict:
     p = p or P.validate_params({})
     feat = S.compute_features(panel, p)
@@ -57,7 +75,6 @@ def compute(panel: S.Panel, p: Optional[dict] = None, now_iso: Optional[str] = N
         win = close[max(0, t - don + 1): t + 1, j]
         win = win[np.isfinite(win)]
         hi, lo = (float(win.max()), float(win.min())) if len(win) else (np.nan, np.nan)
-        f7 = panel.funding[max(0, t - 7 * S.BARS_PER_DAY + 1): t + 1, j]
         spark_idx = [int(k) for k in day_idx if k < t][-(SPARK_DAYS - 1):] + [t]
         spark = [B._f(close[k, j]) for k in spark_idx]
         ema = feat.ema[t, j]
@@ -73,7 +90,7 @@ def compute(panel: S.Panel, p: Optional[dict] = None, now_iso: Optional[str] = N
             "trend": "up" if feat.up[t, j] else ("down" if feat.down[t, j] else None),
             "ema_dist_pct": _pct(c, ema),
             "donchian_pos": B._f((c - lo) / (hi - lo)) if np.isfinite(hi) and hi > lo else None,
-            "funding_7d_apr_pct": B._f(float(f7.sum()) * 365.0 / 7.0 * 100.0) if len(f7) else None,
+            "funding_7d_apr_pct": funding_7d_apr_pct(panel, t, j),
             "eligible": bool(feat.eligible[t, j]),
             "target_weight_pct": B._f(w[j] * 100.0),
             "in_portfolio": bool(w[j] > 0),

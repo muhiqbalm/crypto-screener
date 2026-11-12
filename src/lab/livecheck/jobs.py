@@ -119,6 +119,8 @@ def execute_cycle(conn, job: Optional[dict] = None, now: Optional[float] = None,
     })
     kv_set(conn, "livecheck_last_cycle", out)
     conn.commit()
+    from ..notify_events import livecheck_alarms  # sticky in-web notification per failed live order; never raises
+    livecheck_alarms(conn, rows, cfg.symbol, cfg.preset_name, now)
     log.info("livecheck cycle %s", {k: out[k] for k in ("counts", "deliveries", "data_last_bar")})
     return out
 

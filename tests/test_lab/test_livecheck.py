@@ -176,7 +176,8 @@ def test_cocok_harga_beda_and_gagal_manual_position():
     assert [r["status"] for r in rows] == ["cocok", "harga_beda", "gagal"]
     assert rows[0]["price_diff_bps"] == pytest.approx(5.0)
     assert rows[1]["price_diff_bps"] == pytest.approx(95.238, rel=1e-3)       # sold lower = cost for a close long
-    assert "posisi manual" in rows[2]["reason"] and not rows[2]["perlu_dicek"]
+    # audit 2026-11-13 K1: a rejected live open (the 9 Nov ETH short) must ask someone to look
+    assert "posisi manual" in rows[2]["reason"] and rows[2]["perlu_dicek"]
     assert "rosyade" not in json.dumps(rows)
 
 
