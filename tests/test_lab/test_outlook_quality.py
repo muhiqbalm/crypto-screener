@@ -143,6 +143,36 @@ def test_old_calls_table_gets_the_columns_additively(conn):
     assert got[0]["kualitas"] == "B" and got[0]["kualitas_info"] == {"grade": "B", "basis": "saat_panggilan"}
 
 
+def test_migration_adds_only_what_is_missing_and_a_read_only_reader_never_breaks(conn, tmp_path):
+    import sqlite3
+    conn.executescript("DROP TABLE IF EXISTS lab_outlook_calls;")
+    S._migrated.clear()
+    S.ensure_schema(conn)
+    conn.execute("ALTER TABLE lab_outlook_calls DROP COLUMN kualitas_json")     # half-migrated database
+    conn.commit()
+    S._migrated.clear()
+    S.ensure_schema(conn)
+    assert {"kualitas", "kualitas_json"} <= {r[1] for r in conn.execute("PRAGMA table_info(lab_outlook_calls)")}
+    old = tmp_path / "old.db"
+    w = sqlite3.connect(old)
+    w.executescript("CREATE TABLE lab_outlook (symbol TEXT PRIMARY KEY, computed_at TEXT NOT NULL, last_bar TEXT, "
+                    "row_json TEXT, detail_json TEXT, error TEXT);"
+                    "CREATE TABLE lab_outlook_calls (id INTEGER PRIMARY KEY, symbol TEXT, bar TEXT, bar_close TEXT, "
+                    "computed_at TEXT, side TEXT, cls TEXT, fase TEXT, strategy TEXT, strategy_entry_time TEXT, "
+                    "status TEXT, r_net REAL, mfe_r REAL, bars_to_resolve INTEGER, price REAL, resolved_at TEXT, "
+                    "call_json TEXT);"
+                    "INSERT INTO lab_outlook_calls (symbol, bar, bar_close, side, status) "
+                    "VALUES ('ETHUSDT', 'b', 'c', 'short', 'open');")
+    w.commit()
+    w.close()
+    ro = sqlite3.connect(f"file:{old}?mode=ro", uri=True)
+    ro.row_factory = sqlite3.Row
+    S.ensure_schema(ro)                                                            # cannot ALTER: no crash
+    sb = Q.scoreboard(ro)
+    assert sb["n_calls"] == 1 and sb["n_ungraded"] == 1 and sb["by_grade"]["A"]["n_calls"] == 0
+    ro.close()
+
+
 def _resolve(conn, sym, status, r, bar):
     cid = conn.execute("SELECT id FROM lab_outlook_calls WHERE symbol=? AND bar=?", (sym, bar)).fetchone()[0]
     S.set_outcome(conn, cid, {"status": status, "r_net": r, "bars": 3, "resolved_at": "2026-11-13T00:00:00Z"},
@@ -196,9 +226,9 @@ def test_scoreboard_counts_by_letter_says_when_data_is_too_thin_and_keeps_simula
     assert sb["by_grade"]["C"]["mean_r"] == pytest.approx(-1.05) and sb["by_grade"]["B"]["n_calls"] == 0
     assert sb["n_graded"] == 4 and sb["n_no_letter"] == 1 and sb["n_ungraded"] == 1 and sb["n_backfilled"] == 1
     assert sb["n_done"] == 2 and sb["n_pos_done"] == 2 and sb["enough_any"] is False
-    assert sb["first_graded"] == "2026-11-12T08:00:00Z" and len(sb["recent"]) == 5
+    assert sb["first_graded"] == "2026-11-11T16:00:00Z" and len(sb["recent"]) == 5     # bar close of the first call
     sim = sb["simulasi"]
-    assert [g["grade"] for g in sim["groups"]] == ["A", "B", "C"] and "bukan hasil live" in sim["note"]
+    assert [g["grade"] for g in sim["groups"]] == ["A", "B", "C"] and "sebelum 1 Jul 2024" in sim["note"]
     assert sim["by_grade"]["A"]["mean_r"] == pytest.approx(0.1286)
     assert Q.sim_check(None) is None and Q.sim_check({"fase_split": {}}) is None
 

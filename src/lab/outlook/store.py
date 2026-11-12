@@ -104,15 +104,16 @@ def _migrate_calls(conn: sqlite3.Connection) -> None:
     missing = [(c, t) for c, t in _CALL_MIGRATIONS if c not in cols]
     if missing:
         with _lock:
-            try:
-                if conn.in_transaction:
-                    conn.commit()
-                for c, t in missing:
-                    conn.execute(f"ALTER TABLE lab_outlook_calls ADD COLUMN {c} {t}")
+            if conn.in_transaction:
                 conn.commit()
-            except sqlite3.OperationalError as e:   # read-only connection or a concurrent migration
-                if "duplicate column" not in str(e).lower():
-                    return
+            for c, t in missing:
+                try:
+                    conn.execute(f"ALTER TABLE lab_outlook_calls ADD COLUMN {c} {t}")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column" in str(e).lower():     # another process added it first
+                        continue
+                    return                                       # read-only / busy: try again next time
+            conn.commit()
     if path:
         _migrated.add(path)
 

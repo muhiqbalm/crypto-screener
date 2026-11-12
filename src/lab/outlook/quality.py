@@ -30,6 +30,7 @@ from collections import namedtuple
 from typing import Any, Optional
 
 from . import calib as C
+from . import logic as L
 from . import store as S
 
 RULE_VERSION = 1
@@ -390,16 +391,20 @@ def sim_check(calibration: Optional[dict]) -> Optional[dict]:
         return None
     return {"split": calibration.get("split"), "computed_at": calibration.get("computed_at"), "groups": groups,
             "by_grade": {g: _combine(v) for g, v in agg.items()},
-            "note": ("Simulasi historis, bukan hasil live: skor dihitung dari data sebelum "
-                     f"{str(calibration.get('split') or '')[:10]}, lalu dicek di data sesudahnya. Aturan skor ditulis "
-                     "setelah data ini ada, jadi ini cek konsistensi, bukan bukti.")}
+            "note": (f"Skor dihitung dari data sebelum {L.fdate(calibration.get('split'), with_time=False, year=True)}, "
+                     "lalu hasilnya dicek di data sesudahnya. Aturan ditulis setelah data ini ada: cek konsistensi, "
+                     "bukan bukti.")}
 
 
 def scoreboard(conn, calibration: Optional[dict] = None, recent: int = 20) -> dict:
     """How the calls of each letter actually turned out (live, stored calls only)."""
     S.ensure_schema(conn)
+    have = {r[1] for r in conn.execute("PRAGMA table_info(lab_outlook_calls)")}
+    extra = ", ".join(c if c in have else f"NULL AS {c}" for c in ("kualitas", "kualitas_json"))  # read-only, pre-migration
     rows = [dict(r) for r in conn.execute(
-        "SELECT * FROM lab_outlook_calls WHERE side IS NOT NULL ORDER BY bar, symbol")]
+        "SELECT id, symbol, bar, bar_close, side, fase, cls, strategy, strategy_entry_time, status, r_net, mfe_r, "
+        f"bars_to_resolve, price, resolved_at, {extra} FROM lab_outlook_calls "
+        "WHERE side IS NOT NULL ORDER BY bar, symbol")]
     graded = [r for r in rows if r.get("kualitas") in GRADES]
     no_letter = [r for r in rows if r.get("kualitas") == NO_GRADE]
     ungraded = [r for r in rows if r.get("kualitas") is None]
@@ -423,7 +428,7 @@ def scoreboard(conn, calibration: Optional[dict] = None, recent: int = 20) -> di
     last = sorted(graded + no_letter, key=lambda r: (r["bar"], r["symbol"]), reverse=True)[:max(0, int(recent))]
     return {
         "rule_version": RULE_VERSION, "rule": rule_text(), "need_pos": LIVE_MIN_POS,
-        "first_graded": min((r["bar"] for r in graded), default=None),
+        "first_graded": min((r.get("bar_close") or r["bar"] for r in graded), default=None),
         "n_calls": len(rows), "n_graded": len(graded), "n_no_letter": len(no_letter), "n_ungraded": len(ungraded),
         "n_backfilled": backfilled, "n_done": sum(v["n_done"] for v in by_grade.values()), "n_pos_done": len(done_pos),
         "enough_any": any(v["enough"] for v in by_grade.values()),
