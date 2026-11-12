@@ -71,13 +71,19 @@ def _sanitize(obj: Any) -> Any:
     return obj
 
 
-def connect(db_path: Optional[str] = None, readonly: bool = False) -> sqlite3.Connection:
+def connect(db_path: Optional[str] = None, readonly: bool = False,
+            check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open lab.db. ``check_same_thread=False`` is for the API's per-request dependency:
+    FastAPI may run a sync dependency and the sync endpoint on different threadpool
+    threads, so the connection is created in one thread and used (sequentially, never
+    concurrently) in another."""
     path = db_path or get_lab_settings().db_path
     if readonly:
-        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10.0)
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10.0,
+                               check_same_thread=check_same_thread)
     else:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(path, timeout=15.0)
+        conn = sqlite3.connect(path, timeout=15.0, check_same_thread=check_same_thread)
         init_db(conn, path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=15000")

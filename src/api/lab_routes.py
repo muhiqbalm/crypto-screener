@@ -39,7 +39,10 @@ MAX_SCAN_COMBOS = 200
 
 
 def _conn():
-    conn = labdb.connect()
+    # One connection per request. FastAPI can run this sync dependency and the sync
+    # endpoint on different threadpool threads, so the same-thread check must be off
+    # (it raised "SQLite objects created in a thread ..." on /lab/ledger/signals).
+    conn = labdb.connect(check_same_thread=False)
     try:
         yield conn
     finally:
