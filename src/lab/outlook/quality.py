@@ -208,6 +208,15 @@ def live_groups(conn, as_of: Optional[str] = None) -> dict[str, dict]:
     return {k: live_stats(v) for k, v in groups.items()}
 
 
+def live_groups_safe(conn) -> dict[str, dict]:
+    """live_groups() for the refresh job: without the live record the letters are still computed."""
+    try:
+        return live_groups(conn)
+    except Exception:  # noqa: BLE001
+        log.exception("skor kualitas: live record unavailable")
+        return {}
+
+
 def _live_brief(key: Optional[str], st: Optional[dict]) -> dict:
     st = st or {}
     n_pos = st.get("n_pos") or 0

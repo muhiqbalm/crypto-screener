@@ -180,6 +180,8 @@ def test_a_grading_bug_never_hides_the_coin_and_an_unmigrated_table_still_record
         raise ValueError("bug")
     monkeypatch.setattr(Q, "grade", boom)
     assert Q.safe_grade(_row(_strategy("short", fresh=True), calib=CAL_FRESH)) is None
+    monkeypatch.setattr(Q, "live_groups", boom)
+    assert Q.live_groups_safe(conn) == {}
     monkeypatch.undo()
     conn.executescript("DROP TABLE IF EXISTS lab_outlook_calls;")
     S._migrated.clear()

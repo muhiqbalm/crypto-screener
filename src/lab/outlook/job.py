@@ -503,7 +503,7 @@ def execute(conn, job: Optional[dict] = None, symbols: Optional[list[str]] = Non
             time.sleep(0.1)
     common = {"regime": btc_now, "regime_index": idx, "strength": strength, "screener": screener,
               "screener_bar": screener_bar, "track": track, "headlines": headlines, "fear_greed": fear_greed, "oi": oi,
-              "calibration": calibration, "live_groups": Q.live_groups(conn)}
+              "calibration": calibration, "live_groups": Q.live_groups_safe(conn)}
     runner = Runner(offline)
     errors: dict[str, str] = {}
     last_bars, n_calls = [], 0
