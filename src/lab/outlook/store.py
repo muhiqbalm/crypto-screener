@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS lab_outlook_calls (
     ambiguous           INTEGER,
     resolved_at         TEXT,
     evaluated_at        TEXT,
+    kualitas            TEXT,                -- skor kualitas at call time: A | B | C | D | '-' (quality.py)
+    kualitas_json       TEXT,
     UNIQUE (symbol, bar)
 );
 CREATE INDEX IF NOT EXISTS idx_outlook_calls_status ON lab_outlook_calls (status, symbol);
@@ -73,19 +75,46 @@ MAX_STRATEGIES = 6            # engine runs per coin per refresh (primary + agre
 MAX_PASS = 4
 TF_OK = ("15m", "30m", "1h", "4h", "1d")
 DONE = ("tp", "sl", "batal", "expired")
+# Additive column migrations for lab_outlook_calls created by an earlier version (same pattern as db.py).
+_CALL_MIGRATIONS = (("kualitas", "TEXT"), ("kualitas_json", "TEXT"))
+_migrated: set[str] = set()
 _lock = threading.Lock()
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
     have = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN "
                         "('lab_outlook','lab_outlook_calls')").fetchone()[0]
-    if have == 2:
-        return
-    with _lock:
-        if conn.in_transaction:
+    if have != 2:
+        with _lock:
+            if conn.in_transaction:
+                conn.commit()
+            conn.executescript(SCHEMA)
             conn.commit()
-        conn.executescript(SCHEMA)
-        conn.commit()
+    _migrate_calls(conn)
+
+
+def _migrate_calls(conn: sqlite3.Connection) -> None:
+    try:
+        path = conn.execute("PRAGMA database_list").fetchone()[2] or ""
+    except (sqlite3.Error, IndexError, TypeError):
+        path = ""
+    if path and path in _migrated:
+        return
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(lab_outlook_calls)")}
+    missing = [(c, t) for c, t in _CALL_MIGRATIONS if c not in cols]
+    if missing:
+        with _lock:
+            try:
+                if conn.in_transaction:
+                    conn.commit()
+                for c, t in missing:
+                    conn.execute(f"ALTER TABLE lab_outlook_calls ADD COLUMN {c} {t}")
+                conn.commit()
+            except sqlite3.OperationalError as e:   # read-only connection or a concurrent migration
+                if "duplicate column" not in str(e).lower():
+                    return
+    if path:
+        _migrated.add(path)
 
 
 def kv_get(conn, key: str):
@@ -132,7 +161,7 @@ def read_one(conn, symbol: str) -> Optional[dict]:
 
 CALL_COLS = ("symbol", "bar", "bar_close", "computed_at", "side", "keyakinan", "keyakinan_basis", "cls", "align",
              "fase", "strategy", "template_id", "timeframe", "strategy_entry_time", "price", "sl", "tp",
-             "horizon_bars", "rr", "ev_r", "call_json", "status")
+             "horizon_bars", "rr", "ev_r", "call_json", "status", "kualitas", "kualitas_json")
 
 
 def save_call(conn, call: dict) -> None:
@@ -142,6 +171,8 @@ def save_call(conn, call: dict) -> None:
     vals = {k: call.get(k) for k in CALL_COLS}
     vals["computed_at"] = vals["computed_at"] or utcnow()
     vals["call_json"] = dumps(call.get("call_json")) if not isinstance(call.get("call_json"), str) else call["call_json"]
+    if not isinstance(call.get("kualitas_json"), str):
+        vals["kualitas_json"] = dumps(call.get("kualitas_json"))
     vals["status"] = vals["status"] or ("open" if vals["side"] else "none")
     cols = ", ".join(CALL_COLS)
     marks = ", ".join("?" * len(CALL_COLS))
@@ -155,6 +186,7 @@ def save_call(conn, call: dict) -> None:
 def _call_out(r) -> dict:
     d = dict(r)
     d["call"] = loads(d.pop("call_json", None), {}) or {}
+    d["kualitas_info"] = loads(d.pop("kualitas_json", None))
     return d
 
 
