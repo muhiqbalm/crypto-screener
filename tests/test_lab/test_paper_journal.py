@@ -133,3 +133,68 @@ def test_bot_import_read_only_and_idempotent(conn, lab_env, monkeypatch):
     assert len(e) == 1
     assert e[0]["symbol"] == "ETHUSDT" and e[0]["pnl"] == pytest.approx(50.0) and e[0]["r_multiple"] is None
     assert src_path.read_bytes() == before
+
+
+# ── journal order / limit / source filters ─────────────────────────────────
+
+def _closed(conn, account, symbol, opened, closed, exit_price=110.0):
+    p = paper.open_position(conn, account_id=account, symbol=symbol, side="long", price=100.0, sl=90.0, when=opened)
+    paper.close_position(conn, p["id"], exit_price, "manual_close", when=closed)
+
+
+def _bot_entry(conn, symbol="ETHUSDT", closed="2026-01-05T00:00:00Z", ext="b1"):
+    conn.execute("INSERT INTO journal_entries (account_id, source, external_id, symbol, side, entry_time, exit_time, "
+                 "pnl, created_at) VALUES (NULL, 'bot', ?, ?, 'long', '2026-01-04T00:00:00Z', ?, 25.0, ?)",
+                 (ext, symbol, closed, closed))
+    conn.commit()
+
+
+def test_journal_newest_first_by_default(conn):
+    a = paper.create_account(conn, "t")
+    _closed(conn, a, "ETHUSDT", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
+    _closed(conn, a, "BTCUSDT", "2026-01-02T00:00:00Z", "2026-01-04T00:00:00Z")
+    _closed(conn, a, "SOLUSDT", "2026-01-03T00:00:00Z", "2026-01-03T12:00:00Z")
+    assert [e["symbol"] for e in jr.query(conn)] == ["BTCUSDT", "SOLUSDT", "ETHUSDT"]       # by close time
+    assert [e["symbol"] for e in jr.query(conn, order="asc")] == ["ETHUSDT", "SOLUSDT", "BTCUSDT"]
+
+
+def test_journal_limit_keeps_the_newest_trades(conn):
+    a = paper.create_account(conn, "t")
+    for day in range(1, 6):
+        _closed(conn, a, "ETHUSDT", f"2026-01-0{day}T00:00:00Z", f"2026-01-0{day}T08:00:00Z")
+    newest = jr.query(conn, limit=2)
+    assert [e["exit_time"][:10] for e in newest] == ["2026-01-05", "2026-01-04"]
+    oldest = jr.query(conn, limit=2, order="asc")
+    assert [e["exit_time"][:10] for e in oldest] == ["2026-01-01", "2026-01-02"]
+
+
+def test_journal_same_close_time_falls_back_to_id(conn):
+    a = paper.create_account(conn, "t")
+    _closed(conn, a, "ETHUSDT", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
+    _closed(conn, a, "BTCUSDT", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
+    ids = [e["id"] for e in jr.query(conn)]
+    assert ids == sorted(ids, reverse=True)
+    assert [e["id"] for e in jr.query(conn, order="asc")] == sorted(ids)
+
+
+def test_journal_rejects_unknown_order(conn):
+    with pytest.raises(ValueError):
+        jr.query(conn, order="random")
+
+
+def test_journal_exclude_sources_hides_live_bot_trades(conn):
+    a = paper.create_account(conn, "t")
+    _closed(conn, a, "ETHUSDT", "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
+    _bot_entry(conn)
+    assert {e["source"] for e in jr.query(conn)} == {"paper_manual", "bot"}
+    paper_only = jr.query(conn, exclude_sources=("bot",))
+    assert [e["source"] for e in paper_only] == ["paper_manual"]
+    assert jr.query(conn, exclude_sources=jr.parse_sources("bot, paper_manual")) == []
+    assert jr.stats(paper_only)["trades"] == 1
+
+
+def test_parse_sources():
+    assert jr.parse_sources(None) == ()
+    assert jr.parse_sources("") == ()
+    assert jr.parse_sources("bot") == ("bot",)
+    assert jr.parse_sources(" bot , paper_auto ,") == ("bot", "paper_auto")

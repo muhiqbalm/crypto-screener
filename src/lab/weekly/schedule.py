@@ -15,7 +15,6 @@ from typing import Optional
 
 from .. import notify_events
 from ..ledger.store import kv_get, kv_set
-from ..notify import notify
 from . import SNAPSHOT_AFTER_S, build, store
 
 log = logging.getLogger("lab.weekly")
@@ -52,9 +51,7 @@ def snapshot_week(conn, s, week: str, now: Optional[datetime] = None) -> bool:
     ok = store.save(conn, rep, "worker")
     if ok:
         log.info("weekly report %s saved", week)
-        notify(conn, "report", f"Laporan mingguan {week} siap",
-               f"{rep['start'][:10]} s/d {(store.bounds(week)[1] - timedelta(days=1)).date().isoformat()} (UTC)",
-               f"/lab/report?week={week}", f"report:{week}")
+        notify_events.report_ready(conn, week, rep["start"], rep["end"])
     return ok
 
 

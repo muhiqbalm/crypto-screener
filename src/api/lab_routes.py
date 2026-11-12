@@ -792,14 +792,24 @@ def paper_close(position_id: int, _: Admin, conn: Conn) -> dict:
 @router.get("/journal")
 def journal_list(_: Admin, conn: Conn, account_id: Optional[int] = None, source: Optional[str] = None,
                  symbol: Optional[str] = None, from_: Optional[str] = Query(None, alias="from"),
-                 to: Optional[str] = None, limit: int = Query(1000, ge=1, le=5000)) -> list[dict]:
+                 to: Optional[str] = None, limit: int = Query(jr.DEFAULT_LIMIT, ge=1, le=5000),
+                 order: str = Query(jr.DEFAULT_ORDER, pattern="^(asc|desc)$"),
+                 exclude_source: Optional[str] = None) -> list[dict]:
+    """Newest closed trades first (``order=asc`` for oldest first). ``exclude_source=bot``
+    hides imported live-bot trades (comma-separated for several sources)."""
     return jr.query(conn, account_id=account_id, source=source, symbol=symbol.upper() if symbol else None,
-                    date_from=from_, date_to=to, limit=limit)
+                    date_from=from_, date_to=to, limit=limit, order=order,
+                    exclude_sources=jr.parse_sources(exclude_source))
 
 
 @router.get("/journal/stats")
-def journal_stats(_: Admin, conn: Conn, account_id: Optional[int] = None, source: Optional[str] = None) -> dict:
-    entries = jr.query(conn, account_id=account_id, source=source, limit=100000)
+def journal_stats(_: Admin, conn: Conn, account_id: Optional[int] = None, source: Optional[str] = None,
+                  symbol: Optional[str] = None, from_: Optional[str] = Query(None, alias="from"),
+                  to: Optional[str] = None, exclude_source: Optional[str] = None) -> dict:
+    """Same filters as GET /journal, so the numbers always describe the listed trades."""
+    entries = jr.query(conn, account_id=account_id, source=source, symbol=symbol.upper() if symbol else None,
+                       date_from=from_, date_to=to, limit=100000,
+                       exclude_sources=jr.parse_sources(exclude_source))
     start = None
     if account_id is not None:
         try:

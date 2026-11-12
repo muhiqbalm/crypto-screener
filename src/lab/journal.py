@@ -5,6 +5,12 @@ from typing import Iterable, Optional
 
 from .db import loads
 
+# Newest first by default: with a row limit, ascending order silently dropped the most
+# recent trades once the journal grew past the limit.
+ORDERS = ("asc", "desc")
+DEFAULT_ORDER = "desc"
+DEFAULT_LIMIT = 1000
+
 
 def entry_out(r) -> dict:
     d = dict(r)
@@ -15,21 +21,39 @@ def entry_out(r) -> dict:
 
 def query(conn, account_id: Optional[int] = None, source: Optional[str] = None, symbol: Optional[str] = None,
           date_from: Optional[str] = None, date_to: Optional[str] = None, watch_id: Optional[int] = None,
-          limit: int = 1000) -> list[dict]:
+          limit: int = DEFAULT_LIMIT, order: str = DEFAULT_ORDER,
+          exclude_sources: Iterable[str] = ()) -> list[dict]:
+    """Journal rows sorted by close time (entry time while still open), then id.
+
+    ``order`` is ``desc`` (newest first, the default) or ``asc``; ``limit`` keeps the first
+    ``limit`` rows of that order, so the default returns the newest trades.
+    ``exclude_sources`` drops whole sources, e.g. ``("bot",)`` for paper-only views."""
+    if order not in ORDERS:
+        raise ValueError(f"order must be one of {ORDERS}")
     sql, args = ["SELECT * FROM journal_entries WHERE 1=1"], []
     for col, val in (("account_id", account_id), ("source", source), ("symbol", symbol), ("watch_id", watch_id)):
         if val is not None:
             sql.append(f"AND {col}=?")
             args.append(val)
+    excluded = [s for s in dict.fromkeys(exclude_sources) if s]
+    if excluded:
+        sql.append(f"AND source NOT IN ({','.join('?' * len(excluded))})")
+        args.extend(excluded)
     if date_from:
         sql.append("AND COALESCE(exit_time, entry_time) >= ?")
         args.append(date_from)
     if date_to:
         sql.append("AND COALESCE(exit_time, entry_time) < ?")
         args.append(date_to if "T" in date_to else date_to + "T23:59:59.999999Z")
-    sql.append("ORDER BY COALESCE(exit_time, entry_time) ASC, id ASC LIMIT ?")
+    direction = order.upper()
+    sql.append(f"ORDER BY COALESCE(exit_time, entry_time) {direction}, id {direction} LIMIT ?")
     args.append(limit)
     return [entry_out(r) for r in conn.execute(" ".join(sql), args)]
+
+
+def parse_sources(value: Optional[str]) -> tuple[str, ...]:
+    """'bot' / 'bot,paper_manual' (query string) -> ('bot',) / ('bot', 'paper_manual')."""
+    return tuple(s for s in (p.strip() for p in (value or "").split(",")) if s)
 
 
 def _group(entries: list[dict]) -> dict:

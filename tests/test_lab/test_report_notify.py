@@ -77,9 +77,11 @@ def test_job_done_and_error_notify(conn):
     q.finish(conn, jid3, "cancelled")
     n = _types(conn, "job")
     assert len(n) == 2
-    assert n[0]["title"] == f"Validasi #{rid} selesai: 4H-ETH rosyade_family"
-    assert "PASS" in n[0]["body"] and "+12.50%" in n[0]["body"] and n[0]["link"] == f"/lab/runs/{rid}"
-    assert "gagal" in n[1]["title"] and n[1]["body"] == "ValueError: data kosong"
+    assert n[0]["title"] == f"Uji jujur #{rid} selesai · ETH 4 jam · Rosyade"
+    assert n[0]["body"] == "Lolos · hasil bersih +12.50% · turun terdalam \u22128.25% · 41 trade"
+    assert n[0]["link"] == f"/lab/runs/{rid}"
+    assert n[1]["title"] == f"Cari setting terbaik #{rid2} gagal dijalankan · ETH 4 jam · Rosyade"
+    assert n[1]["body"] == "Detail teknis: ValueError: data kosong"
     q.finish(conn, jid, "done")                       # already terminal: no duplicate
     assert len(_types(conn, "job")) == 2
 
@@ -93,7 +95,8 @@ def test_scan_notifies_once_when_last_cell_finishes(conn):
     assert _types(conn, "job") == []
     q.finish(conn, cells[2][1], "cancelled")
     n = _types(conn, "job")
-    assert len(n) == 1 and n[0]["title"].startswith(f"Scan #{sid} selesai") and "1 PASS" in n[0]["body"]
+    assert len(n) == 1 and n[0]["title"] == f"Uji banyak koin #{sid} selesai · Rosyade"
+    assert "dari 3 kombinasi koin × timeframe selesai · 1 lolos · 1 gagal" in n[0]["body"]
     assert "1 dibatalkan" in n[0]["body"] and n[0]["link"] == f"/lab/scan?id={sid}"
 
 
@@ -132,8 +135,12 @@ def test_paper_auto_open_close_notify_manual_does_not(conn):
     m = paper.open_position(conn, account_id=acct, symbol="ETHUSDT", side="short", price=2000, sl=2100)
     paper.close_position(conn, m["id"], 1990, "manual_close")
     n = _types(conn, "paper")
-    assert [x["title"] for x in n] == ["Paper 4H-ETH-Basic: buka LONG", "Paper 4H-ETH-Basic: tutup LONG"]
-    assert "SL 1900" in n[0]["body"] and "R)" in n[1]["body"] and "hard_tp" in n[1]["body"]
+    assert [x["title"] for x in n] == ["Paper 4H-ETH-Basic: buka LONG ETH", "Paper 4H-ETH-Basic: tutup LONG ETH"]
+    assert "batal jika (SL) 1,900.00 · target (TP) 2,300.00" in n[0]["body"]
+    assert "R)" in n[1]["body"] and "kena target (TP)" in n[1]["body"] and "hard_tp" not in n[1]["body"]
+    assert all("simulasi, bukan order sungguhan" in x["body"] for x in n)
+    pid = conn.execute("SELECT preset_id FROM lab_preset_links WHERE ref_id=?", (wid,)).fetchone()[0]
+    assert n[0]["link"] == f"/lab/arena?highlight={pid}" and n[1]["link"] == f"/journal?account_id={acct}"
 
 
 # ── ledger verdict hook ───────────────────────────────────────────────────
@@ -167,7 +174,8 @@ def test_ledger_verdict_change_baseline_then_notify(conn):
     _signals(conn, 10, start_i=4)
     ids = notify_events.ledger_verdicts(conn)
     n = _types(conn, "ledger")
-    assert len(ids) == 1 and "tier_a long (screener) kini terbukti" in n[0]["title"]
+    assert len(ids) == 1 and n[0]["title"] == "Rekam jejak sinyal: Tier A long (screener) kini terbukti"
+    assert n[0]["body"].startswith("belum cukup data → terbukti · ")
     assert n[0]["link"] == "/lab/signals?type=tier_a"
 
 
@@ -201,14 +209,14 @@ def test_deploy_log_scan(conn, tmp_path):
         fh.write("[2026-11-11T16:11:00Z] backend live @ 3333333 partial")   # no newline yet
     ids = notify_events.deploy_log_scan(conn, str(log))
     n = _types(conn, "deploy")
-    assert len(ids) == 2 and n[0]["title"] == "Deploy backend live @ 7ad7731"
-    assert n[1]["title"].startswith("Deploy gagal: tes backend gagal") and "abc123" not in n[1]["body"]
+    assert len(ids) == 2 and n[0]["title"] == "Pembaruan sistem: backend terpasang @ 7ad7731"
+    assert n[1]["title"].startswith("Pembaruan sistem gagal: tes backend gagal") and "abc123" not in n[1]["body"]
     with log.open("a") as fh:
         fh.write("\n")
     assert len(notify_events.deploy_log_scan(conn, str(log))) == 1       # completed line picked up once
     log.write_text("[2026-11-12T00:00:00Z] frontend live @ 4444444\n")   # rotated / truncated
     notify_events.deploy_log_scan(conn, str(log))
-    assert _types(conn, "deploy")[-1]["title"] == "Deploy frontend live @ 4444444"
+    assert _types(conn, "deploy")[-1]["title"] == "Pembaruan sistem: frontend terpasang @ 4444444"
 
 
 # ── weekly report ─────────────────────────────────────────────────────────
@@ -323,7 +331,9 @@ def test_snapshot_schedule_write_once_and_no_backfill(conn, tmp_path, lab_env, m
     snap = store.get(conn, WEEK)
     assert snap["source"] == "snapshot" and snap["snapshot"]["generator"] == "worker"
     assert schedule.due_week(conn, mon) is None
-    assert _types(conn, "report")[0]["link"] == f"/lab/report?week={WEEK}"
+    rep = _types(conn, "report")[0]
+    assert rep["link"] == f"/lab/report?week={WEEK}" and rep["title"] == "Laporan mingguan siap: 9–16 Nov"
+    assert rep["body"].startswith("Senin 9 Nov 07:00 WIB s/d Senin 16 Nov 07:00 WIB (minggu 2026-W46).")
     assert store.save(conn, {"week": WEEK, "start": "a", "end": "b"}) is False
     with pytest.raises(sqlite3.DatabaseError):
         conn.execute("UPDATE weekly_reports SET data_json='{}' WHERE week=?", (WEEK,))
@@ -355,12 +365,33 @@ def api(lab_env):
     return make
 
 
-def test_api_admin_only(api):
+def test_api_report_readable_by_team_notifications_admin_only(api, monkeypatch):
+    """CEO decision 2026-11-12: every logged-in team account reads the weekly report;
+    notifications (and every other Lab tool) stay admin-only."""
+    from src.lab.weekly import system
+    monkeypatch.setattr(system, "pm2_processes", lambda runner=None: None)
     c = api("u-plain")
-    assert c.get("/api/v1/lab/report/weekly").status_code == 403
-    assert c.get("/api/v1/lab/report/weeks").status_code == 403
+    r = c.get("/api/v1/lab/report/weeks")
+    assert r.status_code == 200 and len(r.json()["weeks"]) == 12
+    r = c.get("/api/v1/lab/report/weekly", params={"week": "2026-W40"})
+    assert r.status_code == 200 and r.json()["partial"] is False
+    assert c.get("/api/v1/lab/report/weekly", params={"week": "bad"}).status_code == 422
     assert c.get("/api/v1/lab/notifications").status_code == 403
     assert c.post("/api/v1/lab/notifications/read-all").status_code == 403
+    assert c.post("/api/v1/lab/notifications/1/read").status_code == 403
+    assert c.get("/api/v1/lab/journal").status_code == 403               # other Lab tools: still admin
+
+
+def test_api_report_needs_login(lab_env):
+    from fastapi.testclient import TestClient
+    from src.api.app import create_app
+    from src.trading.router import get_supabase_client
+    from tests.test_lab.test_lab_api import EMAILS, FakeUsers
+    app = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: FakeUsers(EMAILS)
+    c = TestClient(app)
+    assert c.get("/api/v1/lab/report/weeks").status_code == 401
+    assert c.get("/api/v1/lab/report/weekly").status_code == 401
 
 
 def test_api_report(api, conn, monkeypatch):
@@ -398,3 +429,50 @@ def test_no_trading_imports_orders_or_telegram():
         imports = [ln for ln in text.splitlines() if ln.lstrip().startswith(("import ", "from "))]
         assert not any("trading" in ln for ln in imports), f
         assert "/fapi/v1/order" not in text and "telegram" not in text.lower().replace("no telegram", ""), f
+
+
+# ── notification copy: one vocabulary, exchange-style numbers, WIB ─────────
+
+def test_notification_formatters():
+    ne = notify_events
+    assert ne._signed(1234.5) == "+1,234.50" and ne._signed(-8.25) == "−8.25" and ne._signed(-0.001) == "0.00"
+    assert ne._pct(None) == "tidak tersedia" and ne._pct(12.5) == "+12.50%"
+    assert [ne._px(v) for v in (2000, 150, 1.5, 0.00001234)] == ["2,000.00", "150.00", "1.50", "0.00001234"]
+    assert ne._wib("2026-11-09T00:00:00Z")[1] == "9 Nov 07:00 WIB"
+    assert ne._wib("2026-12-31T20:00:00Z")[1] == "1 Jan 03:00 WIB"
+    assert ne._strategy("rosyade_family") == "Rosyade" and ne._strategy("new_thing") == "New thing"
+    assert ne._signal_type("tier_a") == "Tier A" and ne._signal_type("donchian_breakout_1d") == "Donchian breakout 1 hari"
+    assert ne._tf("4h") == "4 jam" and ne._tf("15m") == "15 menit"
+    assert ne._exit("hard_sl") == "kena batal jika (SL)" and ne._exit("strategy_exit:flat").startswith("strategi keluar")
+    assert ne._exit(None) is None
+
+
+def test_report_ready_across_months(conn):
+    i = notify_events.report_ready(conn, "2026-W49", "2026-11-30T00:00:00Z", "2026-12-07T00:00:00Z")
+    n = _types(conn, "report")
+    assert i and n[0]["title"] == "Laporan mingguan siap: 30 Nov – 7 Des"
+    assert notify_events.report_ready(conn, "2026-W49", "2026-11-30T00:00:00Z", "2026-12-07T00:00:00Z") is None
+
+
+RAW_CODES = ("PASS", "FAIL", "rosyade_family", "Optimasi", "Validasi", "Catatan Sinyal", "hard_tp", "hard_sl",
+             "Deploy ", "Scan #", "4H-ETH rosyade")
+
+
+def test_notification_text_has_no_raw_codes(conn):
+    rid, jid = _run(conn, verdict="FAIL")
+    q.finish(conn, jid, "done")
+    _, jid2 = _run(conn, mode="backtest")
+    q.finish(conn, jid2, "error", "boom")
+    sid = conn.execute("INSERT INTO lab_scans (template_id, mode, symbols_json, timeframes_json, created_at) "
+                       "VALUES ('rosyade_family', 'optimize', '[]', '[]', ?)", (utcnow(),)).lastrowid
+    q.finish(conn, _run(conn, scan_id=sid, verdict="PASS")[1], "done")
+    acct, wid = _preset_watch(conn)
+    p = paper.open_position(conn, account_id=acct, symbol="ETHUSDT", side="short", price=2000, sl=2100,
+                            watch_id=wid, source="paper_auto")
+    paper.close_position(conn, p["id"], 2100, "hard_sl")
+    rows = _types(conn)
+    assert len(rows) == 5
+    for r in rows:
+        text = f"{r['title']} {r['body'] or ''}"
+        assert not any(code in text for code in RAW_CODES), text
+    assert "Gagal" in rows[0]["body"] and "Uji historis cepat" in rows[1]["title"]
