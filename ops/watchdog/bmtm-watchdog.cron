@@ -1,0 +1,2 @@
+# BMTM watchdog: install as /etc/cron.d/bmtm-watchdog (script in /usr/local/bin)
+*/2 * * * * root nice -n 10 /usr/bin/python3 /usr/local/bin/bmtm-watchdog.py >> /var/log/bmtm-watchdog.log 2>&1
