@@ -479,7 +479,8 @@ def test_api_universal_flow(admin_client):
 
 def test_api_universal_admin_only(admin_client):
     c = admin_client("u-plain")
-    for path in ("/api/v1/lab/universal/schema", "/api/v1/lab/strength", "/api/v1/lab/universal/watches"):
+    for path in ("/api/v1/lab/universal/schema", "/api/v1/lab/universal/watches"):
         assert c.get(path).status_code == 403
+    assert c.get("/api/v1/lab/strength").status_code == 200   # Koin Terkuat: readable by every user (12 Nov)
     assert c.post("/api/v1/lab/universal/runs", json={}).status_code == 403
     assert c.post("/api/v1/lab/strength/refresh").status_code == 403

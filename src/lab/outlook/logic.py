@@ -61,7 +61,7 @@ LEVELS = ("rendah", "sedang", "tinggi")
 TEMPLATE_NAMES = {"rosyade_family": "Rosyade", "donchian_breakout": "Donchian breakout",
                   "mean_reversion_range": "Mean reversion"}
 
-# ── Indonesian formatting ────────────────────────────────────────────────
+# ── formatting: exchange-style numbers (1,234.56), WIB times with Indonesian months ──
 
 _MONTHS = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
 WIB = timezone(timedelta(hours=7))
@@ -69,7 +69,8 @@ MINUS = "−"
 
 
 def _swap(s: str) -> str:
-    return s.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+    """Kept as the single place to localise digits; exchange style (CEO decision 12 Nov) = unchanged."""
+    return s
 
 
 def fnum(x: Optional[float], dec: int = 1, signed: bool = False) -> str:

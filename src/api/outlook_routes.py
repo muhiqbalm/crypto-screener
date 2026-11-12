@@ -1,4 +1,6 @@
-"""/api/v1/lab/outlook (admin) + /api/v1/lab/regime (any logged-in user).
+"""/api/v1/lab/outlook + /api/v1/lab/regime: READ access for any logged-in user (CEO decision
+12 Nov: "Peluang koin" is readable by every team account); refresh / calibrate stay admin-only.
+Open positions (Lab paper accounts and the live bot's, read-only) are only shown to admins.
 
 SQL reads of lab.db only: the outlook rows are computed by the lab worker
 (``outlook_refresh`` job after every 4H close), the calibration by the heavy
@@ -156,12 +158,15 @@ def _track_brief(conn) -> dict:
 
 
 @router.get("/outlook")
-def outlook(_: Admin, conn: Conn, capital: Capital = 1000.0, leverage: Leverage = 1.0, sizing: Sizing = "notional",
+def outlook(user: User, conn: Conn, capital: Capital = 1000.0, leverage: Leverage = 1.0, sizing: Sizing = "notional",
             risk_pct: RiskPct = 1.0, arah: Arah = None, keyakinan: Keyakinan = None, posisi: Posisi = None,
             sort: Sort = "peluang") -> dict:
     S.ensure_schema(conn)
     now = _now_iso()
-    pos, pos_avail = _positions(conn)
+    admin = bool(user["is_admin"])
+    pos, pos_avail = _positions(conn) if admin else (None, None)
+    if not admin:
+        posisi = None   # the position filter needs data a non-admin cannot see
     rows = [_decorate(r, now, capital, leverage, sizing, risk_pct, pos) for r in S.read_rows(conn)]
     counts = _counts(rows)
     ranked = L.rank_rows(rows) if sort == "peluang" else sorted(rows, key=lambda r: r.get("symbol") or "")
@@ -174,7 +179,7 @@ def outlook(_: Admin, conn: Conn, capital: Capital = 1000.0, leverage: Leverage 
     reg = R.load(conn) or {}
     cal = load_calibration(conn)
     return {
-        "schema_version": L.SCHEMA_VERSION,
+        "schema_version": L.SCHEMA_VERSION, "can_refresh": admin,
         "meta": S.kv_get(conn, S.META_KEY), "refresh": _job(conn), "calibrate": _job(conn, CALIB_KIND), "now": now,
         "inputs": {"capital": capital, "leverage": leverage, "sizing": sizing, "risk_pct": risk_pct},
         "filters": {"arah": arah, "keyakinan": keyakinan, "posisi": posisi, "sort": sort},
@@ -208,7 +213,7 @@ def outlook_calibrate(_: Admin, conn: Conn) -> dict:
 
 
 @router.get("/outlook/track-record")
-def outlook_track_record(_: Admin, conn: Conn, limit: Annotated[int, Query(ge=0, le=500)] = 100,
+def outlook_track_record(_: User, conn: Conn, limit: Annotated[int, Query(ge=0, le=500)] = 100,
                          since: Annotated[Optional[str], Query(max_length=25)] = None) -> dict:
     """Live track record of the stored calls (evaluated after the fact) + the replay's label check."""
     tr = S.track_record(conn, since=since, limit=limit)
@@ -222,7 +227,7 @@ def outlook_track_record(_: Admin, conn: Conn, limit: Annotated[int, Query(ge=0,
 
 
 @router.get("/outlook/calibration")
-def outlook_calibration(_: Admin, conn: Conn, full: bool = False) -> dict:
+def outlook_calibration(_: User, conn: Conn, full: bool = False) -> dict:
     cal = load_calibration(conn)
     if cal is None:
         return {"available": False, "job": _job(conn, CALIB_KIND)}
@@ -233,7 +238,7 @@ def outlook_calibration(_: Admin, conn: Conn, full: bool = False) -> dict:
 
 
 @router.get("/outlook/{symbol}")
-def outlook_detail(symbol: str, _: Admin, conn: Conn, capital: Capital = 1000.0, leverage: Leverage = 1.0,
+def outlook_detail(symbol: str, user: User, conn: Conn, capital: Capital = 1000.0, leverage: Leverage = 1.0,
                    sizing: Sizing = "notional", risk_pct: RiskPct = 1.0) -> dict:
     sym = symbol.upper().replace("/", "").replace(":USDT", "")
     sym = sym if sym.endswith("USDT") else sym + "USDT"
@@ -242,10 +247,11 @@ def outlook_detail(symbol: str, _: Admin, conn: Conn, capital: Capital = 1000.0,
         raise HTTPException(404, f"outlook untuk {sym} belum tersedia")
     now = _now_iso()
     reg = R.load(conn) or {}
-    pos, pos_avail = _positions(conn)
+    admin = bool(user["is_admin"])
+    pos, pos_avail = _positions(conn) if admin else (None, None)
     row = _decorate(got["row"], now, capital, leverage, sizing, risk_pct, pos)
     cal = load_calibration(conn)
-    return {**row, "error": got["error"], "detail": got["detail"], "now": now,
+    return {**row, "error": got["error"], "detail": got["detail"], "now": now, "can_refresh": admin,
             "inputs": {"capital": capital, "leverage": leverage, "sizing": sizing, "risk_pct": risk_pct},
             "positions_available": pos_avail,
             "calls": S.calls_for(conn, sym, 30),

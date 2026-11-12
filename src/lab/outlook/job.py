@@ -290,6 +290,7 @@ def build_row(conn, symbol: str, runner: Runner, presets: list[dict], ctx_common
             st, price, run = s_st, s_price, s_run
         strategies.append({"name": d["name"], "template_id": d["template_id"], "timeframe": d["timeframe"],
                            "verdict": (d.get("preset") or {}).get("verdict"), "evidence": s_st["evidence"],
+                           "live_reference": bool((d.get("preset") or {}).get("live_reference")),
                            "primary": bool(d.get("primary")), "side": s_st.get("side"),
                            "entry_at": s_st.get("entry_at"), "entry_price": s_st.get("entry_price"),
                            "sl": s_st.get("sl"), "tp": s_st.get("tp"), "fresh": bool(s_st.get("fresh")),

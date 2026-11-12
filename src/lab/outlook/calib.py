@@ -43,15 +43,15 @@ Case = namedtuple("Case", "coin cls side align fase t pos status r_net mfe_r bar
 
 
 def fr(x: Optional[float]) -> str:
-    """R value, Indonesian style (+0,12R / −0,05R)."""
+    """R value, exchange-style digits (+0.12R / −0.05R)."""
     if x is None:
         return "tidak tersedia"
-    v = f"{abs(x):.2f}".replace(".", ",")
-    return ("+" if x > 0 else "−" if x < 0 else "") + v + "R"
+    return ("+" if x > 0 else "−" if x < 0 else "") + f"{abs(x):.2f}R"
 
 
 def fint(n) -> str:
-    return f"{int(n):,}".replace(",", ".") if n is not None else "0"
+    """Count with exchange-style thousands (6,470)."""
+    return f"{int(n):,}" if n is not None else "0"
 
 
 def bucket_keys(cls: str, side: str, align: str, fase: str) -> list[str]:

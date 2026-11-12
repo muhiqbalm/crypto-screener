@@ -94,14 +94,16 @@ def _row(st, calib=CALIB, now="2026-11-11T16:05:00Z", **kw):
 
 # ── formatting ───────────────────────────────────────────────────────────
 
-def test_indonesian_number_formatting():
-    assert L.fprice(2125.2) == "2.125"
-    assert L.fprice(126.97) == "126,97"
-    assert L.fprice(0.0049408) == "0,004941"
-    assert L.fpct(-12.04) == "−12,0%"
+def test_exchange_style_numbers_and_wib_times():
+    """CEO decision 12 Nov: exchange-style digits (1,234.56) everywhere; WIB with Indonesian months."""
+    assert L.fprice(2125.2) == "2,125"
+    assert L.fprice(126.97) == "126.97"
+    assert L.fprice(0.0049408) == "0.004941"
+    assert L.fpct(-12.04) == "−12.0%"
     assert L.fpct(None) == "tidak tersedia"
-    assert L.fusd(-98.4) == "−$98,40"
-    assert L.fr(0.123) == "+0,12R" and L.fpp(0.578) == "58%"
+    assert L.fusd(-98.4) == "−$98.40" and L.fusd(1234.5) == "+$1,234.50"
+    assert L.fr(0.123) == "+0.12R" and L.fpp(0.578) == "58%"
+    assert C.fr(-0.0248) == "−0.02R" and C.fint(6470) == "6,470"
     assert L.fdate("2026-11-08T20:00:00Z", True) == "9 Nov 03:00 WIB"
     assert L.fdate("2025-07-06T04:00:00Z", False, True) == "6 Jul 2025"
 
@@ -263,7 +265,7 @@ def test_plan_entry_zone_rr_invalidation_horizon():
     assert p["dont_chase"] == pytest.approx(2074.25 - 0.25 * r)          # short: lower entry = worse R:R
     assert p["horizon_bars"] == 42 and p["valid_until"] == "2026-11-18T16:00:00Z"
     assert p["target_typical"] == pytest.approx(2074.25 - 1.1 * r)
-    assert "Batal kalau harga menyentuh SL 2.274" in p["batal_kalau"]
+    assert "Batal kalau harga menyentuh SL 2,274" in p["batal_kalau"]
     assert _row(_strategy("short"))["plan"]["action"] == "menyusul"
     assert L.plan(_strategy("short"), 2300.0, {}, None)["action"] == "jangan_masuk"
     assert L.plan(_strategy(None), 2000.0, {}, None)["action"] == "tunggu"
@@ -276,8 +278,8 @@ def test_changes_since_previous_call():
     cur = {"side": "short", "keyakinan": "sedang", "sl": 2230.0, "tp": 1860.0, "price": 2074.25, "fase": "berjalan",
            "strategy": "A", "strategy_entry_time": "t1", "call": {"dirs": {"tren_1d": -1, "momentum_1h": -1}}}
     ch = " | ".join(L.changes(cur, prev))
-    assert "Keyakinan naik: rendah → sedang" in ch and "SL bergeser dari 2.274 ke 2.230" in ch
-    assert "Momentum 1H berubah: naik → turun" in ch and "menyusul" in ch and "−1,2%" in ch
+    assert "Keyakinan naik: rendah → sedang" in ch and "SL bergeser dari 2,274 ke 2,230" in ch
+    assert "Momentum 1H berubah: naik → turun" in ch and "menyusul" in ch and "−1.2%" in ch
     flip = L.changes({**cur, "side": None}, prev)
     assert flip[0].startswith("Arah berubah: SHORT → FLAT")
 
@@ -634,7 +636,7 @@ def test_summarise_reports_oos_checks_and_exclusions():
 
 # ── API ──────────────────────────────────────────────────────────────────
 
-def test_outlook_api_admin_only_v2_fields_filters_and_ranking(client_for, conn):
+def test_outlook_api_v2_fields_filters_and_ranking(client_for, conn):
     _store_row(conn, "ETHUSDT")
     fresh = _row(_strategy("short", fresh=True))
     fresh.update({"symbol": "SOLUSDT", "coin": "SOL", "last_bar": "2026-11-11T12:00:00Z"})
@@ -645,11 +647,10 @@ def test_outlook_api_admin_only_v2_fields_filters_and_ranking(client_for, conn):
     S.kv_set(conn, S.META_KEY, {"computed_at": utcnow()})
     conn.commit()
     assert client_for(None).get("/api/v1/lab/outlook").status_code == 401
-    assert client_for("u-plain").get("/api/v1/lab/outlook").status_code == 403
-    assert client_for("u-plain").get("/api/v1/lab/outlook/ETHUSDT").status_code == 403
     c = client_for("u-admin")
     body = c.get("/api/v1/lab/outlook?capital=1000&leverage=1").json()
     assert body["schema_version"] == 2 and body["counts"]["arah"] == {"long": 0, "short": 2, "netral": 1}
+    assert body["can_refresh"] is True and body["positions_available"] == {"paper": True, "live": False}
     syms = [r["symbol"] for r in body["rows"]]
     assert syms[-1] == "BTCUSDT"                                    # FLAT rows sink to the bottom
     row = body["rows"][0]
@@ -671,10 +672,31 @@ def test_outlook_api_admin_only_v2_fields_filters_and_ranking(client_for, conn):
     assert c.get("/api/v1/lab/outlook?arah=up").status_code == 422
 
 
+def test_peluang_koin_is_readable_by_every_logged_in_user(client_for, conn):
+    """CEO decision 12 Nov: every team account can READ Outlook / coin page / Terkuat; mutations stay admin."""
+    _store_row(conn, "ETHUSDT")
+    S.save_call(conn, _call())
+    conn.commit()
+    plain = client_for("u-plain")
+    body = plain.get("/api/v1/lab/outlook").json()
+    assert body["rows"][0]["symbol"] == "ETHUSDT" and body["can_refresh"] is False
+    assert "positions" not in body["rows"][0] and body["positions_available"] is None   # positions are admin-only
+    assert plain.get("/api/v1/lab/outlook?posisi=ada").json()["rows"][0]["symbol"] == "ETHUSDT"  # filter ignored
+    d = plain.get("/api/v1/lab/outlook/ETHUSDT").json()
+    assert d["explanation"]["paragraphs"] and d["can_refresh"] is False and "positions" not in d
+    assert d["calls"][0]["side"] == "short"
+    assert plain.get("/api/v1/lab/outlook/track-record").status_code == 200
+    assert plain.get("/api/v1/lab/outlook/calibration").json()["available"] is False
+    assert plain.get("/api/v1/lab/strength").status_code == 200
+    for path in ("/api/v1/lab/outlook/refresh", "/api/v1/lab/outlook/calibrate", "/api/v1/lab/strength/refresh"):
+        assert plain.post(path).status_code == 403, path
+    assert client_for(None).get("/api/v1/lab/strength").status_code == 401
+    assert client_for(None).get("/api/v1/lab/outlook/ETHUSDT").status_code == 401
+
+
 def test_track_record_and_calibration_endpoints(client_for, conn):
     from src.lab.outlook import replay as RP
     c = client_for("u-admin")
-    assert client_for("u-plain").get("/api/v1/lab/outlook/track-record").status_code == 403
     assert c.get("/api/v1/lab/outlook/calibration").json()["available"] is False
     S.save_call(conn, _call())
     conn.commit()
