@@ -306,6 +306,9 @@ def main(argv=None) -> int:
         elif job["kind"] == "livecheck_cycle":
             from .livecheck.jobs import execute as execute_livecheck
             execute_livecheck(conn, job)
+        elif job["kind"] == "ai_factor_summary":
+            from .ai.job import execute as execute_ai
+            execute_ai(conn, job)
         else:
             raise ValueError(f"unknown job kind {job['kind']}")
         q.finish(conn, job_id, "done")

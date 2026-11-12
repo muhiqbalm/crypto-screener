@@ -492,5 +492,6 @@ Configure via environment variables:
     from src.api.livecheck_routes import router as livecheck_router; app.include_router(livecheck_router)
     from src.api.bot_routes import router as bot_router; app.include_router(bot_router)
     from src.api.report_routes import router as report_router, notifications_router; app.include_router(report_router); app.include_router(notifications_router)
+    from src.api.ai_routes import router as ai_router; app.include_router(ai_router)
 
     return app
