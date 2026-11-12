@@ -189,12 +189,16 @@ class TestProperty5CacheTTLCorrectness:
         cm = CacheManager(ttl=ttl)
         result = _make_result()
         
-        # Store the result
+        # Store the result. CacheManager.set() stamps cached_at with its own module's
+        # datetime, so pin that clock too; otherwise a slow machine adds real elapsed
+        # time between original_time and cached_at and the 0.1 s tolerance flakes.
         original_time = datetime.utcnow()
-        with patch('src.services.models.datetime') as mock_datetime:
+        with patch('src.services.models.datetime') as mock_datetime, \
+                patch('src.services.cache_manager.datetime') as mock_cm_datetime:
             mock_datetime.utcnow.return_value = original_time
+            mock_cm_datetime.utcnow.return_value = original_time
             cm.set(result)
-        
+
         # Check age at different time points
         time_points = [0.25, 0.5, 0.75]
         previous_age = 0.0
