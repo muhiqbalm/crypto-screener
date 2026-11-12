@@ -65,6 +65,7 @@ class LabSettings:
     watch_max_active: int = 100            # hard cap on active watches (all timeframes)
     klines_cache_s: int = 30
     fast_lane: bool = True                 # one extra slot for watch_eval/universe_refresh jobs
+    priority_lane: bool = True             # + one slot for short post-close jobs next to a long fast job
     strength_refresh: bool = True          # universe_refresh job after every 4H close
     telegram_enabled: bool = True
     telegram_chat_id: str = field(default="", repr=False)
@@ -146,6 +147,7 @@ def get_lab_settings() -> LabSettings:
         watch_max_active=int(_get(env, "LAB_WATCH_MAX_ACTIVE", "100")),
         klines_cache_s=max(30, int(_get(env, "LAB_KLINES_CACHE_S", "30"))),
         fast_lane=_get(env, "LAB_FAST_LANE", "1") != "0",
+        priority_lane=_get(env, "LAB_PRIORITY_LANE", "1") != "0",
         strength_refresh=_get(env, "LAB_STRENGTH_REFRESH", "1") != "0",
         telegram_enabled=_get(env, "LAB_TELEGRAM_ENABLED", "1") != "0",
         telegram_chat_id=_get(env, "LAB_TELEGRAM_CHAT_ID", "") or _get(env, "TRADING_TELEGRAM_DEFAULT_CHAT_ID", ""),

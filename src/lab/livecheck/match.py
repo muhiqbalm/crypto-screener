@@ -13,7 +13,9 @@ Statuses
   diabaikan       a non-TradingView client hit the webhook (manual test), shown for completeness
 
 ``perlu_dicek`` marks rows where the Lab may legitimately differ from Pine (causes in
-``causes``; see docs/lab/live-check.md). Matching is done in passes: same bar, then one
+``causes``; see docs/lab/live-check.md), and every ``gagal`` row: a delivered live order
+that did not execute leaves the bot away from the strategy (audit 2026-11-13 K1: the
+9 Nov ETH short was rejected and nobody was asked to look). Matching is done in passes: same bar, then one
 bar off (``beda_bar``), then - for exits only - anywhere within the same trade
 (``beda_waktu_exit``), so a timing difference is shown as one paired row instead of a
 "missing" plus an "unexpected" row.
@@ -421,7 +423,7 @@ def _paired_row(e: dict, d: dict, causes: list[str], note: Optional[str], exp: d
         reason += f"; {d['note']}"
     if note:
         reason += f"; {note}"
-    perlu = bool(causes) or (status == "gagal" and "hasil tidak diketahui" in (d["reason"] or ""))
+    perlu = bool(causes) or status == "gagal"     # rejected / failed / outcome unknown: always ask someone
     return _row(e["bar_open"], exp["step"], status, perlu, causes, e["action"], e["side"], reason, bps, exp, dj)
 
 

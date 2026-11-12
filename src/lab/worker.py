@@ -7,6 +7,16 @@ time by default (LAB_MAX_CONCURRENT_JOBS); scan cells are capped separately
 (LAB_SCAN_MAX_CONCURRENT) so a big scan never takes every slot, and an extra
 slot is only used while the 1-min load per CPU is below LAB_MAX_LOAD_PER_CPU.
 
+Lanes next to those slots (LAB_FAST_LANE / LAB_PRIORITY_LANE, both on by default):
+  * fast lane: one FAST_KINDS job when no fast job is running, so a long optimise run
+    cannot delay the post-candle jobs by hours;
+  * priority lane (audit 2026-11-13 P4): one PRIORITY_KINDS job when none is running.
+    outlook_refresh takes ~3 min right after every 4H close and used to hold the only
+    fast slot while the live check, ledger, shadow and arena jobs waited up to 274 s.
+    PRIORITY_KINDS are short (seconds) and still run one at a time, so watch_eval
+    batches (and the basket entries they open) never overlap each other. Worst case:
+    general slot(s) + one long fast job + one short job.
+
 The worker itself never imports the engine, pandas or src.trading.
 """
 from __future__ import annotations
@@ -30,6 +40,9 @@ from .settings import REPO_ROOT, LabSettings, get_lab_settings
 log = logging.getLogger("lab.worker")
 FAST_KINDS = ("watch_eval", "universe_refresh", "ledger_cycle", "shadow_cycle", "outlook_refresh", "arena_snapshot", "livecheck_cycle",
               "ai_factor_summary")
+# Short, time-critical after a candle close (seconds each). The other fast kinds run for minutes
+# (outlook_refresh 164-208 s on prod, universe_refresh, ai_factor_summary) and keep the fast lane.
+PRIORITY_KINDS = ("watch_eval", "livecheck_cycle", "ledger_cycle", "shadow_cycle", "arena_snapshot")
 # Jobs that need the screener pipeline (pydantic-settings, ccxt) run under the worker's
 # own interpreter (screener venv) instead of the engine venv.
 # ai_factor_summary: the anthropic SDK is installed in the screener venv only (requirements.txt).
@@ -126,6 +139,16 @@ class Worker:
             return True
         return load1 / max(1, os.cpu_count() or 1) <= self.settings.max_load_per_cpu
 
+    def _finished_by_child(self, conn, job_id: int) -> bool:
+        """The child already recorded its result (done / error, still under this worker's id) and
+        is exiting: the heartbeat no longer matches a running row, but that is not a cancel.
+        Killing it here was the harmless "rc=-15 but done" race (audit 2026-11-13 S3). A row the
+        reaper took over (worker_id NULL) or a cancel request still kills; the timeout still applies."""
+        row = conn.execute("SELECT status, cancel_requested, worker_id FROM lab_jobs WHERE id=?",
+                           (job_id,)).fetchone()
+        return bool(row and row["status"] in ("done", "error") and not row["cancel_requested"]
+                    and row["worker_id"] == self.worker_id)
+
     def _kill(self, r: Running, reason: str) -> None:
         r.killed_reason = reason
         try:
@@ -173,7 +196,7 @@ class Worker:
                 continue
             if do_hb:
                 alive = q.heartbeat(conn, job_id, self.worker_id, pid=r.proc.pid)
-                if not alive:
+                if not alive and not self._finished_by_child(conn, job_id):
                     self._kill(r, "cancelled")
         if do_hb:
             self._last_hb = now
@@ -204,6 +227,13 @@ class Worker:
         # post-candle watch / universe refresh jobs by hours.
         if self.settings.fast_lane and not any(r.job["kind"] in FAST_KINDS for r in self.running.values()):
             job = q.claim(conn, self.worker_id, kinds=FAST_KINDS)
+            if job is not None:
+                self._start(conn, job)
+        # Priority lane: a short post-close job never waits behind a long fast job (outlook_refresh).
+        # At most one PRIORITY_KINDS job at a time, wherever it runs.
+        if self.settings.fast_lane and self.settings.priority_lane and \
+                not any(r.job["kind"] in PRIORITY_KINDS for r in self.running.values()):
+            job = q.claim(conn, self.worker_id, kinds=PRIORITY_KINDS)
             if job is not None:
                 self._start(conn, job)
 

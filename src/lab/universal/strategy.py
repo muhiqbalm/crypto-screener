@@ -25,6 +25,7 @@ class Panel:
     funding: np.ndarray       # T x N, sum of funding rates settled in (open_t, close_t]
     first_idx: np.ndarray     # N, first bar index with data (T if none)
     quote_volume: Optional[np.ndarray] = None  # T x N quote (USDT) volume per bar, NaN where no real bar
+    funding_n: Optional[np.ndarray] = None     # T x N number of settlements binned into each bar
 
     @property
     def n(self) -> int:
@@ -74,6 +75,7 @@ def build_panel(ohlcv: dict, funding: Optional[dict] = None, end=None) -> Panel:
     close = pd.DataFrame(raw).ffill().to_numpy()
     first_idx = np.array([int(np.argmax(present[:, j])) if present[:, j].any() else T for j in range(N)])
     fund = np.zeros((T, N))
+    fund_n = np.zeros((T, N), dtype=np.int32)
     if funding:
         for j, s in enumerate(syms):
             f = funding.get(s)
@@ -86,8 +88,9 @@ def build_panel(ohlcv: dict, funding: Optional[dict] = None, end=None) -> Panel:
             rates = f["funding_rate"].astype(float).to_numpy()
             ok = (idx >= 0) & (idx < T) & np.isfinite(rates)
             np.add.at(fund[:, j], idx[ok], rates[ok])
+            np.add.at(fund_n[:, j], idx[ok], 1)
     return Panel(ts=grid, symbols=syms, close=close, present=present, funding=fund, first_idx=first_idx,
-                 quote_volume=qv)
+                 quote_volume=qv, funding_n=fund_n)
 
 
 def slice_panel(p: Panel, end_excl: int) -> Panel:
@@ -95,7 +98,8 @@ def slice_panel(p: Panel, end_excl: int) -> Panel:
     return Panel(ts=p.ts[:end_excl], symbols=list(p.symbols), close=p.close[:end_excl],
                  present=p.present[:end_excl], funding=p.funding[:end_excl],
                  first_idx=np.minimum(p.first_idx, end_excl),
-                 quote_volume=None if p.quote_volume is None else p.quote_volume[:end_excl])
+                 quote_volume=None if p.quote_volume is None else p.quote_volume[:end_excl],
+                 funding_n=None if p.funding_n is None else p.funding_n[:end_excl])
 
 
 def subset_panel(p: Panel, idx) -> Panel:
@@ -103,7 +107,8 @@ def subset_panel(p: Panel, idx) -> Panel:
     idx = list(idx)
     return Panel(ts=p.ts, symbols=[p.symbols[i] for i in idx], close=p.close[:, idx], present=p.present[:, idx],
                  funding=p.funding[:, idx], first_idx=p.first_idx[idx],
-                 quote_volume=None if p.quote_volume is None else p.quote_volume[:, idx])
+                 quote_volume=None if p.quote_volume is None else p.quote_volume[:, idx],
+                 funding_n=None if p.funding_n is None else p.funding_n[:, idx])
 
 
 @dataclass

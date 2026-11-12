@@ -6,6 +6,7 @@ one hook point with a single additive line and never raises:
   ledger_verdicts   src/lab/ledger/jobs.py execute_cycle()   (after scoring)
   deploy_log_scan   src/lab/weekly/schedule.py tick()   (worker scheduler; /var/log/bmtm-deploy.log)
   report_ready      src/lab/weekly/schedule.py snapshot_week()   (weekly snapshot frozen)
+  livecheck_alarms  src/lab/livecheck/jobs.py execute_cycle()   (failed live order: sticky until "Sudah dicek")
 
 Copy rules (same as the web UI, glossary in docs/riset-2026-11-12/02-audit-ux.md §4):
 Indonesian, one name per concept (Uji jujur, Cari setting terbaik, Lolos / Gagal, Rekam jejak
@@ -34,7 +35,7 @@ TEMPLATE_LABEL = {"rosyade_family": "Rosyade", "donchian_breakout": "Donchian br
 TF_LABEL = {"1m": "1 menit", "5m": "5 menit", "15m": "15 menit", "30m": "30 menit", "1h": "1 jam", "2h": "2 jam",
             "4h": "4 jam", "6h": "6 jam", "12h": "12 jam", "1d": "1 hari", "1w": "1 minggu"}
 VERDICT_LABEL = {"terbukti": "terbukti", "negatif": "negatif", "belum_terbukti": "belum terbukti",
-                 "belum_cukup_data": "belum cukup data"}
+                 "belum_cukup_data": "belum cukup data", "searah_pasar": "searah pasar"}
 SIGNAL_TYPE_LABEL = {"komposit": "Komposit", "komposit_high": "Komposit keyakinan tinggi", "tier_a": "Tier A",
                      "tier_c": "Tier C", "momentum": "Momentum 30 hari", "funding": "Funding", "oi": "OI × harga",
                      "tv_open": "Alert TradingView", "universal_v0": "Universal v0"}
@@ -275,11 +276,52 @@ def basket_stopped(conn, basket: dict, dd_pct: float, limit_pct: float) -> Optio
 KV_LEDGER = "notify_ledger_verdicts"
 
 
+def _span(first: Optional[str], last: Optional[str]) -> Optional[str]:
+    """'6 Okt–12 Nov' (WIB dates of the first and last signal)."""
+    if not first or not last:
+        return None
+    a, b = _wib(first)[0], _wib(last)[0]
+    if (a.year, a.month, a.day) == (b.year, b.month, b.day):
+        return f"{b.day} {MONTHS[b.month - 1]}"
+    return (f"{a.day}–{b.day} {MONTHS[b.month - 1]}" if (a.year, a.month) == (b.year, b.month)
+            else f"{a.day} {MONTHS[a.month - 1]}–{b.day} {MONTHS[b.month - 1]}")
+
+
+def _range(ci) -> str:
+    return f" (rentang {_pct(ci[0])} s/d {_pct(ci[1])})" if ci and ci[0] is not None and ci[1] is not None else ""
+
+
+def ledger_body(old_label: str, v: dict) -> str:
+    """Verdict change, sample (size, period, share reconstructed), the raw mean next to the
+    BTC-relative mean, and - for searah pasar - what that means (audit 2026-11-13 P3)."""
+    sample = f"{v['n']:,} sinyal dinilai di {v['days']} hari"
+    bits = [b for b in (_span(v.get("first_ts"), v.get("last_ts")),
+                        f"{round(100 * v['n_rekon'] / v['n_signals'])}% rekonstruksi"
+                        if v.get("n_rekon") and v.get("n_signals") else None) if b]
+    if bits:
+        sample += f" ({', '.join(bits)})"
+    body = (f"{old_label} → {VERDICT_LABEL.get(v['verdict'], v['verdict'])} · {sample} · rata-rata gerak searah sinyal "
+            f"setelah 1 hari {_pct(v['mean_pct'])}{_range(v.get('mean_ci'))} · dibanding BTC "
+            f"{_pct(v.get('mean_rel_btc_pct'))}{_range(v.get('rel_btc_ci'))} · sebelum biaya")
+    if v["verdict"] == "searah_pasar":
+        rel = v.get("mean_rel_btc_pct")
+        market = None if rel is None or v.get("mean_pct") is None else v["mean_pct"] - rel
+        if market is not None and market > 0:
+            fell = v["direction"] < 0
+            body += (f". Dibanding BTC rentangnya mencakup nol: gerak ini kemungkinan besar ikut pasar yang "
+                     f"{'turun' if fell else 'naik'}, belum teruji di pasar {'naik' if fell else 'turun'}.")
+        else:
+            body += ". Dibanding BTC rentangnya mencakup nol: belum terbukti lebih baik dari pasar."
+    return body
+
+
 @_safe
 def ledger_verdicts(conn) -> list[int]:
     """Compare the overall 1d verdict of every signal group with the last cycle. The first
     call only records a baseline. A change notifies when either side is terbukti / negatif
-    (belum cukup data <-> belum terbukti flips are noise); 4+ changes become one summary."""
+    (belum cukup data <-> belum terbukti flips are noise); 4+ changes become one summary.
+    "terbukti" is the honest headline (BTC-relative interval above zero too, see
+    ledger/verdicts.py); a raw-only edge is "searah pasar" and never notifies as a win."""
     from .ledger.store import kv_get, kv_set
     from .ledger.verdicts import verdicts
     now = {v["key"]: v for v in verdicts(conn)}
@@ -306,19 +348,61 @@ def ledger_verdicts(conn) -> list[int]:
     ids = []
     if len(changes) <= 3:
         for k, old, v in changes:
-            body = (f"{was(old)} → {VERDICT_LABEL[v['verdict']]} · {v['n']:,} sinyal dinilai di {v['days']} hari "
-                    f"· rata-rata gerak searah sinyal setelah 1 hari {_pct(v['mean_pct'])}")
-            i = notify(conn, "ledger", f"Rekam jejak sinyal: {name(v)} kini {VERDICT_LABEL[v['verdict']]}", body,
+            now_label = VERDICT_LABEL.get(v["verdict"], v["verdict"])
+            if v["verdict"] == "searah_pasar":
+                now_label += " (belum terbukti dibanding BTC)"
+            i = notify(conn, "ledger", f"Rekam jejak sinyal: {name(v)} kini {now_label}", ledger_body(was(old), v),
                        f"/lab/signals?type={v['signal_type']}", f"ledger:{stamp(k, old, v)}")
             if i:
                 ids.append(i)
         return ids
-    body = "; ".join(f"{name(v)}: {was(old)} → {VERDICT_LABEL[v['verdict']]}"
+    body = "; ".join(f"{name(v)}: {was(old)} → {VERDICT_LABEL.get(v['verdict'], v['verdict'])}"
                      for _, old, v in changes[:8]) + (f"; dan {len(changes) - 8} lagi" if len(changes) > 8 else "")
+    if any(v["verdict"] == "searah_pasar" for _, _, v in changes):
+        body += ". Searah pasar = rata-rata positif, tapi dibanding BTC rentangnya mencakup nol."
     key = hashlib.sha1("|".join(stamp(*c) for c in changes).encode()).hexdigest()[:16]
     i = notify(conn, "ledger", f"Rekam jejak sinyal: {len(changes)} vonis berubah", body, "/lab/signals",
                f"ledger:multi:{key}")
     return [i] if i else []
+
+
+# ── live bot (Cek bot live) ───────────────────────────────────────────────
+
+LIVE_ALARM_MAX_AGE_DAYS = 14        # older failed rows are history (still flagged on the page, no new alarm)
+LIVE_LINK = "/bot#cek"
+
+
+@_safe
+def livecheck_alarms(conn, rows: list[dict], symbol: str, preset: str, now: float) -> list[int]:
+    """One STICKY notification per failed live order (live-check status ``gagal``: delivered but
+    rejected / failed / outcome unknown), so a rejected open can never again sit unseen while
+    the strategy runs without the bot (audit 2026-11-13 K1). Stays unread for every admin until
+    one of them presses "Sudah dicek". Dedupe per bar + action + side, so each event alarms once."""
+    ids = []
+    coin = _coin(symbol)
+    for r in rows:
+        if r.get("status") != "gagal" or not r.get("bar_close"):
+            continue
+        if now - float(r["bar_close"]) > LIVE_ALARM_MAX_AGE_DAYS * 86400:
+            continue
+        action, side = (r.get("action") or "").lower(), (r.get("side") or "").upper()
+        when = _wib(datetime.fromtimestamp(float(r["bar_close"]), tz=timezone.utc).isoformat())[1]
+        what = f"{action} {side} {coin}".strip()
+        if action == "open":
+            title = f"Bot live tidak ikut sinyal: {what} tidak tereksekusi"
+            effect = (f"Strategi sudah berposisi, bot tidak. Cek posisi {coin} di exchange dan putuskan langkahnya; "
+                      f"selama penyebabnya masih ada, sinyal berikutnya bisa ditolak juga.")
+        else:
+            title = f"Bot live: sinyal {what} tidak tereksekusi"
+            effect = (f"Posisi bot di exchange bisa masih terbuka, atau memang tidak ada yang ditutup. "
+                      f"Cek posisi {coin} di exchange.")
+        body = (f"Sinyal {preset} saat penutupan bar 4 jam {when}. Alasan: {r.get('reason') or 'tidak tereksekusi'}. "
+                f"{effect} Tetap di atas sampai ada yang menandai \"Sudah dicek\".")
+        bar = datetime.fromtimestamp(float(r["bar_open"]), tz=timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+        i = notify(conn, "live", title, body, LIVE_LINK, f"livecheck:{bar}:{action}:{side.lower()}:gagal", sticky=True)
+        if i:
+            ids.append(i)
+    return ids
 
 
 # ── weekly report ─────────────────────────────────────────────────────────

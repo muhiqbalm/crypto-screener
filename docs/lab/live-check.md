@@ -6,7 +6,8 @@ the strategy's own signals as recomputed by the Strategy Lab.
 
 Code: `src/lab/livecheck/` (job `livecheck_cycle`, fast lane, after every 4H close +
 `delay_s` and hourly), API `GET /api/v1/lab/live-check?bars=N` (admin-only, lab.db only).
-Nothing here sends orders, posts to the webhook, notifies anyone or imports `src.trading`.
+Nothing here sends orders, posts to the webhook, sends Telegram or imports `src.trading`. The
+only outward effect is one in-web notification per failed live order (below).
 
 ## Inputs
 
@@ -42,6 +43,16 @@ side=buy/sell") must fit; nginx-only deliveries have unknown direction.
 | data source | Lab uses Binance USD-M perp klines (`ETHUSDT`); the chart is `ETHUSDT.P`. Volumes/wicks can differ slightly, which moves volume / RVOL / TP-check filters. |
 | input drift | The Lab uses preset params (template defaults). The Pine source defaults differ in places (e.g. long hard TP 60 vs 62.5) and the live chart's inputs can be changed in TradingView without any trace here. |
 | `tengah_bar` | A delivery mid-bar is an intrabar SL/TP alert or a manual alert. |
+
+## Failed live orders (audit 2026-11-13 K1)
+
+Every `gagal` row (delivered but rejected / failed / outcome unknown) is `perlu_dicek`, whatever
+its causes: the bot is no longer where the strategy is. On the first cycle that sees it (bars
+closed within the last 14 days), the job raises one **sticky** in-web notification (type
+`live`, link `/bot#cek`, dedupe per bar + action + side): pinned in red on top of the Lab bell
+for every admin, not cleared by "tandai semua sudah dibaca" or the 90-day prune, until one
+admin presses "Sudah dicek" (`POST /api/v1/lab/notifications/{id}/ack`). The /bot answer keeps
+counting a `gagal` row as a missed trade ("Belum aman"), not as a Lab-vs-Pine doubt.
 
 ## Manual positions
 
